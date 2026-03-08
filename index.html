@@ -2303,9 +2303,9 @@ function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, ne
       el.textContent = 'Adding toppings... Press C to put in oven!';
       setAction('KeyC', 'Cook');
     } else if (pizzaMaking.stage === 'oven') {
-      const pct = Math.min(100, (pizzaMaking.progress / 3000) * 100);
-      el.textContent = `Baking... ${Math.round(pct)}% — Press C to take out!`;
-      setAction('KeyC', 'Cook');
+      el.style.display = 'none';
+      setAction('KeyC', 'Take out');
+      return;
     }
     el.style.display = 'block';
   } else if (fishing.active) {
@@ -4118,32 +4118,40 @@ function drawPizzaInterior(cam, W, H) {
       ctx.fill();
     }
   } else if (pizzaMaking.stage === 'oven') {
-    // Pizza in oven — show timer bar
+    // Pizza in oven — show timer bar (positioned above counter, clear of prompt)
     const pct = pizzaMaking.progress / 4500;
-    const barW = 120;
+    const barW = 160;
+    const barH = 20;
     const barX = cx - barW / 2;
-    const barY = cy + 80;
+    const barY = cy - 80;
     // Bar background
-    ctx.fillStyle = 'rgba(0,0,0,0.3)';
-    ctx.beginPath(); ctx.roundRect(barX, barY, barW, 14, 4); ctx.fill();
-    // Bar fill (green → yellow → red)
-    let barColor;
-    if (pct < 0.66) barColor = '#4ade80';       // undercooked
-    else if (pct < 1.0) barColor = '#22c55e';    // perfect zone
-    else barColor = '#ef4444';                     // burning
-    ctx.fillStyle = barColor;
-    ctx.beginPath();
-    ctx.roundRect(barX + 2, barY + 2, Math.min(barW - 4, (barW - 4) * Math.min(pct, 1.33)), 10, 3);
-    ctx.fill();
-    // Perfect zone markers
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.fillRect(barX + (barW - 4) * 0.66 + 2, barY, 2, 14);
-    ctx.fillRect(barX + (barW - 4) * 1.0 + 2, barY, 2, 14);
-    // Label
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.beginPath(); ctx.roundRect(barX, barY, barW, barH, 6); ctx.fill();
+    // Zone backgrounds for colorblind clarity
+    const zoneW = barW - 4;
+    // Undercooked zone (blue) 0-66%
+    ctx.fillStyle = '#3b82f6';
+    ctx.beginPath(); ctx.roundRect(barX + 2, barY + 2, zoneW * 0.66, barH - 4, [4, 0, 0, 4]); ctx.fill();
+    // Perfect zone (bright green) 66-100%
+    ctx.fillStyle = '#22c55e';
+    ctx.beginPath(); ctx.roundRect(barX + 2 + zoneW * 0.66, barY + 2, zoneW * 0.34, barH - 4, 0); ctx.fill();
+    // Burn zone (red/dark) beyond 100%
+    ctx.fillStyle = '#991b1b';
+    ctx.beginPath(); ctx.roundRect(barX + 2 + zoneW, barY + 2, zoneW * 0.33, barH - 4, [0, 4, 4, 0]); ctx.fill();
+    // Fill indicator (white line showing current position)
+    const fillX = barX + 2 + Math.min(zoneW * 1.33, zoneW * pct);
     ctx.fillStyle = '#fff';
-    ctx.font = '10px system-ui';
+    ctx.fillRect(fillX - 2, barY - 2, 4, barH + 4);
+    // Zone divider lines
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.fillRect(barX + 2 + zoneW * 0.66, barY, 2, barH);
+    ctx.fillRect(barX + 2 + zoneW, barY, 2, barH);
+    // Labels
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 10px system-ui';
     ctx.textAlign = 'center';
-    ctx.fillText('PERFECT', barX + barW * 0.83, barY - 4);
+    ctx.fillText('TOO EARLY', barX + 2 + zoneW * 0.33, barY - 6);
+    ctx.fillText('PERFECT', barX + 2 + zoneW * 0.83, barY - 6);
   }
 
   // Completed pizzas on shelf
