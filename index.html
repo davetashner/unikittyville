@@ -454,7 +454,10 @@ const SURF_POS = { x: 1800 };
 let insideChalet = false;
 let marshmallow = { active: false, x: 0, y: 0, vx: 0, vy: 0, landed: false };
 let marshmallowScore = 0;
-let hotChocolate = { x: 0, y: 0 }; // set when entering chalet
+let marshmallowAngle = Math.PI / 5; // aiming angle (radians), adjustable with Up/Down
+const MARSHMALLOW_SPEED = 4.2;
+const MARSHMALLOW_GRAVITY = 0.15;
+let hotChocolate = { x: 0, y: 0 }; // computed each frame relative to scene center
 // Sledding level
 let sledding = false;
 let snowballCount = 0;
@@ -1569,25 +1572,42 @@ function update(dt) {
   }
 
   if (insideChalet) {
+    // Compute scene center (same as drawChaletInterior)
+    const W = canvas.width;
+    const chaletCam = Math.max(0, Math.min(getCurrentWorldW() - W, player.x - W / 2));
+    const chaletCx = chaletCam + W / 2;
+    const chaletCy = GROUND_Y - 80;
+    // Position hot chocolate relative to scene center each frame
+    hotChocolate.x = chaletCx + 50;
+    hotChocolate.y = chaletCy + 60;
+    // Kitty is at chaletCx - 80, chaletCy + 70
+
+    // Aim angle with Up/Down
+    if (!marshmallow.active) {
+      if (keys['ArrowUp']) marshmallowAngle = Math.min(Math.PI * 0.45, marshmallowAngle + 0.02);
+      if (keys['ArrowDown']) marshmallowAngle = Math.max(Math.PI * 0.08, marshmallowAngle - 0.02);
+    }
+
     // Marshmallow mini-game update
     if (keys['Space'] && !marshmallow.active) {
       keys['Space'] = false;
       marshmallow.active = true;
       marshmallow.landed = false;
-      marshmallow.x = hotChocolate.x - 80;
-      marshmallow.y = hotChocolate.y + 10;
-      marshmallow.vx = 3 + Math.random() * 2;
-      marshmallow.vy = -(4 + Math.random() * 2);
+      // Launch from kitty's position
+      marshmallow.x = chaletCx - 65;
+      marshmallow.y = chaletCy + 55;
+      marshmallow.vx = Math.cos(marshmallowAngle) * MARSHMALLOW_SPEED;
+      marshmallow.vy = -Math.sin(marshmallowAngle) * MARSHMALLOW_SPEED;
     }
     if (marshmallow.active && !marshmallow.landed) {
       marshmallow.x += marshmallow.vx;
       marshmallow.y += marshmallow.vy;
-      marshmallow.vy += 0.15; // gravity
+      marshmallow.vy += MARSHMALLOW_GRAVITY; // gravity
       // Check if landed in mug
-      const mugLeft = hotChocolate.x - 12;
-      const mugRight = hotChocolate.x + 12;
-      const mugTop = hotChocolate.y - 5;
-      if (marshmallow.x > mugLeft && marshmallow.x < mugRight && marshmallow.y > mugTop && marshmallow.y < hotChocolate.y + 10) {
+      const mugLeft = hotChocolate.x - 14;
+      const mugRight = hotChocolate.x + 14;
+      const mugTop = hotChocolate.y - 15;
+      if (marshmallow.x > mugLeft && marshmallow.x < mugRight && marshmallow.y > mugTop && marshmallow.y < hotChocolate.y + 10 && marshmallow.vy > 0) {
         marshmallow.landed = true;
         marshmallowScore++;
         score += 20;
@@ -1595,7 +1615,7 @@ function update(dt) {
         playChaChing();
       }
       // Missed — fell off screen
-      if (marshmallow.y > GROUND_Y + 50) {
+      if (marshmallow.y > GROUND_Y + 50 || marshmallow.x > chaletCx + 300) {
         marshmallow.active = false;
       }
     }
@@ -1985,9 +2005,7 @@ function update(dt) {
       if (keys['Enter']) {
         keys['Enter'] = false;
         insideChalet = true;
-        // Position hot chocolate mug relative to player
-        hotChocolate.x = player.x + 60;
-        hotChocolate.y = GROUND_Y - 30;
+        marshmallowAngle = Math.PI / 5; // reset aim
         crossfadeToLevel(7); // chalet music
       }
     }
@@ -2228,7 +2246,7 @@ function setAction(key, label) {
 function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf, nearAirport, nearChalet, nearTrain, nearNpc) {
   const el = document.getElementById('prompt');
   if (insideChalet) {
-    el.textContent = marshmallow.active ? 'Tossing...' : 'Press Space to toss a marshmallow! (Enter to leave)';
+    el.textContent = marshmallow.active ? 'Tossing...' : 'Up/Down to aim, Space to toss! (Enter to leave)';
     el.style.display = 'block';
     setAction('Enter', 'Exit');
     return;
@@ -5643,8 +5661,8 @@ function drawChaletInterior(cam, W, H) {
   ctx.fillStyle = '#92400e';
   ctx.beginPath(); ctx.ellipse(cx, cy + 80, 60, 20, 0, 0, Math.PI * 2); ctx.fill();
 
-  // Hot chocolate mug (target)
-  const mx = hotChocolate.x, my = hotChocolate.y;
+  // Hot chocolate mug (target) — positioned relative to scene center
+  const mx = cx + 50, my = cy + 60;
   // Mug body
   ctx.fillStyle = '#dc2626';
   ctx.beginPath(); ctx.roundRect(mx - 14, my - 20, 28, 30, 3); ctx.fill();
@@ -5683,11 +5701,33 @@ function drawChaletInterior(cam, W, H) {
   // Kitty sitting by fire
   drawKitty(cx - 80, cy + 70, player.color, 1, 0, 'horn');
 
+  // Aim trajectory preview (dotted arc)
+  if (!marshmallow.active) {
+    const launchX = cx - 65;
+    const launchY = cy + 55;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 6]);
+    ctx.beginPath();
+    let pvx = Math.cos(marshmallowAngle) * MARSHMALLOW_SPEED;
+    let pvy = -Math.sin(marshmallowAngle) * MARSHMALLOW_SPEED;
+    let px = launchX, py = launchY;
+    ctx.moveTo(px, py);
+    for (let t = 0; t < 30; t++) {
+      px += pvx;
+      py += pvy;
+      pvy += MARSHMALLOW_GRAVITY;
+      ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
   // Score display
   ctx.fillStyle = '#fff'; ctx.font = 'bold 16px system-ui'; ctx.textAlign = 'center';
   ctx.fillText('Marshmallows landed: ' + marshmallowScore, cx, cy - 140);
   ctx.font = '13px system-ui'; ctx.fillStyle = 'rgba(255,255,255,0.7)';
-  ctx.fillText('Space: Toss marshmallow    Enter: Leave chalet', cx, cy + 140);
+  ctx.fillText('Up/Down: Aim    Space: Toss    Enter: Leave', cx, cy + 140);
 }
 
 function drawSurfingScene(cam, W, H) {
