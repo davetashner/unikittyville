@@ -147,16 +147,16 @@
   <span id="hudLevel">Level 1</span>
   <span id="hudName"></span>
   <span>Score: <b id="hudScore">0</b></span>
-  <span>Fish: <b id="hudFish">0</b></span>
-  <span>Bacon: <b id="hudBacon">0</b></span>
-  <span>Yarn: <b id="hudYarn">0</b></span>
-  <span>Pizza: <b id="hudPizza">0</b></span>
-  <span>Hot Dogs: <b id="hudHotdog">0</b></span>
-  <span>Gelato: <b id="hudGelato">0</b></span>
-  <span>Honey: <b id="hudHoney">0</b></span>
-  <span>Tiki: <b id="hudTiki">0</b></span>
-  <span>Coconuts: <b id="hudCoconut">0</b></span>
-  <span>Diamonds: <b id="hudDiamond">0</b></span>
+  <span class="hud-item" data-levels="1">Fish: <b id="hudFish">0</b></span>
+  <span class="hud-item" data-levels="1">Bacon: <b id="hudBacon">0</b></span>
+  <span class="hud-item" data-levels="1,2,3,4">Yarn: <b id="hudYarn">0</b></span>
+  <span class="hud-item" data-levels="2">Pizza: <b id="hudPizza">0</b></span>
+  <span class="hud-item" data-levels="2">Hot Dogs: <b id="hudHotdog">0</b></span>
+  <span class="hud-item" data-levels="3">Gelato: <b id="hudGelato">0</b></span>
+  <span class="hud-item" data-levels="1">Honey: <b id="hudHoney">0</b></span>
+  <span class="hud-item" data-levels="4">Tiki: <b id="hudTiki">0</b></span>
+  <span class="hud-item" data-levels="4">Coconuts: <b id="hudCoconut">0</b></span>
+  <span class="hud-item" data-levels="5">Diamonds: <b id="hudDiamond">0</b></span>
 </div>
 <div id="controls">
   <span>Arrow Keys: Move</span>
@@ -1454,6 +1454,12 @@ function update(dt) {
   document.getElementById('hudTiki').textContent = tikiCount;
   document.getElementById('hudCoconut').textContent = coconutCount;
   document.getElementById('hudDiamond').textContent = diamondCount;
+
+  // Show/hide HUD items based on current level
+  for (const el of document.querySelectorAll('.hud-item')) {
+    const levels = el.dataset.levels.split(',');
+    el.style.display = levels.includes(String(currentLevel)) ? '' : 'none';
+  }
 
   // Prompt
   updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf, nearAirport, nearChalet);
