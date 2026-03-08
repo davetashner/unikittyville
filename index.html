@@ -261,6 +261,77 @@
   .touch-active #prompt {
     bottom: 170px;
   }
+
+  /* ── Mobile-friendly HUD and menus ── */
+  @media (max-width: 768px) {
+    /* Start screen */
+    #startScreen h1 {
+      font-size: 1.8rem;
+      letter-spacing: 1px;
+    }
+    #startScreen .subtitle {
+      font-size: 0.95rem;
+      margin-bottom: 1.5rem;
+    }
+    #startScreen label {
+      font-size: 1rem;
+    }
+    #nameInput {
+      font-size: 1.1rem;
+      padding: 12px 20px;
+      width: 260px;
+      min-height: 48px;
+      border-radius: 12px;
+    }
+    #startBtn {
+      font-size: 1.1rem;
+      padding: 14px 40px;
+      min-height: 48px;
+      border-radius: 14px;
+    }
+
+    /* HUD */
+    #hud {
+      top: 8px;
+      font-size: 0.7rem;
+      padding: 4px 10px;
+      gap: 8px;
+      border-radius: 14px;
+      max-width: 95vw;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    #hud span {
+      gap: 3px;
+    }
+
+    /* Prompt */
+    #prompt {
+      font-size: 0.9rem;
+      padding: 8px 16px;
+      white-space: normal;
+      max-width: 90vw;
+      text-align: center;
+    }
+
+    /* Volume control */
+    #volumeBtn {
+      width: 44px;
+      height: 44px;
+      font-size: 20px;
+    }
+    #volumeSlider {
+      width: 120px;
+      height: 28px;
+    }
+    #volumeSliderWrap {
+      padding: 8px 14px;
+    }
+    #volumeControl {
+      top: 8px;
+      right: 8px;
+    }
+  }
 </style>
 </head>
 <body>
