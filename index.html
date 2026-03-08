@@ -128,6 +128,7 @@
 <audio id="musicNYC" src="assets/music/city.mp3" loop preload="auto"></audio>
 <audio id="musicRome" src="assets/music/rome.mp3" loop preload="auto"></audio>
 <audio id="musicHawaii" src="assets/music/hawaii.mp3" loop preload="auto"></audio>
+<audio id="musicAlps" src="assets/music/alps.mp3" loop preload="auto"></audio>
 <audio id="meow1" src="assets/sfx/kitty-meow-01.mp3" preload="auto"></audio>
 <audio id="meow2" src="assets/sfx/kitty-meow-02.mp3" preload="auto"></audio>
 <audio id="chaChing" src="assets/sfx/cha-ching.mp3" preload="auto"></audio>
@@ -250,7 +251,7 @@ function playMeow() {
 // ── Music system with crossfade ──
 const MUSIC_VOLUME = 0.4;
 const FADE_DURATION = 1200; // ms
-const levelMusic = { 1: 'musicMeadow', 2: 'musicNYC', 3: 'musicRome', 4: 'musicHawaii' };
+const levelMusic = { 1: 'musicMeadow', 2: 'musicNYC', 3: 'musicRome', 4: 'musicHawaii', 5: 'musicAlps' };
 let currentMusicId = null;
 let musicFade = null; // { out: AudioElement, in: AudioElement, timer: 0 }
 
@@ -565,20 +566,21 @@ function completeTransition() {
   insidePantheon = false;
   swimming = false;
   surfing = false;
+  skiing = false;
   pizzaMaking.stage = 'idle';
   pizzaMaking.progress = 0;
 }
 
 function getCurrentPlatforms() {
-  return currentLevel === 1 ? platforms : currentLevel === 2 ? level2.platforms : currentLevel === 3 ? level3.platforms : level4.platforms;
+  return currentLevel === 1 ? platforms : currentLevel === 2 ? level2.platforms : currentLevel === 3 ? level3.platforms : currentLevel === 4 ? level4.platforms : level5.platforms;
 }
 
 function getCurrentYarnBalls() {
-  return currentLevel === 1 ? yarnBalls : currentLevel === 2 ? level2.yarnBalls : currentLevel === 3 ? level3.yarnBalls : level4.yarnBalls;
+  return currentLevel === 1 ? yarnBalls : currentLevel === 2 ? level2.yarnBalls : currentLevel === 3 ? level3.yarnBalls : currentLevel === 4 ? level4.yarnBalls : level5.yarnBalls;
 }
 
 function getCurrentWorldW() {
-  return currentLevel === 1 ? WORLD_W : currentLevel === 2 ? level2.worldW : currentLevel === 3 ? level3.worldW : level4.worldW;
+  return currentLevel === 1 ? WORLD_W : currentLevel === 2 ? level2.worldW : currentLevel === 3 ? level3.worldW : currentLevel === 4 ? level4.worldW : level5.worldW;
 }
 
 // ── Level 3: Rome ──
@@ -718,8 +720,10 @@ const level4 = {
     { type: 'flower_lei', x: 300 },
     { type: 'flower_lei', x: 1900 },
     { type: 'flower_lei', x: 3500 },
+    { type: 'airport', x: 4900 },
   ],
 };
+const AIRPORT_POS = { x: 4900 };
 
 // Init level 4 yarn balls
 for (const p of level4.platforms) {
@@ -745,6 +749,98 @@ for (let i = 0; i < 4; i++) {
     color: hawaiiNpcColors[i],
     accessory: hawaiiNpcAccessories[i],
     vx: (Math.random() - 0.5) * 1.2,
+    walkFrame: 0, walkTimer: 0,
+    facing: 1,
+    idleTimer: Math.random() * 200
+  });
+}
+
+// ── Level 5: Alps ──
+// The Alps is a downhill skiing level — the kitty starts at the top-left
+// and skis right/downhill, dodging trees, jumping cornices, collecting diamonds.
+let skiing = false;
+let diamondCount = 0;
+let alpsScrollX = 0;
+const ALPS_WORLD_W = 6000;
+const ALPS_SPEED = 3.5; // auto-scroll speed while skiing
+
+const level5 = {
+  worldW: ALPS_WORLD_W,
+  // Cornices (big snow ledges to jump off)
+  cornices: [
+    { x: 800, y: 340, w: 120 },
+    { x: 1600, y: 300, w: 140 },
+    { x: 2500, y: 320, w: 130 },
+    { x: 3400, y: 280, w: 150 },
+    { x: 4300, y: 310, w: 120 },
+    { x: 5000, y: 290, w: 140 },
+  ],
+  // Trees to dodge (x positions)
+  trees: [],
+  // Diamonds to collect
+  diamonds: [],
+};
+
+// Generate trees along the slope
+for (let tx = 300; tx < ALPS_WORLD_W - 200; tx += 140 + Math.random() * 120) {
+  // Don't place trees on cornices
+  let onCornice = false;
+  for (const c of level5.cornices) {
+    if (tx > c.x - 20 && tx < c.x + c.w + 20) { onCornice = true; break; }
+  }
+  if (!onCornice) {
+    level5.trees.push({
+      x: tx,
+      y: GROUND_Y,
+      size: 0.7 + Math.random() * 0.6,
+      hit: false
+    });
+  }
+}
+
+// Generate diamonds along the run — many on cornices, some in the air
+for (const c of level5.cornices) {
+  // Row of diamonds above each cornice
+  for (let i = 0; i < 3; i++) {
+    level5.diamonds.push({
+      x: c.x + 20 + i * (c.w - 40) / 2,
+      y: c.y - 30 - i * 10,
+      collected: false,
+      bobPhase: Math.random() * Math.PI * 2
+    });
+  }
+}
+// Some diamonds between cornices
+for (let dx = 400; dx < ALPS_WORLD_W - 300; dx += 250 + Math.random() * 200) {
+  let onCornice = false;
+  for (const c of level5.cornices) {
+    if (dx > c.x - 40 && dx < c.x + c.w + 40) { onCornice = true; break; }
+  }
+  if (!onCornice) {
+    level5.diamonds.push({
+      x: dx,
+      y: GROUND_Y - 40 - Math.random() * 30,
+      collected: false,
+      bobPhase: Math.random() * Math.PI * 2
+    });
+  }
+}
+
+// Use cornices as platforms for the Alps
+level5.platforms = level5.cornices.map(c => ({ x: c.x, y: c.y, w: c.w }));
+level5.yarnBalls = []; // No yarn balls — diamonds instead
+
+// Level 5 NPCs (ski-themed kitties standing around)
+const alpsNpcs = [];
+const alpsNpcColors = ['#bae6fd','#fda4af','#d9f99d','#e9d5ff'];
+const alpsNpcAccessories = ['scarf','bow','glasses','flower'];
+for (let i = 0; i < 4; i++) {
+  alpsNpcs.push({
+    x: 500 + i * 1200 + Math.random() * 200,
+    y: GROUND_Y,
+    color: alpsNpcColors[i],
+    accessory: alpsNpcAccessories[i],
+    vx: (Math.random() - 0.5) * 0.8,
     walkFrame: 0, walkTimer: 0,
     facing: 1,
     idleTimer: Math.random() * 200
