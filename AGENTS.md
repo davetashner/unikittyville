@@ -6,28 +6,56 @@ This project uses **bd** (beads) for issue tracking. Run `bd onboard` to get sta
 
 The game is deployed as part of **norahtashner.com** at `https://norahtashner.com/games/unikittyville/`.
 
-After merging changes to this repo, deploy by copying the built game files into the website repo:
+Deployment has two parts: the HTML goes through the website repo + CI/CD, while audio files go directly to S3.
+
+### 1. Deploy index.html (via website repo)
 
 ```bash
-# Copy game files to the website's public directory
-cp -rf ~/Development/unikittyville/index.html ~/Development/norahtashner.com/public/games/unikittyville/
-cp -rf ~/Development/unikittyville/assets/music/*.mp3 ~/Development/norahtashner.com/public/games/unikittyville/assets/music/
-cp -rf ~/Development/unikittyville/assets/sfx/*.mp3 ~/Development/norahtashner.com/public/games/unikittyville/assets/sfx/
+# Copy game HTML to the website's public directory
+cp -f ~/Development/unikittyville/index.html ~/Development/norahtashner.com/public/games/unikittyville/
 
-# Then in the website repo, build and deploy
+# Commit and push — CI/CD will build and deploy to S3/CloudFront
 cd ~/Development/norahtashner.com
-npm run build
-git add public/games/unikittyville
+git add public/games/unikittyville/index.html
 git commit -m "chore: update unikittyville game"
 git push
 ```
 
-**What gets copied:**
-- `index.html` — the full game (single file)
-- `assets/music/*.mp3` — level music tracks
-- `assets/sfx/*.mp3` — sound effects
+### 2. Deploy audio files (direct to S3)
 
-**Do NOT copy** source WAV files (`assets/*/source/`) — only MP3s are needed for the web.
+Audio files (mp3) are gitignored in the website repo. They must be uploaded directly to S3.
+
+```bash
+# Upload new or changed music files
+aws s3 cp assets/music/FILENAME.mp3 \
+  s3://norahtashner.com/games/unikittyville/assets/music/FILENAME.mp3 \
+  --content-type "audio/mpeg" \
+  --cache-control "public, max-age=31536000"
+
+# Upload new or changed SFX files
+aws s3 cp assets/sfx/FILENAME.mp3 \
+  s3://norahtashner.com/games/unikittyville/assets/sfx/FILENAME.mp3 \
+  --content-type "audio/mpeg" \
+  --cache-control "public, max-age=31536000"
+
+# Invalidate CloudFront cache for updated files
+aws cloudfront create-invalidation \
+  --distribution-id E3JF840O8YSE4Q \
+  --paths "/games/unikittyville/assets/music/*"
+```
+
+**IMPORTANT:** The CI/CD workflow preserves `games/unikittyville/assets/*` on S3 (it excludes that path from sync/delete). So audio files persist across deploys once uploaded. But new audio files MUST be manually uploaded — they will NOT be deployed by `git push` alone.
+
+### Local copy (for local testing only)
+
+To test locally via the website dev server, also copy mp3s to the website's public dir:
+
+```bash
+cp -rf ~/Development/unikittyville/assets/music/*.mp3 ~/Development/norahtashner.com/public/games/unikittyville/assets/music/
+cp -rf ~/Development/unikittyville/assets/sfx/*.mp3 ~/Development/norahtashner.com/public/games/unikittyville/assets/sfx/
+```
+
+**Do NOT copy** source WAV files (`assets/*/source/`) — only MP3s are needed.
 
 ## Quick Reference
 
