@@ -127,6 +127,7 @@
 <audio id="bgMusic" src="assets/music/theme.mp3" loop preload="auto"></audio>
 <audio id="meow1" src="assets/sfx/kitty-meow-01.mp3" preload="auto"></audio>
 <audio id="meow2" src="assets/sfx/kitty-meow-02.mp3" preload="auto"></audio>
+<audio id="chaChing" src="assets/sfx/cha-ching.mp3" preload="auto"></audio>
 
 <div id="startScreen">
   <h1>Unikittyville</h1>
@@ -178,14 +179,26 @@ let fishing = { active: false, timer: 0, caught: false };
 let popups = []; // floating score popups
 let keys = {};
 let lastMeowTime = 0;
+let lastChaChingTime = 0;
 let currentLevel = 1;
 let levelTransition = { active: false, timer: 0, toLevel: 0 };
 const meowSounds = [];
+let chaChingSound = null;
 
 function initMeows() {
   meowSounds.push(document.getElementById('meow1'));
   meowSounds.push(document.getElementById('meow2'));
   for (const m of meowSounds) m.volume = 0.5;
+  chaChingSound = document.getElementById('chaChing');
+  chaChingSound.volume = 0.5;
+}
+
+function playChaChing() {
+  const now = performance.now();
+  if (now - lastChaChingTime < 2000) return;
+  lastChaChingTime = now;
+  chaChingSound.currentTime = 0;
+  chaChingSound.play().catch(() => {});
 }
 
 function playMeow() {
@@ -604,6 +617,7 @@ function update(dt) {
       yarnCount++;
       score += 20;
       addPopup(yb.x, yb.y - 20, '+20 Yarn!', yb.color);
+      playChaChing();
     }
   }
 
@@ -637,6 +651,7 @@ function update(dt) {
       fishCount++;
       score += 10;
       addPopup(player.x, player.y - 40, '+10 Fish!', '#38bdf8');
+      playChaChing();
       // respawn a fish
       if (pondFish.length < 8) {
         const colors = ['#fb923c','#38bdf8','#4ade80','#f472b6'];
@@ -668,6 +683,7 @@ function update(dt) {
       baconCount++;
       score += 15;
       addPopup(GRILL.x, GROUND_Y - 60, '+15 Bacon!', '#fb923c');
+      playChaChing();
     } else if (cooking.progress >= 5000) {
       cooking.active = false;
       cooking.burnt = true;
