@@ -129,6 +129,7 @@
 <audio id="musicRome" src="assets/music/rome.mp3" loop preload="auto"></audio>
 <audio id="musicHawaii" src="assets/music/hawaii.mp3" loop preload="auto"></audio>
 <audio id="musicAlps" src="assets/music/alps.mp3" loop preload="auto"></audio>
+<audio id="musicChalet" src="assets/music/chalet.mp3" loop preload="auto"></audio>
 <audio id="meow1" src="assets/sfx/kitty-meow-01.mp3" preload="auto"></audio>
 <audio id="meow2" src="assets/sfx/kitty-meow-02.mp3" preload="auto"></audio>
 <audio id="chaChing" src="assets/sfx/cha-ching.mp3" preload="auto"></audio>
@@ -155,6 +156,7 @@
   <span>Honey: <b id="hudHoney">0</b></span>
   <span>Tiki: <b id="hudTiki">0</b></span>
   <span>Coconuts: <b id="hudCoconut">0</b></span>
+  <span>Diamonds: <b id="hudDiamond">0</b></span>
 </div>
 <div id="controls">
   <span>Arrow Keys: Move</span>
@@ -214,6 +216,11 @@ let surfing = false;
 const TIKI_POSITIONS = [600, 1400, 2200, 3000, 3800];
 const COCONUT_POSITIONS = [400, 1200, 2000, 2800, 3600, 4400];
 const SURF_POS = { x: 1800 };
+// Chalet mini-game
+let insideChalet = false;
+let marshmallow = { active: false, x: 0, y: 0, vx: 0, vy: 0, landed: false };
+let marshmallowScore = 0;
+let hotChocolate = { x: 0, y: 0 }; // set when entering chalet
 let popups = []; // floating score popups
 let keys = {};
 let lastMeowTime = 0;
@@ -251,7 +258,7 @@ function playMeow() {
 // ── Music system with crossfade ──
 const MUSIC_VOLUME = 0.4;
 const FADE_DURATION = 1200; // ms
-const levelMusic = { 1: 'musicMeadow', 2: 'musicNYC', 3: 'musicRome', 4: 'musicHawaii', 5: 'musicAlps' };
+const levelMusic = { 1: 'musicMeadow', 2: 'musicNYC', 3: 'musicRome', 4: 'musicHawaii', 5: 'musicAlps', 6: 'musicChalet' };
 let currentMusicId = null;
 let musicFade = null; // { out: AudioElement, in: AudioElement, timer: 0 }
 
@@ -567,6 +574,7 @@ function completeTransition() {
   swimming = false;
   surfing = false;
   skiing = false;
+  insideChalet = false;
   pizzaMaking.stage = 'idle';
   pizzaMaking.progress = 0;
 }
@@ -960,6 +968,49 @@ function update(dt) {
     return;
   }
 
+  if (insideChalet) {
+    // Marshmallow mini-game update
+    if (keys['Space'] && !marshmallow.active) {
+      keys['Space'] = false;
+      marshmallow.active = true;
+      marshmallow.landed = false;
+      marshmallow.x = hotChocolate.x - 80;
+      marshmallow.y = hotChocolate.y + 10;
+      marshmallow.vx = 3 + Math.random() * 2;
+      marshmallow.vy = -(4 + Math.random() * 2);
+    }
+    if (marshmallow.active && !marshmallow.landed) {
+      marshmallow.x += marshmallow.vx;
+      marshmallow.y += marshmallow.vy;
+      marshmallow.vy += 0.15; // gravity
+      // Check if landed in mug
+      const mugLeft = hotChocolate.x - 12;
+      const mugRight = hotChocolate.x + 12;
+      const mugTop = hotChocolate.y - 5;
+      if (marshmallow.x > mugLeft && marshmallow.x < mugRight && marshmallow.y > mugTop && marshmallow.y < hotChocolate.y + 10) {
+        marshmallow.landed = true;
+        marshmallowScore++;
+        score += 20;
+        addPopup(hotChocolate.x, hotChocolate.y - 30, '+20 Marshmallow!', '#fef3c7');
+        playChaChing();
+      }
+      // Missed — fell off screen
+      if (marshmallow.y > GROUND_Y + 50) {
+        marshmallow.active = false;
+      }
+    }
+    // Reset after landing
+    if (marshmallow.landed) {
+      marshmallow.active = false;
+    }
+    if (keys['Enter']) {
+      keys['Enter'] = false;
+      insideChalet = false;
+      crossfadeToLevel(5); // back to alps music
+    }
+    return;
+  }
+
   // Movement
   player.vx = 0;
   if (keys['ArrowLeft']) { player.vx = -MOVE_SPEED; player.facing = -1; }
@@ -1243,6 +1294,7 @@ function update(dt) {
   let nearTiki = false;
   let nearCoconut = false;
   let nearSurf = false;
+  let nearAirport = false;
   if (currentLevel === 4) {
     // Tiki torches
     for (const tx of TIKI_POSITIONS) {
@@ -1280,6 +1332,65 @@ function update(dt) {
         surfing = true;
       }
     }
+    // Airport → Alps
+    if (Math.abs(player.x - AIRPORT_POS.x) < 55) {
+      nearAirport = true;
+      if (keys['Enter']) {
+        keys['Enter'] = false;
+        switchToLevel(5);
+      }
+    }
+  }
+
+  // Alps interactions (level 5)
+  let nearChalet = false;
+  if (currentLevel === 5) {
+    // Auto-ski: push player right continuously
+    player.vx = Math.max(player.vx, ALPS_SPEED);
+
+    // Diamond collection
+    for (const d of level5.diamonds) {
+      if (d.collected) continue;
+      const ddx = player.x - d.x;
+      const ddy = (player.y - 20) - d.y;
+      if (ddx * ddx + ddy * ddy < 625) {
+        d.collected = true;
+        diamondCount++;
+        score += 25;
+        addPopup(d.x, d.y - 20, '+25 Diamond!', '#60a5fa');
+        playChaChing();
+      }
+    }
+
+    // Tree collision (slow down + lose points)
+    for (const tree of level5.trees) {
+      if (tree.hit) continue;
+      if (Math.abs(player.x - tree.x) < 12 && player.y > tree.y - 50 * tree.size) {
+        tree.hit = true;
+        score = Math.max(0, score - 10);
+        addPopup(tree.x, player.y - 40, '-10 Ouch!', '#ef4444');
+        player.vx = 1; // slow down on hit
+      }
+    }
+
+    // Reset trees that are far behind (so they can hit again on replay)
+    for (const tree of level5.trees) {
+      if (tree.hit && player.x - tree.x > 300) tree.hit = false;
+    }
+
+    // End of run — reach the chalet at the bottom
+    if (player.x > ALPS_WORLD_W - 200) {
+      nearChalet = true;
+      player.vx = 0; // stop at the end
+      if (keys['Enter']) {
+        keys['Enter'] = false;
+        insideChalet = true;
+        // Position hot chocolate mug relative to player
+        hotChocolate.x = player.x + 60;
+        hotChocolate.y = GROUND_Y - 30;
+        crossfadeToLevel(6); // chalet music
+      }
+    }
   }
 
   // Rainbow bridge portal (level 1 → level 2)
@@ -1304,7 +1415,7 @@ function update(dt) {
   }
 
   // NPC AI
-  const activeNpcs = currentLevel === 1 ? npcs : currentLevel === 2 ? nycNpcs : currentLevel === 3 ? romeNpcs : hawaiiNpcs;
+  const activeNpcs = currentLevel === 1 ? npcs : currentLevel === 2 ? nycNpcs : currentLevel === 3 ? romeNpcs : currentLevel === 4 ? hawaiiNpcs : alpsNpcs;
   const worldW = getCurrentWorldW();
   for (const npc of activeNpcs) {
     npc.idleTimer -= dt / 16;
@@ -1335,16 +1446,17 @@ function update(dt) {
   document.getElementById('hudFish').textContent = fishCount;
   document.getElementById('hudBacon').textContent = baconCount;
   document.getElementById('hudYarn').textContent = yarnCount;
-  document.getElementById('hudLevel').textContent = currentLevel === 1 ? 'Meadow' : currentLevel === 2 ? 'NYC' : currentLevel === 3 ? 'Rome' : 'Hawaii';
+  document.getElementById('hudLevel').textContent = currentLevel === 1 ? 'Meadow' : currentLevel === 2 ? 'NYC' : currentLevel === 3 ? 'Rome' : currentLevel === 4 ? 'Hawaii' : 'Alps';
   document.getElementById('hudPizza').textContent = pizzaMaking.pizzaCount;
   document.getElementById('hudHotdog').textContent = hotdogCount;
   document.getElementById('hudGelato').textContent = gelatoCount;
   document.getElementById('hudHoney').textContent = honeyCount;
   document.getElementById('hudTiki').textContent = tikiCount;
   document.getElementById('hudCoconut').textContent = coconutCount;
+  document.getElementById('hudDiamond').textContent = diamondCount;
 
   // Prompt
-  updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf);
+  updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf, nearAirport, nearChalet);
 }
 
 function getGroundLevel(x) {
@@ -1413,8 +1525,13 @@ function updatePizzaMinigame(dt) {
   document.getElementById('hudPizza').textContent = pizzaMaking.pizzaCount;
 }
 
-function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf) {
+function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf, nearAirport, nearChalet) {
   const el = document.getElementById('prompt');
+  if (insideChalet) {
+    el.textContent = marshmallow.active ? 'Tossing...' : 'Press Space to toss a marshmallow! (Enter to leave)';
+    el.style.display = 'block';
+    return;
+  }
   if (surfing) {
     el.textContent = 'Surfing the waves! Press S to get off';
     el.style.display = 'block';
@@ -1515,6 +1632,15 @@ function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, ne
   } else if (nearSurf) {
     el.textContent = 'Press S to go surfing!';
     el.style.display = 'block';
+  } else if (nearAirport) {
+    el.textContent = 'Press Enter to fly to the Alps!';
+    el.style.display = 'block';
+  } else if (nearChalet) {
+    el.textContent = 'Press Enter to warm up in the chalet!';
+    el.style.display = 'block';
+  } else if (currentLevel === 5) {
+    el.textContent = 'Ski downhill! Dodge trees, jump cornices, collect diamonds!';
+    el.style.display = 'block';
   } else if (currentLevel === 1 && Math.abs(player.x - BRIDGE_PORTAL.x) < 60) {
     el.textContent = 'Press Enter to travel to NYC!';
     el.style.display = 'block';
@@ -1545,8 +1671,10 @@ function draw() {
     drawLevel2Sky(W, H, cycle, isNight);
   } else if (currentLevel === 3) {
     drawRomeSky(W, H, cycle, isNight);
-  } else {
+  } else if (currentLevel === 4) {
     drawHawaiiSky(W, H, cycle, isNight);
+  } else {
+    drawAlpsSky(W, H, cycle, isNight);
   }
 
   ctx.save();
@@ -1568,14 +1696,18 @@ function draw() {
     drawSwimmingScene(cam, W, H);
   } else if (surfing) {
     drawSurfingScene(cam, W, H);
+  } else if (insideChalet) {
+    drawChaletInterior(cam, W, H);
   } else if (currentLevel === 1) {
     drawLevel1World(W, H, cam, cycle, isNight);
   } else if (currentLevel === 2) {
     drawLevel2World(W, H, cam, cycle, isNight);
   } else if (currentLevel === 3) {
     drawRomeWorld(W, H, cam, cycle, isNight);
-  } else {
+  } else if (currentLevel === 4) {
     drawHawaiiWorld(W, H, cam, cycle, isNight);
+  } else {
+    drawAlpsWorld(W, H, cam, cycle, isNight);
   }
 
   ctx.restore();
@@ -1715,8 +1847,8 @@ function drawLevelTransition(W, H) {
     ctx.textBaseline = 'middle';
     const textAlpha = Math.min(1, (t - 0.4) / 0.3);
     ctx.globalAlpha = textAlpha;
-    const levelNames = { 1: 'Back to the Meadow!', 2: 'Welcome to NYC!', 3: 'Benvenuto a Roma!' };
-    const levelSubtitles = { 1: playerName + ' returns home!', 2: playerName + ' arrives in the big city!', 3: playerName + ' explores the Eternal City!' };
+    const levelNames = { 1: 'Back to the Meadow!', 2: 'Welcome to NYC!', 3: 'Benvenuto a Roma!', 4: 'Aloha Hawaii!', 5: 'Welcome to the Alps!' };
+    const levelSubtitles = { 1: playerName + ' returns home!', 2: playerName + ' arrives in the big city!', 3: playerName + ' explores the Eternal City!', 4: playerName + ' hits the beach!', 5: playerName + ' hits the slopes!' };
     ctx.fillText(levelNames[levelTransition.toLevel] || 'New Level!', W / 2, H / 2 - 20);
     ctx.font = '20px system-ui';
     ctx.fillText(levelSubtitles[levelTransition.toLevel] || '', W / 2, H / 2 + 20);
@@ -3718,6 +3850,7 @@ function drawHawaiiScenes(cam, W) {
       case 'surfboard': drawSurfboard(s.x); break;
       case 'sea_turtle': drawSeaTurtle(s.x); break;
       case 'flower_lei': drawFlowerLei(s.x); break;
+      case 'airport': drawAirport(s.x); break;
     }
   }
 }
@@ -3906,6 +4039,479 @@ function drawFlowerLei(x) {
     ctx.fillStyle = '#fde68a';
     ctx.beginPath(); ctx.arc(fx, fy, 1, 0, Math.PI * 2); ctx.fill();
   }
+}
+
+function drawAirport(x) {
+  const gy = GROUND_Y;
+  // Runway
+  ctx.fillStyle = '#4b5563';
+  ctx.fillRect(x - 80, gy - 3, 160, 6);
+  ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 1; ctx.setLineDash([8, 6]);
+  ctx.beginPath(); ctx.moveTo(x - 75, gy); ctx.lineTo(x + 75, gy); ctx.stroke();
+  ctx.setLineDash([]);
+  // Terminal building
+  ctx.fillStyle = '#e5e7eb';
+  ctx.fillRect(x - 40, gy - 50, 80, 47);
+  // Control tower
+  ctx.fillStyle = '#d1d5db';
+  ctx.fillRect(x + 25, gy - 75, 14, 25);
+  ctx.fillStyle = '#bae6fd';
+  ctx.fillRect(x + 22, gy - 80, 20, 8);
+  ctx.fillStyle = '#9ca3af';
+  ctx.fillRect(x + 20, gy - 82, 24, 3);
+  // Terminal windows
+  ctx.fillStyle = '#bae6fd';
+  for (let i = 0; i < 5; i++) {
+    ctx.fillRect(x - 35 + i * 15, gy - 42, 10, 8);
+  }
+  // Terminal door
+  ctx.fillStyle = '#3b82f6';
+  ctx.fillRect(x - 8, gy - 30, 16, 27);
+  // "AIRPORT" sign
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 8px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText('AIRPORT', x, gy - 52);
+  // Airplane
+  const planeX = x + 60 + Math.sin(gameTime / 800) * 15;
+  const planeY = gy - 100 - Math.cos(gameTime / 800) * 8;
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.moveTo(planeX + 20, planeY);
+  ctx.lineTo(planeX - 15, planeY - 3);
+  ctx.lineTo(planeX - 20, planeY - 10);
+  ctx.lineTo(planeX - 18, planeY - 3);
+  ctx.lineTo(planeX - 25, planeY);
+  ctx.lineTo(planeX - 18, planeY + 3);
+  ctx.lineTo(planeX - 20, planeY + 8);
+  ctx.lineTo(planeX - 15, planeY + 3);
+  ctx.closePath();
+  ctx.fill();
+  // Plane windows
+  ctx.fillStyle = '#60a5fa';
+  for (let i = 0; i < 4; i++) {
+    ctx.beginPath(); ctx.arc(planeX + 5 - i * 6, planeY, 1.5, 0, Math.PI * 2); ctx.fill();
+  }
+  // Prompt glow
+  ctx.globalAlpha = 0.4 + Math.sin(gameTime / 300) * 0.2;
+  ctx.fillStyle = '#3b82f6';
+  ctx.beginPath(); ctx.arc(x, gy - 20, 25, 0, Math.PI * 2); ctx.fill();
+  ctx.globalAlpha = 1;
+}
+
+// ── Alps Draw Functions ──
+function drawAlpsSky(W, H, cycle, isNight) {
+  const dayTop = [180, 210, 240]; const nightTop = [15, 20, 40];
+  const dayBot = [230, 240, 255]; const nightBot = [30, 35, 60];
+  const skyTop = lerpColor(dayTop, nightTop, cycle);
+  const skyBot = lerpColor(dayBot, nightBot, cycle);
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, `rgb(${skyTop})`);
+  grad.addColorStop(1, `rgb(${skyBot})`);
+  ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
+  if (isNight) drawStars(W, H, cycle);
+  drawCelestial(W, H, cycle);
+  // Distant mountain range silhouette
+  ctx.fillStyle = `rgba(${isNight ? '60,70,100' : '180,195,220'}, 0.6)`;
+  ctx.beginPath(); ctx.moveTo(0, GROUND_Y - 40);
+  for (let mx = 0; mx <= W; mx += 60) {
+    const mh = 50 + Math.sin(mx * 0.015 + 2) * 30 + Math.sin(mx * 0.007) * 20;
+    ctx.lineTo(mx, GROUND_Y - 40 - mh);
+  }
+  ctx.lineTo(W, GROUND_Y); ctx.lineTo(0, GROUND_Y); ctx.closePath(); ctx.fill();
+  // Snow peaks
+  ctx.fillStyle = `rgba(255,255,255, ${isNight ? 0.3 : 0.6})`;
+  for (let mx = 0; mx <= W; mx += 60) {
+    const mh = 50 + Math.sin(mx * 0.015 + 2) * 30 + Math.sin(mx * 0.007) * 20;
+    const peakY = GROUND_Y - 40 - mh;
+    ctx.beginPath();
+    ctx.moveTo(mx - 10, peakY + 12);
+    ctx.lineTo(mx, peakY);
+    ctx.lineTo(mx + 10, peakY + 12);
+    ctx.closePath(); ctx.fill();
+  }
+}
+
+function drawAlpsWorld(W, H, cam) {
+  const ww = getCurrentWorldW();
+  // Snow-covered ground
+  ctx.fillStyle = '#f0f9ff';
+  ctx.fillRect(0, GROUND_Y, ww, H);
+  // Snow surface with sparkle
+  const snowGrad = ctx.createLinearGradient(0, GROUND_Y, 0, GROUND_Y + 6);
+  snowGrad.addColorStop(0, '#e0f2fe');
+  snowGrad.addColorStop(1, '#f0f9ff');
+  ctx.fillStyle = snowGrad;
+  ctx.fillRect(0, GROUND_Y - 2, ww, 8);
+  // Snow sparkles
+  ctx.fillStyle = '#fff';
+  for (let sx = Math.floor((cam - 10) / 30) * 30; sx < cam + W + 10; sx += 30) {
+    const sparkle = Math.sin(gameTime / 300 + sx * 0.1) * 0.5 + 0.5;
+    ctx.globalAlpha = sparkle * 0.7;
+    ctx.beginPath(); ctx.arc(sx + 15, GROUND_Y - 1, 1.5, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Draw pine trees (obstacles)
+  for (const tree of level5.trees) {
+    if (tree.x < cam - 100 || tree.x > cam + W + 100) continue;
+    drawAlpsPineTree(tree.x, tree.size, tree.hit);
+  }
+
+  // Draw cornices (snow ledges)
+  for (const c of level5.cornices) {
+    if (c.x < cam - 200 || c.x > cam + W + 200) continue;
+    drawCornice(c.x, c.y, c.w);
+  }
+
+  // Draw diamonds
+  for (const d of level5.diamonds) {
+    if (d.collected) continue;
+    if (d.x < cam - 50 || d.x > cam + W + 50) continue;
+    const bob = Math.sin(gameTime / 350 + d.bobPhase) * 3;
+    drawDiamond(d.x, d.y + bob);
+  }
+
+  // Chalet at the end
+  if (ALPS_WORLD_W - 150 > cam - 200 && ALPS_WORLD_W - 150 < cam + W + 200) {
+    drawChalet(ALPS_WORLD_W - 150);
+  }
+
+  for (const npc of alpsNpcs) drawKitty(npc.x, npc.y, npc.color, npc.facing, npc.walkFrame, npc.accessory);
+  drawPlayerAndUI();
+}
+
+function drawAlpsPineTree(x, size, hit) {
+  const gy = GROUND_Y;
+  const h = 50 * size;
+  // Trunk
+  ctx.fillStyle = '#78350f';
+  ctx.fillRect(x - 3 * size, gy - 10 * size, 6 * size, 10 * size);
+  // Tree layers (3 triangles stacked)
+  const treeColor = hit ? '#ef4444' : '#166534';
+  ctx.fillStyle = treeColor;
+  for (let layer = 0; layer < 3; layer++) {
+    const ly = gy - 10 * size - layer * h * 0.28;
+    const lw = (18 - layer * 4) * size;
+    const lh = h * 0.38;
+    ctx.beginPath();
+    ctx.moveTo(x, ly - lh);
+    ctx.lineTo(x - lw, ly);
+    ctx.lineTo(x + lw, ly);
+    ctx.closePath(); ctx.fill();
+  }
+  // Snow on branches
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  for (let layer = 0; layer < 3; layer++) {
+    const ly = gy - 10 * size - layer * h * 0.28;
+    const lw = (18 - layer * 4) * size;
+    ctx.beginPath();
+    ctx.moveTo(x - lw * 0.7, ly - 2);
+    ctx.quadraticCurveTo(x, ly - 6, x + lw * 0.7, ly - 2);
+    ctx.lineTo(x + lw * 0.5, ly);
+    ctx.quadraticCurveTo(x, ly - 3, x - lw * 0.5, ly);
+    ctx.closePath(); ctx.fill();
+  }
+}
+
+function drawCornice(x, y, w) {
+  // Snow ledge / cornice
+  ctx.fillStyle = 'rgba(0,0,0,0.08)';
+  ctx.fillRect(x + 3, y + 3, w, 18);
+  // Main snow body
+  const cGrad = ctx.createLinearGradient(x, y, x, y + 18);
+  cGrad.addColorStop(0, '#e0f2fe');
+  cGrad.addColorStop(0.5, '#f0f9ff');
+  cGrad.addColorStop(1, '#bae6fd');
+  ctx.fillStyle = cGrad;
+  ctx.beginPath(); ctx.roundRect(x, y, w, 18, 6); ctx.fill();
+  // Overhang lip (the cornice curl)
+  ctx.fillStyle = '#dbeafe';
+  ctx.beginPath();
+  ctx.moveTo(x + w, y + 4);
+  ctx.quadraticCurveTo(x + w + 12, y + 8, x + w + 5, y + 18);
+  ctx.lineTo(x + w, y + 18);
+  ctx.closePath(); ctx.fill();
+  // Top snow shine
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.fillRect(x + 5, y + 2, w - 10, 3);
+  // Icicles
+  ctx.fillStyle = '#bfdbfe';
+  for (let i = 0; i < 4; i++) {
+    const ix = x + 15 + i * ((w - 30) / 3);
+    const ih = 8 + Math.sin(gameTime / 500 + i) * 2;
+    ctx.beginPath();
+    ctx.moveTo(ix - 2, y + 18);
+    ctx.lineTo(ix, y + 18 + ih);
+    ctx.lineTo(ix + 2, y + 18);
+    ctx.closePath(); ctx.fill();
+  }
+}
+
+function drawDiamond(x, y) {
+  // Glowing diamond collectible
+  ctx.globalAlpha = 0.3;
+  ctx.fillStyle = '#60a5fa';
+  ctx.beginPath(); ctx.arc(x, y, 16, 0, Math.PI * 2); ctx.fill();
+  ctx.globalAlpha = 1;
+  // Diamond shape
+  ctx.fillStyle = '#3b82f6';
+  ctx.beginPath();
+  ctx.moveTo(x, y - 12);
+  ctx.lineTo(x + 8, y - 3);
+  ctx.lineTo(x, y + 10);
+  ctx.lineTo(x - 8, y - 3);
+  ctx.closePath(); ctx.fill();
+  // Top facet (lighter)
+  ctx.fillStyle = '#93c5fd';
+  ctx.beginPath();
+  ctx.moveTo(x, y - 12);
+  ctx.lineTo(x + 8, y - 3);
+  ctx.lineTo(x, y - 1);
+  ctx.lineTo(x - 8, y - 3);
+  ctx.closePath(); ctx.fill();
+  // Highlight
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.beginPath();
+  ctx.moveTo(x - 3, y - 10);
+  ctx.lineTo(x + 2, y - 4);
+  ctx.lineTo(x - 4, y - 4);
+  ctx.closePath(); ctx.fill();
+  // Sparkle
+  const sparkle = Math.sin(gameTime / 200 + x) * 0.5 + 0.5;
+  ctx.globalAlpha = sparkle;
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(x + 4, y - 8, 2, 0, Math.PI * 2); ctx.fill();
+  ctx.globalAlpha = 1;
+}
+
+function drawChalet(x) {
+  const gy = GROUND_Y;
+  // Foundation
+  ctx.fillStyle = '#78350f';
+  ctx.fillRect(x - 45, gy - 5, 90, 5);
+  // Walls (warm wood)
+  const wallGrad = ctx.createLinearGradient(x - 40, gy - 65, x + 40, gy - 65);
+  wallGrad.addColorStop(0, '#b45309');
+  wallGrad.addColorStop(1, '#d97706');
+  ctx.fillStyle = wallGrad;
+  ctx.fillRect(x - 40, gy - 65, 80, 60);
+  // Log lines
+  ctx.strokeStyle = '#92400e'; ctx.lineWidth = 1;
+  for (let ly = gy - 60; ly < gy - 5; ly += 8) {
+    ctx.beginPath(); ctx.moveTo(x - 38, ly); ctx.lineTo(x + 38, ly); ctx.stroke();
+  }
+  // Roof
+  ctx.fillStyle = '#991b1b';
+  ctx.beginPath();
+  ctx.moveTo(x - 55, gy - 65);
+  ctx.lineTo(x, gy - 100);
+  ctx.lineTo(x + 55, gy - 65);
+  ctx.closePath(); ctx.fill();
+  // Snow on roof
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.moveTo(x - 55, gy - 65);
+  ctx.lineTo(x, gy - 100);
+  ctx.lineTo(x + 55, gy - 65);
+  ctx.lineTo(x + 50, gy - 62);
+  ctx.quadraticCurveTo(x, gy - 92, x - 50, gy - 62);
+  ctx.closePath(); ctx.fill();
+  // Snow overhang
+  ctx.fillStyle = '#e0f2fe';
+  ctx.beginPath();
+  ctx.moveTo(x - 55, gy - 65);
+  ctx.quadraticCurveTo(x - 58, gy - 58, x - 52, gy - 58);
+  ctx.lineTo(x - 50, gy - 65);
+  ctx.closePath(); ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(x + 55, gy - 65);
+  ctx.quadraticCurveTo(x + 58, gy - 58, x + 52, gy - 58);
+  ctx.lineTo(x + 50, gy - 65);
+  ctx.closePath(); ctx.fill();
+  // Door
+  ctx.fillStyle = '#451a03';
+  ctx.beginPath(); ctx.roundRect(x - 10, gy - 40, 20, 35, [4, 4, 0, 0]); ctx.fill();
+  ctx.fillStyle = '#fbbf24';
+  ctx.beginPath(); ctx.arc(x + 5, gy - 22, 2, 0, Math.PI * 2); ctx.fill();
+  // Windows
+  ctx.fillStyle = '#fef3c7';
+  ctx.fillRect(x - 35, gy - 55, 16, 14);
+  ctx.fillRect(x + 18, gy - 55, 16, 14);
+  // Window glow
+  ctx.globalAlpha = 0.3;
+  ctx.fillStyle = '#fbbf24';
+  ctx.fillRect(x - 35, gy - 55, 16, 14);
+  ctx.fillRect(x + 18, gy - 55, 16, 14);
+  ctx.globalAlpha = 1;
+  // Window frames
+  ctx.strokeStyle = '#78350f'; ctx.lineWidth = 1.5;
+  ctx.strokeRect(x - 35, gy - 55, 16, 14);
+  ctx.strokeRect(x + 18, gy - 55, 16, 14);
+  ctx.beginPath(); ctx.moveTo(x - 27, gy - 55); ctx.lineTo(x - 27, gy - 41); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x + 26, gy - 55); ctx.lineTo(x + 26, gy - 41); ctx.stroke();
+  // Chimney
+  ctx.fillStyle = '#78350f';
+  ctx.fillRect(x + 20, gy - 95, 12, 20);
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(x + 18, gy - 97, 16, 4);
+  // Smoke
+  ctx.fillStyle = 'rgba(200,200,200,0.4)';
+  for (let i = 0; i < 3; i++) {
+    const sx = x + 26 + Math.sin(gameTime / 400 + i * 2) * 6;
+    const sy = gy - 100 - i * 14 - Math.sin(gameTime / 300 + i) * 4;
+    ctx.beginPath(); ctx.arc(sx, sy, 5 + i * 2, 0, Math.PI * 2); ctx.fill();
+  }
+  // "FINISH" banner
+  ctx.fillStyle = '#dc2626'; ctx.font = 'bold 10px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText('FINISH', x, gy - 105);
+}
+
+function drawChaletInterior(cam, W, H) {
+  const cx = player.x;
+  const cy = GROUND_Y - 80;
+
+  // Wooden floor
+  ctx.fillStyle = '#92400e';
+  ctx.fillRect(cx - 240, cy + 20, 480, 140);
+  // Floor plank lines
+  ctx.strokeStyle = '#78350f'; ctx.lineWidth = 1;
+  for (let fy = cy + 30; fy < cy + 160; fy += 18) {
+    ctx.beginPath(); ctx.moveTo(cx - 240, fy); ctx.lineTo(cx + 240, fy); ctx.stroke();
+  }
+
+  // Stone back wall
+  ctx.fillStyle = '#d6d3d1';
+  ctx.fillRect(cx - 240, cy - 160, 480, 180);
+  // Log cabin wall (warm wood)
+  ctx.fillStyle = '#b45309';
+  ctx.fillRect(cx - 240, cy - 160, 160, 180);
+  ctx.fillRect(cx + 80, cy - 160, 160, 180);
+  // Log lines
+  ctx.strokeStyle = '#92400e'; ctx.lineWidth = 1;
+  for (let ly = cy - 155; ly < cy + 20; ly += 12) {
+    ctx.beginPath(); ctx.moveTo(cx - 238, ly); ctx.lineTo(cx - 82, ly); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx + 82, ly); ctx.lineTo(cx + 238, ly); ctx.stroke();
+  }
+
+  // Fireplace (center)
+  ctx.fillStyle = '#57534e';
+  ctx.fillRect(cx - 60, cy - 100, 120, 120);
+  // Fireplace arch
+  ctx.fillStyle = '#44403c';
+  ctx.beginPath();
+  ctx.arc(cx, cy - 30, 45, Math.PI, 0);
+  ctx.lineTo(cx + 45, cy + 20);
+  ctx.lineTo(cx - 45, cy + 20);
+  ctx.fill();
+  // Fire inside
+  ctx.fillStyle = '#1c1917';
+  ctx.beginPath();
+  ctx.arc(cx, cy - 20, 38, Math.PI, 0);
+  ctx.lineTo(cx + 38, cy + 18);
+  ctx.lineTo(cx - 38, cy + 18);
+  ctx.fill();
+  // Flames (animated)
+  const flicker1 = Math.sin(gameTime / 80) * 6;
+  const flicker2 = Math.sin(gameTime / 120 + 1) * 4;
+  const flicker3 = Math.cos(gameTime / 100) * 5;
+  // Big flame
+  ctx.fillStyle = '#f97316';
+  ctx.beginPath();
+  ctx.moveTo(cx - 25, cy + 15);
+  ctx.quadraticCurveTo(cx - 10, cy - 40 + flicker1, cx, cy - 50 + flicker2);
+  ctx.quadraticCurveTo(cx + 10, cy - 40 + flicker3, cx + 25, cy + 15);
+  ctx.fill();
+  // Inner flame
+  ctx.fillStyle = '#fbbf24';
+  ctx.beginPath();
+  ctx.moveTo(cx - 15, cy + 15);
+  ctx.quadraticCurveTo(cx - 5, cy - 25 + flicker2, cx, cy - 35 + flicker1);
+  ctx.quadraticCurveTo(cx + 5, cy - 25 + flicker3, cx + 15, cy + 15);
+  ctx.fill();
+  // Core flame
+  ctx.fillStyle = '#fef3c7';
+  ctx.beginPath();
+  ctx.moveTo(cx - 6, cy + 15);
+  ctx.quadraticCurveTo(cx, cy - 15 + flicker3, cx + 6, cy + 15);
+  ctx.fill();
+  // Embers
+  ctx.fillStyle = '#f97316';
+  for (let i = 0; i < 5; i++) {
+    const ex = cx - 15 + Math.sin(gameTime / 200 + i * 1.7) * 20;
+    const ey = cy - 30 - Math.abs(Math.sin(gameTime / 300 + i * 2.3)) * 30;
+    ctx.globalAlpha = Math.sin(gameTime / 150 + i) * 0.3 + 0.4;
+    ctx.beginPath(); ctx.arc(ex, ey, 1.5, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Fireplace mantle
+  ctx.fillStyle = '#78350f';
+  ctx.fillRect(cx - 68, cy - 105, 136, 8);
+  // Mantle decorations
+  ctx.fillStyle = '#22c55e'; // small wreath
+  ctx.beginPath(); ctx.arc(cx - 30, cy - 115, 8, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(cx - 30, cy - 121, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#fbbf24'; // candle
+  ctx.fillRect(cx + 25, cy - 118, 5, 12);
+  ctx.fillStyle = '#f97316';
+  ctx.beginPath(); ctx.arc(cx + 27.5, cy - 120, 3, 0, Math.PI * 2); ctx.fill();
+
+  // Warm glow from fire
+  ctx.globalAlpha = 0.08 + Math.sin(gameTime / 200) * 0.03;
+  ctx.fillStyle = '#f97316';
+  ctx.beginPath(); ctx.arc(cx, cy - 20, 120, 0, Math.PI * 2); ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Bear rug
+  ctx.fillStyle = '#78350f';
+  ctx.beginPath(); ctx.ellipse(cx, cy + 80, 70, 25, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#92400e';
+  ctx.beginPath(); ctx.ellipse(cx, cy + 80, 60, 20, 0, 0, Math.PI * 2); ctx.fill();
+
+  // Hot chocolate mug (target)
+  const mx = hotChocolate.x, my = hotChocolate.y;
+  // Mug body
+  ctx.fillStyle = '#dc2626';
+  ctx.beginPath(); ctx.roundRect(mx - 14, my - 20, 28, 30, 3); ctx.fill();
+  // Mug handle
+  ctx.strokeStyle = '#dc2626'; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.arc(mx + 18, my - 5, 8, -Math.PI / 2, Math.PI / 2); ctx.stroke();
+  // Hot chocolate inside
+  ctx.fillStyle = '#5c2d0e';
+  ctx.beginPath(); ctx.ellipse(mx, my - 18, 11, 5, 0, 0, Math.PI * 2); ctx.fill();
+  // Steam
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1.5;
+  for (let i = 0; i < 3; i++) {
+    const sx = mx - 6 + i * 6;
+    const sway = Math.sin(gameTime / 300 + i * 2) * 4;
+    ctx.beginPath();
+    ctx.moveTo(sx, my - 22);
+    ctx.quadraticCurveTo(sx + sway, my - 34, sx - sway, my - 44);
+    ctx.stroke();
+  }
+  // Landed marshmallows in the mug
+  ctx.fillStyle = '#fef3c7';
+  for (let i = 0; i < Math.min(marshmallowScore, 5); i++) {
+    ctx.beginPath();
+    ctx.arc(mx - 6 + i * 3, my - 20 - i * 1.5, 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Flying marshmallow
+  if (marshmallow.active && !marshmallow.landed) {
+    ctx.fillStyle = '#fef3c7';
+    ctx.beginPath(); ctx.roundRect(marshmallow.x - 5, marshmallow.y - 5, 10, 10, 2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.beginPath(); ctx.roundRect(marshmallow.x - 3, marshmallow.y - 3, 4, 4, 1); ctx.fill();
+  }
+
+  // Kitty sitting by fire
+  drawKitty(cx - 80, cy + 70, player.color, 1, 0, 'horn');
+
+  // Score display
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 16px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText('Marshmallows landed: ' + marshmallowScore, cx, cy - 140);
+  ctx.font = '13px system-ui'; ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.fillText('Space: Toss marshmallow    Enter: Leave chalet', cx, cy + 140);
 }
 
 function drawSurfingScene(cam, W, H) {
