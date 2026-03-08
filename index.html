@@ -145,6 +145,7 @@
   <span>Fish: <b id="hudFish">0</b></span>
   <span>Bacon: <b id="hudBacon">0</b></span>
   <span>Yarn: <b id="hudYarn">0</b></span>
+  <span>Pizza: <b id="hudPizza">0</b></span>
 </div>
 <div id="controls">
   <span>Arrow Keys: Move</span>
@@ -174,8 +175,12 @@ let playerName = 'Sparkle';
 let score = 0, fishCount = 0, baconCount = 0, yarnCount = 0;
 let gameTime = 0;
 let insideHouse = false;
+let insidePizza = false;
 let cooking = { active: false, progress: 0, burnt: false };
 let fishing = { active: false, timer: 0, caught: false };
+let pizzaMaking = { active: false, progress: 0, stage: 'idle', pizzaCount: 0 };
+// Pizza stages: idle → dough (press C) → toppings (press C) → oven (auto-timer) → done/burnt
+const PIZZA_SHOP = { x: 1000, w: 80 };
 let popups = []; // floating score popups
 let keys = {};
 let lastMeowTime = 0;
@@ -563,6 +568,15 @@ function update(dt) {
     return;
   }
 
+  if (insidePizza) {
+    updatePizzaMinigame(dt);
+    if (keys['Enter'] && pizzaMaking.stage === 'idle') {
+      keys['Enter'] = false;
+      insidePizza = false;
+    }
+    return;
+  }
+
   // Movement
   player.vx = 0;
   if (keys['ArrowLeft']) { player.vx = -MOVE_SPEED; player.facing = -1; }
@@ -698,6 +712,16 @@ function update(dt) {
     insideHouse = true;
   }
 
+  // Pizza shop entry (level 2 only)
+  const nearPizza = currentLevel === 2 && Math.abs(player.x - PIZZA_SHOP.x) < 50;
+  if (keys['Enter'] && nearPizza && !insidePizza) {
+    keys['Enter'] = false;
+    insidePizza = true;
+    pizzaMaking.stage = 'idle';
+    pizzaMaking.progress = 0;
+    pizzaMaking.active = false;
+  }
+
   // Rainbow bridge portal (level 1 → level 2)
   if (currentLevel === 1) {
     const dx = player.x - BRIDGE_PORTAL.x;
@@ -752,9 +776,10 @@ function update(dt) {
   document.getElementById('hudBacon').textContent = baconCount;
   document.getElementById('hudYarn').textContent = yarnCount;
   document.getElementById('hudLevel').textContent = currentLevel === 1 ? 'Meadow' : 'NYC';
+  document.getElementById('hudPizza').textContent = pizzaMaking.pizzaCount;
 
   // Prompt
-  updatePrompt(inPond, nearGrill, nearHouse);
+  updatePrompt(inPond, nearGrill, nearHouse, nearPizza);
 }
 
 function getGroundLevel(x) {
@@ -769,9 +794,75 @@ function addPopup(x, y, text, color) {
   popups.push({ x, y, text, color, life: 1500 });
 }
 
-function updatePrompt(inPond, nearGrill, nearHouse) {
+function updatePizzaMinigame(dt) {
+  if (pizzaMaking.stage === 'idle') {
+    if (keys['KeyC']) {
+      keys['KeyC'] = false;
+      pizzaMaking.stage = 'dough';
+      pizzaMaking.progress = 0;
+    }
+  } else if (pizzaMaking.stage === 'dough') {
+    pizzaMaking.progress += dt;
+    if (keys['KeyC'] && pizzaMaking.progress > 800) {
+      keys['KeyC'] = false;
+      pizzaMaking.stage = 'toppings';
+      pizzaMaking.progress = 0;
+    }
+  } else if (pizzaMaking.stage === 'toppings') {
+    pizzaMaking.progress += dt;
+    if (keys['KeyC'] && pizzaMaking.progress > 800) {
+      keys['KeyC'] = false;
+      pizzaMaking.stage = 'oven';
+      pizzaMaking.progress = 0;
+    }
+  } else if (pizzaMaking.stage === 'oven') {
+    pizzaMaking.progress += dt;
+    // Sweet spot: 3000-4500ms = perfect, >4500 = burnt
+    if (keys['KeyC']) {
+      keys['KeyC'] = false;
+      if (pizzaMaking.progress >= 3000 && pizzaMaking.progress < 4500) {
+        // Perfect pizza!
+        pizzaMaking.pizzaCount++;
+        score += 25;
+        addPopup(player.x, player.y - 40, '+25 Perfect Pizza!', '#f97316');
+        playChaChing();
+      } else if (pizzaMaking.progress < 3000) {
+        // Undercooked
+        addPopup(player.x, player.y - 40, 'Undercooked!', '#93c5fd');
+      } else {
+        // Burnt
+        addPopup(player.x, player.y - 40, 'Burnt pizza!', '#ef4444');
+      }
+      pizzaMaking.stage = 'idle';
+      pizzaMaking.progress = 0;
+    }
+    if (pizzaMaking.progress >= 6000) {
+      // Auto-burn
+      addPopup(player.x, player.y - 40, 'Burnt to a crisp!', '#ef4444');
+      pizzaMaking.stage = 'idle';
+      pizzaMaking.progress = 0;
+    }
+  }
+  // HUD updates still needed
+  document.getElementById('hudScore').textContent = score;
+  document.getElementById('hudPizza').textContent = pizzaMaking.pizzaCount;
+}
+
+function updatePrompt(inPond, nearGrill, nearHouse, nearPizza) {
   const el = document.getElementById('prompt');
-  if (fishing.active) {
+  if (insidePizza) {
+    if (pizzaMaking.stage === 'idle') {
+      el.textContent = 'Press C to make pizza! (Enter to leave)';
+    } else if (pizzaMaking.stage === 'dough') {
+      el.textContent = 'Kneading dough... Press C when ready!';
+    } else if (pizzaMaking.stage === 'toppings') {
+      el.textContent = 'Adding toppings... Press C to put in oven!';
+    } else if (pizzaMaking.stage === 'oven') {
+      const pct = Math.min(100, (pizzaMaking.progress / 3000) * 100);
+      el.textContent = `Baking... ${Math.round(pct)}% — Press C to take out!`;
+    }
+    el.style.display = 'block';
+  } else if (fishing.active) {
     el.textContent = 'Fishing...';
     el.style.display = 'block';
   } else if (cooking.active) {
@@ -786,6 +877,9 @@ function updatePrompt(inPond, nearGrill, nearHouse) {
     el.style.display = 'block';
   } else if (nearHouse) {
     el.textContent = 'Press Enter to go inside';
+    el.style.display = 'block';
+  } else if (nearPizza) {
+    el.textContent = 'Press Enter to make pizza!';
     el.style.display = 'block';
   } else if (currentLevel === 1 && Math.abs(player.x - BRIDGE_PORTAL.x) < 60) {
     el.textContent = 'Press Enter to travel to NYC!';
@@ -822,6 +916,8 @@ function draw() {
 
   if (insideHouse) {
     drawHouseInterior(cam, W, H);
+  } else if (insidePizza) {
+    drawPizzaInterior(cam, W, H);
   } else if (currentLevel === 1) {
     drawLevel1World(W, H, cam, cycle, isNight);
   } else {
@@ -2152,6 +2248,176 @@ function drawHouseInterior(cam, W, H) {
 
   // Draw player inside
   drawKitty(cx, cy + 60, player.color, 1, 0, 'horn');
+}
+
+function drawPizzaInterior(cam, W, H) {
+  const cx = player.x;
+  const cy = GROUND_Y - 80;
+
+  // Kitchen floor (checkered)
+  ctx.fillStyle = '#f5f5f4';
+  ctx.fillRect(cx - 220, cy, 440, 160);
+  ctx.fillStyle = '#e7e5e4';
+  for (let tx = -220; tx < 220; tx += 20) {
+    for (let ty = 0; ty < 160; ty += 20) {
+      if ((Math.floor(tx / 20) + Math.floor(ty / 20)) % 2 === 0) {
+        ctx.fillRect(cx + tx, cy + ty, 20, 20);
+      }
+    }
+  }
+
+  // Back wall (red)
+  ctx.fillStyle = '#dc2626';
+  ctx.fillRect(cx - 220, cy - 140, 440, 140);
+
+  // Italian flag stripe
+  ctx.fillStyle = '#16a34a';
+  ctx.fillRect(cx - 220, cy - 140, 146, 8);
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(cx - 74, cy - 140, 148, 8);
+  ctx.fillStyle = '#dc2626';
+  ctx.fillRect(cx + 74, cy - 140, 146, 8);
+
+  // Pizza oven (brick)
+  ctx.fillStyle = '#92400e';
+  ctx.beginPath();
+  ctx.arc(cx + 100, cy - 30, 50, Math.PI, 0);
+  ctx.fillRect(cx + 50, cy - 30, 100, 30);
+  ctx.fill();
+  // Oven opening
+  ctx.fillStyle = '#1f2937';
+  ctx.beginPath();
+  ctx.arc(cx + 100, cy - 10, 25, Math.PI, 0);
+  ctx.fill();
+  // Fire glow inside oven
+  if (pizzaMaking.stage === 'oven') {
+    ctx.fillStyle = '#f97316';
+    ctx.globalAlpha = 0.6 + Math.sin(gameTime / 150) * 0.2;
+    ctx.beginPath();
+    ctx.arc(cx + 100, cy - 10, 22, Math.PI, 0);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  // Counter
+  ctx.fillStyle = '#78350f';
+  ctx.fillRect(cx - 150, cy - 10, 180, 10);
+  // Counter top
+  ctx.fillStyle = '#d6d3d1';
+  ctx.fillRect(cx - 150, cy - 14, 180, 6);
+
+  // Pizza being made on counter
+  const pizzaX = cx - 60;
+  const pizzaY = cy - 24;
+
+  if (pizzaMaking.stage === 'dough') {
+    // Dough ball expanding
+    const doughSize = Math.min(20, 8 + pizzaMaking.progress / 100);
+    ctx.fillStyle = '#fde68a';
+    ctx.beginPath();
+    ctx.ellipse(pizzaX, pizzaY, doughSize, doughSize * 0.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Rolling pin
+    ctx.fillStyle = '#78350f';
+    ctx.beginPath();
+    ctx.roundRect(pizzaX - 25, pizzaY - 6, 50, 5, 2);
+    ctx.fill();
+  } else if (pizzaMaking.stage === 'toppings') {
+    // Flat dough
+    ctx.fillStyle = '#fde68a';
+    ctx.beginPath();
+    ctx.ellipse(pizzaX, pizzaY, 22, 11, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Sauce
+    ctx.fillStyle = '#dc2626';
+    ctx.beginPath();
+    ctx.ellipse(pizzaX, pizzaY, 18, 9, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Cheese
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath();
+    ctx.ellipse(pizzaX, pizzaY, 16, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Toppings appearing
+    const numToppings = Math.min(6, Math.floor(pizzaMaking.progress / 200));
+    const toppingColors = ['#ef4444','#16a34a','#78350f','#f97316','#6b7280','#22c55e'];
+    for (let i = 0; i < numToppings; i++) {
+      const a = (i / 6) * Math.PI * 2 + 0.3;
+      ctx.fillStyle = toppingColors[i];
+      ctx.beginPath();
+      ctx.arc(pizzaX + Math.cos(a) * 10, pizzaY + Math.sin(a) * 5, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (pizzaMaking.stage === 'oven') {
+    // Pizza in oven — show timer bar
+    const pct = pizzaMaking.progress / 4500;
+    const barW = 120;
+    const barX = cx - barW / 2;
+    const barY = cy + 80;
+    // Bar background
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath(); ctx.roundRect(barX, barY, barW, 14, 4); ctx.fill();
+    // Bar fill (green → yellow → red)
+    let barColor;
+    if (pct < 0.66) barColor = '#4ade80';       // undercooked
+    else if (pct < 1.0) barColor = '#22c55e';    // perfect zone
+    else barColor = '#ef4444';                     // burning
+    ctx.fillStyle = barColor;
+    ctx.beginPath();
+    ctx.roundRect(barX + 2, barY + 2, Math.min(barW - 4, (barW - 4) * Math.min(pct, 1.33)), 10, 3);
+    ctx.fill();
+    // Perfect zone markers
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.fillRect(barX + (barW - 4) * 0.66 + 2, barY, 2, 14);
+    ctx.fillRect(barX + (barW - 4) * 1.0 + 2, barY, 2, 14);
+    // Label
+    ctx.fillStyle = '#fff';
+    ctx.font = '10px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('PERFECT', barX + barW * 0.83, barY - 4);
+  }
+
+  // Completed pizzas on shelf
+  for (let i = 0; i < Math.min(5, pizzaMaking.pizzaCount); i++) {
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath();
+    ctx.ellipse(cx - 180 + i * 28, cy - 90, 10, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#dc2626';
+    ctx.beginPath();
+    ctx.ellipse(cx - 180 + i * 28, cy - 90, 8, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Title
+  ctx.fillStyle = '#fde68a';
+  ctx.font = 'bold 18px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText('Pizza Kitchen!', cx, cy - 115);
+
+  // Instructions
+  ctx.font = '13px system-ui';
+  ctx.fillStyle = 'rgba(255,255,255,0.8)';
+  if (pizzaMaking.stage === 'idle') {
+    ctx.fillText('Press C to start making a pizza', cx, cy + 120);
+    ctx.fillText('Press Enter to leave', cx, cy + 138);
+  } else if (pizzaMaking.stage === 'oven') {
+    ctx.fillText('Press C in the green zone!', cx, cy + 120);
+  }
+
+  // Draw player
+  drawKitty(cx - 60, cy + 60, player.color, 1, 0, 'horn');
+
+  // Popups
+  for (const p of popups) {
+    const alpha = Math.min(1, p.life / 500);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = p.color;
+    ctx.font = 'bold 16px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText(p.text, p.x, p.y);
+    ctx.globalAlpha = 1;
+  }
 }
 
 function drawKitty(x, y, color, facing, walkFrame, accessory) {
