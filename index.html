@@ -104,6 +104,50 @@
     z-index: 10;
     gap: 16px;
   }
+  #volumeControl {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    display: none;
+    align-items: center;
+    gap: 8px;
+    z-index: 20;
+  }
+  #volumeBtn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.25);
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(12px);
+    color: #fff;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+  }
+  #volumeBtn:hover { background: rgba(255,255,255,0.25); }
+  #volumeSliderWrap {
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(12px);
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.25);
+    padding: 6px 12px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  #volumeSliderWrap.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  #volumeSlider {
+    width: 100px;
+    accent-color: #c084fc;
+    cursor: pointer;
+  }
   #prompt {
     position: fixed;
     bottom: 80px;
@@ -168,6 +212,10 @@
   <span>Enter: Enter/Exit Buildings</span>
 </div>
 <div id="prompt"></div>
+<div id="volumeControl">
+  <button id="volumeBtn" title="Toggle sound">&#128264;</button>
+  <div id="volumeSliderWrap"><input type="range" id="volumeSlider" min="0" max="100" value="40"></div>
+</div>
 
 <script>
 // ── Constants ──
@@ -233,30 +281,87 @@ let chaChingSound = null;
 function initMeows() {
   meowSounds.push(document.getElementById('meow1'));
   meowSounds.push(document.getElementById('meow2'));
-  for (const m of meowSounds) m.volume = 0.5;
+  for (const m of meowSounds) m.volume = getSfxVolume();
   chaChingSound = document.getElementById('chaChing');
-  chaChingSound.volume = 0.5;
+  chaChingSound.volume = getSfxVolume();
 }
 
 function playChaChing() {
+  if (muted) return;
   const now = performance.now();
   if (now - lastChaChingTime < 2000) return;
   lastChaChingTime = now;
+  chaChingSound.volume = getSfxVolume();
   chaChingSound.currentTime = 0;
   chaChingSound.play().catch(() => {});
 }
 
 function playMeow() {
+  if (muted) return;
   const now = performance.now();
   if (now - lastMeowTime < 3000) return;
   lastMeowTime = now;
   const sound = meowSounds[Math.floor(Math.random() * meowSounds.length)];
+  sound.volume = getSfxVolume();
   sound.currentTime = 0;
   sound.play().catch(() => {});
 }
 
+// ── Volume control ──
+let masterVolume = 0.4; // 0..1
+let muted = false;
+let sliderHideTimer = null;
+
+function getMusicVolume() { return muted ? 0 : masterVolume; }
+const sfxRatio = 1.25; // sfx slightly louder than music
+function getSfxVolume() { return muted ? 0 : Math.min(1, masterVolume * sfxRatio); }
+
+// Wire up volume UI
+document.getElementById('volumeBtn').addEventListener('click', () => {
+  muted = !muted;
+  document.getElementById('volumeBtn').innerHTML = muted ? '&#128263;' : '&#128264;';
+  applyVolume();
+  showSlider();
+});
+
+const sliderEl = document.getElementById('volumeSlider');
+const sliderWrap = document.getElementById('volumeSliderWrap');
+
+sliderEl.addEventListener('input', () => {
+  masterVolume = sliderEl.value / 100;
+  if (masterVolume > 0) muted = false;
+  document.getElementById('volumeBtn').innerHTML = masterVolume === 0 ? '&#128263;' : '&#128264;';
+  applyVolume();
+  showSlider();
+});
+
+function showSlider() {
+  sliderWrap.classList.add('visible');
+  clearTimeout(sliderHideTimer);
+  sliderHideTimer = setTimeout(() => sliderWrap.classList.remove('visible'), 2000);
+}
+
+sliderWrap.addEventListener('mouseenter', () => { clearTimeout(sliderHideTimer); });
+sliderWrap.addEventListener('mouseleave', () => {
+  sliderHideTimer = setTimeout(() => sliderWrap.classList.remove('visible'), 2000);
+});
+sliderWrap.addEventListener('touchstart', () => { clearTimeout(sliderHideTimer); }, { passive: true });
+sliderWrap.addEventListener('touchend', () => {
+  sliderHideTimer = setTimeout(() => sliderWrap.classList.remove('visible'), 2000);
+});
+
+function applyVolume() {
+  const mv = getMusicVolume();
+  // Update currently playing music
+  if (currentMusicId) {
+    document.getElementById(currentMusicId).volume = mv;
+  }
+  // Update SFX
+  for (const m of meowSounds) m.volume = getSfxVolume();
+  if (chaChingSound) chaChingSound.volume = getSfxVolume();
+}
+
 // ── Music system with crossfade ──
-const MUSIC_VOLUME = 0.4;
 const FADE_DURATION = 1200; // ms
 const levelMusic = { 1: 'musicMeadow', 2: 'musicNYC', 3: 'musicRome', 4: 'musicHawaii', 5: 'musicAlps', 6: 'musicChalet' };
 let currentMusicId = null;
@@ -266,7 +371,7 @@ function startLevelMusic(level) {
   const id = levelMusic[level];
   if (!id || id === currentMusicId) return;
   const el = document.getElementById(id);
-  el.volume = MUSIC_VOLUME;
+  el.volume = getMusicVolume();
   el.currentTime = 0;
   el.play().catch(() => {});
   currentMusicId = id;
@@ -285,10 +390,11 @@ function crossfadeToLevel(level) {
 
 function updateMusicFade(dt) {
   if (!musicFade) return;
+  const mv = getMusicVolume();
   musicFade.timer += dt;
   const t = Math.min(1, musicFade.timer / FADE_DURATION);
-  if (musicFade.out) musicFade.out.volume = MUSIC_VOLUME * (1 - t);
-  musicFade.inEl.volume = MUSIC_VOLUME * t;
+  if (musicFade.out) musicFade.out.volume = mv * (1 - t);
+  musicFade.inEl.volume = mv * t;
   if (t >= 1) {
     if (musicFade.out) { musicFade.out.pause(); musicFade.out.currentTime = 0; }
     currentMusicId = musicFade.inId;
@@ -885,6 +991,7 @@ function startGame() {
   document.getElementById('startScreen').style.display = 'none';
   document.getElementById('hud').style.display = 'flex';
   document.getElementById('controls').style.display = 'flex';
+  document.getElementById('volumeControl').style.display = 'flex';
   document.getElementById('hudName').textContent = playerName;
   initMeows();
   // Start music (requires user gesture, which the click/enter provides)
