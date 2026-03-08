@@ -146,13 +146,16 @@
   <span>Bacon: <b id="hudBacon">0</b></span>
   <span>Yarn: <b id="hudYarn">0</b></span>
   <span>Pizza: <b id="hudPizza">0</b></span>
+  <span>Hot Dogs: <b id="hudHotdog">0</b></span>
+  <span>Honey: <b id="hudHoney">0</b></span>
 </div>
 <div id="controls">
   <span>Arrow Keys: Move</span>
   <span>Space: Jump</span>
   <span>F: Fish</span>
   <span>C: Cook</span>
-  <span>Enter: Enter/Exit House</span>
+  <span>H: Honey</span>
+  <span>Enter: Enter/Exit Buildings</span>
 </div>
 <div id="prompt"></div>
 
@@ -176,11 +179,19 @@ let score = 0, fishCount = 0, baconCount = 0, yarnCount = 0;
 let gameTime = 0;
 let insideHouse = false;
 let insidePizza = false;
+let insideCamper = false;
+let insideWindmill = false;
 let cooking = { active: false, progress: 0, burnt: false };
 let fishing = { active: false, timer: 0, caught: false };
+let honeyCount = 0;
 let pizzaMaking = { active: false, progress: 0, stage: 'idle', pizzaCount: 0 };
-// Pizza stages: idle → dough (press C) → toppings (press C) → oven (auto-timer) → done/burnt
 const PIZZA_SHOP = { x: 1000, w: 80 };
+let insidePark = false;
+let hotdogCount = 0;
+const HOTDOG_POSITIONS = [600, 2000, 3400];
+const CENTRAL_PARK_POS = { x: 2200, w: 160 };
+// Taxi positions for NYC → Rome portal
+const TAXI_POSITIONS = [300, 1200, 2400, 3600];
 let popups = []; // floating score popups
 let keys = {};
 let lastMeowTime = 0;
@@ -484,18 +495,104 @@ function completeTransition() {
   cooking.active = false;
   fishing.active = false;
   insideHouse = false;
+  insidePizza = false;
+  insidePark = false;
+  insideCamper = false;
+  insideWindmill = false;
+  pizzaMaking.stage = 'idle';
+  pizzaMaking.progress = 0;
 }
 
 function getCurrentPlatforms() {
-  return currentLevel === 1 ? platforms : level2.platforms;
+  return currentLevel === 1 ? platforms : currentLevel === 2 ? level2.platforms : level3.platforms;
 }
 
 function getCurrentYarnBalls() {
-  return currentLevel === 1 ? yarnBalls : level2.yarnBalls;
+  return currentLevel === 1 ? yarnBalls : currentLevel === 2 ? level2.yarnBalls : level3.yarnBalls;
 }
 
 function getCurrentWorldW() {
-  return currentLevel === 1 ? WORLD_W : level2.worldW;
+  return currentLevel === 1 ? WORLD_W : currentLevel === 2 ? level2.worldW : level3.worldW;
+}
+
+// ── Level 3: Rome ──
+const level3 = {
+  worldW: 4800,
+  platforms: [
+    { x: 150, y: 340, w: 90 },
+    { x: 350, y: 280, w: 80 },
+    { x: 550, y: 220, w: 90 },
+    { x: 750, y: 340, w: 100 },
+    { x: 950, y: 270, w: 80 },
+    { x: 1150, y: 210, w: 90 },
+    { x: 1400, y: 330, w: 80 },
+    { x: 1600, y: 260, w: 90 },
+    { x: 1800, y: 340, w: 100 },
+    { x: 2000, y: 280, w: 80 },
+    { x: 2200, y: 220, w: 90 },
+    { x: 2450, y: 340, w: 80 },
+    { x: 2650, y: 270, w: 90 },
+    { x: 2850, y: 210, w: 80 },
+    { x: 3100, y: 330, w: 100 },
+    { x: 3300, y: 260, w: 80 },
+    { x: 3550, y: 340, w: 90 },
+    { x: 3750, y: 280, w: 80 },
+    { x: 3950, y: 220, w: 90 },
+    { x: 4200, y: 340, w: 100 },
+    { x: 4400, y: 270, w: 80 },
+  ],
+  yarnBalls: [],
+  scenes: [
+    { type: 'colosseum', x: 800 },
+    { type: 'fountain', x: 1500 },
+    { type: 'roman_column', x: 400 },
+    { type: 'roman_column', x: 2000 },
+    { type: 'roman_column', x: 3200 },
+    { type: 'roman_column', x: 4000 },
+    { type: 'gelato_cart', x: 1000 },
+    { type: 'gelato_cart', x: 2800 },
+    { type: 'vespa', x: 600 },
+    { type: 'vespa', x: 1800 },
+    { type: 'vespa', x: 3400 },
+    { type: 'olive_tree', x: 300 },
+    { type: 'olive_tree', x: 1200 },
+    { type: 'olive_tree', x: 2400 },
+    { type: 'olive_tree', x: 3600 },
+    { type: 'olive_tree', x: 4400 },
+    { type: 'pantheon', x: 2600 },
+    { type: 'pasta_shop', x: 3800 },
+    { type: 'piazza', x: 4200 },
+  ],
+};
+
+// Init level 3 yarn balls
+for (const p of level3.platforms) {
+  if (p.y < 280) {
+    level3.yarnBalls.push({
+      x: p.x + p.w / 2,
+      y: p.y - 14,
+      color: yarnColors[level3.yarnBalls.length % yarnColors.length],
+      collected: false,
+      bobPhase: Math.random() * Math.PI * 2
+    });
+  }
+}
+
+// Level 3 NPCs
+const romeNpcs = [];
+const romeNpcColors = ['#fca5a5','#bbf7d0','#ddd6fe','#fde68a'];
+const romeNpcAccessories = ['bow','flower','glasses','scarf'];
+for (let i = 0; i < 4; i++) {
+  romeNpcs.push({
+    x: 500 + i * 800 + Math.random() * 200,
+    y: GROUND_Y,
+    color: romeNpcColors[i],
+    accessory: romeNpcAccessories[i],
+    vx: (Math.random() - 0.5) * 1.2,
+    walkFrame: 0, walkTimer: 0,
+    facing: 1,
+    idleTimer: Math.random() * 200
+  });
 }
 
 // ── Canvas Setup ──
@@ -573,6 +670,28 @@ function update(dt) {
     if (keys['Enter'] && pizzaMaking.stage === 'idle') {
       keys['Enter'] = false;
       insidePizza = false;
+    }
+    return;
+  }
+
+  if (insideCamper) {
+    if (keys['Enter']) {
+      keys['Enter'] = false;
+      insideCamper = false;
+    }
+    return;
+  }
+  if (insideWindmill) {
+    if (keys['Enter']) {
+      keys['Enter'] = false;
+      insideWindmill = false;
+    }
+    return;
+  }
+  if (insidePark) {
+    if (keys['Enter']) {
+      keys['Enter'] = false;
+      insidePark = false;
     }
     return;
   }
@@ -712,6 +831,54 @@ function update(dt) {
     insideHouse = true;
   }
 
+  // Camper entry (level 1 only)
+  let nearCamper = false;
+  if (currentLevel === 1) {
+    for (const s of bgScenes) {
+      if (s.type === 'rv' && Math.abs(player.x - s.x) < 45) {
+        nearCamper = true;
+        if (keys['Enter'] && !insideCamper) {
+          keys['Enter'] = false;
+          insideCamper = true;
+        }
+        break;
+      }
+    }
+  }
+
+  // Windmill entry (level 1 only)
+  let nearWindmill = false;
+  if (currentLevel === 1) {
+    for (const s of bgScenes) {
+      if (s.type === 'windmill' && Math.abs(player.x - s.x) < 30) {
+        nearWindmill = true;
+        if (keys['Enter'] && !insideWindmill) {
+          keys['Enter'] = false;
+          insideWindmill = true;
+        }
+        break;
+      }
+    }
+  }
+
+  // Honey collection (level 1 only — H key near beehive)
+  let nearBeehive = false;
+  if (currentLevel === 1) {
+    for (const s of bgScenes) {
+      if (s.type === 'beehive' && Math.abs(player.x - s.x) < 40) {
+        nearBeehive = true;
+        if (keys['KeyH']) {
+          keys['KeyH'] = false;
+          honeyCount++;
+          score += 12;
+          addPopup(s.x, GROUND_Y - 80, '+12 Honey!', '#f59e0b');
+          playChaChing();
+        }
+        break;
+      }
+    }
+  }
+
   // Pizza shop entry (level 2 only)
   const nearPizza = currentLevel === 2 && Math.abs(player.x - PIZZA_SHOP.x) < 50;
   if (keys['Enter'] && nearPizza && !insidePizza) {
@@ -720,6 +887,46 @@ function update(dt) {
     pizzaMaking.stage = 'idle';
     pizzaMaking.progress = 0;
     pizzaMaking.active = false;
+  }
+
+  // Hot dog stands (level 2 — buy for 10 points)
+  let nearHotdog = false;
+  if (currentLevel === 2) {
+    for (const hx of HOTDOG_POSITIONS) {
+      if (Math.abs(player.x - hx) < 40) {
+        nearHotdog = true;
+        if (keys['KeyC'] && score >= 10) {
+          keys['KeyC'] = false;
+          score -= 10;
+          hotdogCount++;
+          addPopup(player.x, player.y - 40, 'Hot Dog! -10pts', '#fbbf24');
+        }
+        break;
+      }
+    }
+  }
+
+  // Central Park entry (level 2)
+  const nearPark = currentLevel === 2 &&
+    player.x > CENTRAL_PARK_POS.x - 80 && player.x < CENTRAL_PARK_POS.x + 80;
+  if (keys['Enter'] && nearPark && !insidePark && !insidePizza) {
+    keys['Enter'] = false;
+    insidePark = true;
+  }
+
+  // Taxi → Rome (level 2)
+  let nearTaxi = false;
+  if (currentLevel === 2) {
+    for (const tx of TAXI_POSITIONS) {
+      if (Math.abs(player.x - tx) < 40) {
+        nearTaxi = true;
+        if (keys['Enter'] && !insidePizza && !insidePark) {
+          keys['Enter'] = false;
+          switchToLevel(3);
+        }
+        break;
+      }
+    }
   }
 
   // Rainbow bridge portal (level 1 → level 2)
@@ -744,7 +951,7 @@ function update(dt) {
   }
 
   // NPC AI
-  const activeNpcs = currentLevel === 1 ? npcs : nycNpcs;
+  const activeNpcs = currentLevel === 1 ? npcs : currentLevel === 2 ? nycNpcs : romeNpcs;
   const worldW = getCurrentWorldW();
   for (const npc of activeNpcs) {
     npc.idleTimer -= dt / 16;
@@ -775,11 +982,13 @@ function update(dt) {
   document.getElementById('hudFish').textContent = fishCount;
   document.getElementById('hudBacon').textContent = baconCount;
   document.getElementById('hudYarn').textContent = yarnCount;
-  document.getElementById('hudLevel').textContent = currentLevel === 1 ? 'Meadow' : 'NYC';
+  document.getElementById('hudLevel').textContent = currentLevel === 1 ? 'Meadow' : currentLevel === 2 ? 'NYC' : 'Rome';
   document.getElementById('hudPizza').textContent = pizzaMaking.pizzaCount;
+  document.getElementById('hudHotdog').textContent = hotdogCount;
+  document.getElementById('hudHoney').textContent = honeyCount;
 
   // Prompt
-  updatePrompt(inPond, nearGrill, nearHouse, nearPizza);
+  updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi);
 }
 
 function getGroundLevel(x) {
@@ -848,8 +1057,23 @@ function updatePizzaMinigame(dt) {
   document.getElementById('hudPizza').textContent = pizzaMaking.pizzaCount;
 }
 
-function updatePrompt(inPond, nearGrill, nearHouse, nearPizza) {
+function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi) {
   const el = document.getElementById('prompt');
+  if (insideCamper) {
+    el.textContent = 'Chilling in the camper... Press Enter to go outside';
+    el.style.display = 'block';
+    return;
+  }
+  if (insideWindmill) {
+    el.textContent = 'Inside the windmill... Press Enter to go outside';
+    el.style.display = 'block';
+    return;
+  }
+  if (insidePark) {
+    el.textContent = 'Relaxing in Central Park... Press Enter to leave';
+    el.style.display = 'block';
+    return;
+  }
   if (insidePizza) {
     if (pizzaMaking.stage === 'idle') {
       el.textContent = 'Press C to make pizza! (Enter to leave)';
@@ -878,8 +1102,26 @@ function updatePrompt(inPond, nearGrill, nearHouse, nearPizza) {
   } else if (nearHouse) {
     el.textContent = 'Press Enter to go inside';
     el.style.display = 'block';
+  } else if (nearCamper) {
+    el.textContent = 'Press Enter to enter the camper';
+    el.style.display = 'block';
+  } else if (nearWindmill) {
+    el.textContent = 'Press Enter to enter the windmill';
+    el.style.display = 'block';
+  } else if (nearBeehive) {
+    el.textContent = 'Press H to collect honey';
+    el.style.display = 'block';
   } else if (nearPizza) {
     el.textContent = 'Press Enter to make pizza!';
+    el.style.display = 'block';
+  } else if (nearHotdog) {
+    el.textContent = score >= 10 ? 'Press C to buy a hot dog (-10 pts)' : 'Not enough points for a hot dog!';
+    el.style.display = 'block';
+  } else if (nearPark) {
+    el.textContent = 'Press Enter to visit Central Park';
+    el.style.display = 'block';
+  } else if (nearTaxi) {
+    el.textContent = 'Press Enter to take a taxi to Rome!';
     el.style.display = 'block';
   } else if (currentLevel === 1 && Math.abs(player.x - BRIDGE_PORTAL.x) < 60) {
     el.textContent = 'Press Enter to travel to NYC!';
@@ -907,8 +1149,10 @@ function draw() {
 
   if (currentLevel === 1) {
     drawLevel1Sky(W, H, cycle, isNight, cam);
-  } else {
+  } else if (currentLevel === 2) {
     drawLevel2Sky(W, H, cycle, isNight);
+  } else {
+    drawRomeSky(W, H, cycle, isNight);
   }
 
   ctx.save();
@@ -916,12 +1160,20 @@ function draw() {
 
   if (insideHouse) {
     drawHouseInterior(cam, W, H);
+  } else if (insideCamper) {
+    drawCamperInterior(cam, W, H);
+  } else if (insideWindmill) {
+    drawWindmillInterior(cam, W, H);
   } else if (insidePizza) {
     drawPizzaInterior(cam, W, H);
+  } else if (insidePark) {
+    drawParkInterior(cam, W, H);
   } else if (currentLevel === 1) {
     drawLevel1World(W, H, cam, cycle, isNight);
-  } else {
+  } else if (currentLevel === 2) {
     drawLevel2World(W, H, cam, cycle, isNight);
+  } else {
+    drawRomeWorld(W, H, cam, cycle, isNight);
   }
 
   ctx.restore();
@@ -1061,10 +1313,11 @@ function drawLevelTransition(W, H) {
     ctx.textBaseline = 'middle';
     const textAlpha = Math.min(1, (t - 0.4) / 0.3);
     ctx.globalAlpha = textAlpha;
-    const levelName = levelTransition.toLevel === 2 ? 'Welcome to NYC!' : 'Back to the Meadow!';
-    ctx.fillText(levelName, W / 2, H / 2 - 20);
+    const levelNames = { 1: 'Back to the Meadow!', 2: 'Welcome to NYC!', 3: 'Benvenuto a Roma!' };
+    const levelSubtitles = { 1: playerName + ' returns home!', 2: playerName + ' arrives in the big city!', 3: playerName + ' explores the Eternal City!' };
+    ctx.fillText(levelNames[levelTransition.toLevel] || 'New Level!', W / 2, H / 2 - 20);
     ctx.font = '20px system-ui';
-    ctx.fillText(playerName + ' arrives in the big city!', W / 2, H / 2 + 20);
+    ctx.fillText(levelSubtitles[levelTransition.toLevel] || '', W / 2, H / 2 + 20);
     ctx.globalAlpha = 1;
     ctx.textBaseline = 'alphabetic';
   }
@@ -2250,6 +2503,117 @@ function drawHouseInterior(cam, W, H) {
   drawKitty(cx, cy + 60, player.color, 1, 0, 'horn');
 }
 
+function drawCamperInterior(cam, W, H) {
+  const cx = player.x;
+  const cy = GROUND_Y - 80;
+
+  // Floor (wood)
+  ctx.fillStyle = '#c4a882';
+  ctx.fillRect(cx - 200, cy, 400, 160);
+
+  // Back wall
+  ctx.fillStyle = '#fef9c3';
+  ctx.fillRect(cx - 200, cy - 140, 400, 140);
+
+  // Window with curtains
+  ctx.fillStyle = '#bae6fd';
+  ctx.fillRect(cx - 80, cy - 110, 60, 40);
+  ctx.fillRect(cx + 20, cy - 110, 60, 40);
+  ctx.fillStyle = '#f9a8d4';
+  ctx.fillRect(cx - 80, cy - 110, 12, 40);
+  ctx.fillRect(cx - 32, cy - 110, 12, 40);
+  ctx.fillRect(cx + 20, cy - 110, 12, 40);
+  ctx.fillRect(cx + 68, cy - 110, 12, 40);
+
+  // Bunk bed
+  ctx.fillStyle = '#92400e';
+  ctx.fillRect(cx + 120, cy - 60, 60, 60);
+  ctx.fillStyle = '#c084fc';
+  ctx.fillRect(cx + 124, cy - 56, 52, 20);
+  ctx.fillStyle = '#818cf8';
+  ctx.fillRect(cx + 124, cy - 20, 52, 16);
+
+  // Small kitchenette
+  ctx.fillStyle = '#d1d5db';
+  ctx.fillRect(cx - 180, cy - 40, 50, 40);
+  ctx.fillStyle = '#1f2937';
+  ctx.beginPath(); ctx.arc(cx - 165, cy - 30, 6, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx - 145, cy - 30, 6, 0, Math.PI * 2); ctx.fill();
+
+  // Cozy text
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 18px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText('Cozy camper vibes!', cx, cy - 120);
+  ctx.font = '14px system-ui';
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.fillText('Press Enter to go outside', cx, cy + 130);
+
+  drawKitty(cx, cy + 60, player.color, 1, 0, 'horn');
+}
+
+function drawWindmillInterior(cam, W, H) {
+  const cx = player.x;
+  const cy = GROUND_Y - 80;
+
+  // Floor (stone)
+  ctx.fillStyle = '#9ca3af';
+  ctx.fillRect(cx - 180, cy, 360, 160);
+  // Stone pattern
+  ctx.strokeStyle = '#6b7280';
+  ctx.lineWidth = 1;
+  for (let sx = -180; sx < 180; sx += 30) {
+    for (let sy = 0; sy < 160; sy += 25) {
+      ctx.strokeRect(cx + sx, cy + sy, 30, 25);
+    }
+  }
+
+  // Curved stone walls
+  ctx.fillStyle = '#e5e7eb';
+  ctx.fillRect(cx - 180, cy - 150, 360, 150);
+
+  // Gear mechanism on the wall
+  ctx.strokeStyle = '#78350f';
+  ctx.lineWidth = 3;
+  const gearX = cx, gearY = cy - 90;
+  const gAngle = gameTime / 1500;
+  ctx.beginPath(); ctx.arc(gearX, gearY, 25, 0, Math.PI * 2); ctx.stroke();
+  for (let i = 0; i < 8; i++) {
+    const a = gAngle + (i / 8) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(gearX + Math.cos(a) * 20, gearY + Math.sin(a) * 20);
+    ctx.lineTo(gearX + Math.cos(a) * 30, gearY + Math.sin(a) * 30);
+    ctx.stroke();
+  }
+
+  // Flour sacks
+  ctx.fillStyle = '#fef3c7';
+  ctx.beginPath(); ctx.roundRect(cx - 140, cy - 30, 35, 30, 4); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(cx - 100, cy - 30, 35, 30, 4); ctx.fill();
+  ctx.fillStyle = '#92400e';
+  ctx.font = '10px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText('FLOUR', cx - 122, cy - 10);
+  ctx.fillText('FLOUR', cx - 82, cy - 10);
+
+  // Grindstone
+  ctx.fillStyle = '#6b7280';
+  ctx.beginPath(); ctx.arc(cx + 100, cy - 15, 20, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#4b5563';
+  ctx.beginPath(); ctx.arc(cx + 100, cy - 15, 10, 0, Math.PI * 2); ctx.fill();
+
+  // Text
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 18px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText('The old windmill!', cx, cy - 130);
+  ctx.font = '14px system-ui';
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.fillText('Press Enter to go outside', cx, cy + 130);
+
+  drawKitty(cx, cy + 60, player.color, 1, 0, 'horn');
+}
+
 function drawPizzaInterior(cam, W, H) {
   const cx = player.x;
   const cy = GROUND_Y - 80;
@@ -2417,6 +2781,260 @@ function drawPizzaInterior(cam, W, H) {
     ctx.textAlign = 'center';
     ctx.fillText(p.text, p.x, p.y);
     ctx.globalAlpha = 1;
+  }
+}
+
+function drawParkInterior(cam, W, H) {
+  const cx = player.x;
+  const cy = GROUND_Y - 80;
+  ctx.fillStyle = '#87ceeb';
+  ctx.fillRect(cx - 250, cy - 160, 500, 160);
+  ctx.fillStyle = '#4ade80';
+  ctx.fillRect(cx - 250, cy, 500, 180);
+  ctx.fillStyle = '#d4a574';
+  ctx.beginPath();
+  ctx.moveTo(cx - 250, cy + 60);
+  ctx.quadraticCurveTo(cx, cy + 40, cx + 250, cy + 70);
+  ctx.lineTo(cx + 250, cy + 80);
+  ctx.quadraticCurveTo(cx, cy + 60, cx - 250, cy + 70);
+  ctx.fill();
+  for (let i = -2; i <= 2; i++) {
+    const tx = cx + i * 90;
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(tx - 4, cy - 50, 8, 50);
+    ctx.fillStyle = '#16a34a';
+    ctx.beginPath(); ctx.arc(tx, cy - 60, 25, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#22c55e';
+    ctx.beginPath(); ctx.arc(tx + 8, cy - 68, 18, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.fillStyle = '#38bdf8';
+  ctx.beginPath(); ctx.ellipse(cx + 80, cy + 20, 40, 18, 0, 0, Math.PI * 2); ctx.fill();
+  for (let i = 0; i < 3; i++) {
+    const dx = cx + 65 + i * 15 + Math.sin(gameTime / 600 + i) * 5;
+    const dy = cy + 18 + Math.cos(gameTime / 800 + i) * 3;
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath(); ctx.ellipse(dx, dy, 5, 3, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#f97316';
+    ctx.beginPath(); ctx.moveTo(dx + 4, dy - 1); ctx.lineTo(dx + 7, dy); ctx.lineTo(dx + 4, dy + 1); ctx.fill();
+  }
+  ctx.fillStyle = '#92400e';
+  const sq1x = cx - 100 + Math.sin(gameTime / 700) * 15;
+  ctx.beginPath(); ctx.ellipse(sq1x, cy + 90, 5, 4, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(sq1x + 4, cy + 86, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(sq1x - 6, cy + 85, 4, 0, Math.PI * 2); ctx.fill();
+  const bfx = cx - 50 + Math.sin(gameTime / 500) * 40;
+  const bfy = cy - 20 + Math.cos(gameTime / 400) * 15;
+  ctx.fillStyle = '#e879f9';
+  const wing = Math.sin(gameTime / 100) * 4;
+  ctx.beginPath(); ctx.ellipse(bfx - 3, bfy, 3 + wing, 5, -0.3, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(bfx + 3, bfy, 3 + wing, 5, 0.3, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 18px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText('Central Park', cx, cy - 130);
+  ctx.font = '13px system-ui'; ctx.fillStyle = 'rgba(255,255,255,0.8)';
+  ctx.fillText('Press Enter to leave', cx, cy + 150);
+  drawKitty(cx - 30, cy + 60, player.color, 1, 0, 'horn');
+}
+
+function drawRomeSky(W, H, cycle, isNight) {
+  const dayTop = [150, 180, 230]; const nightTop = [15, 18, 35];
+  const dayBot = [255, 230, 200]; const nightBot = [30, 25, 45];
+  const skyTop = lerpColor(dayTop, nightTop, cycle);
+  const skyBot = lerpColor(dayBot, nightBot, cycle);
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, `rgb(${skyTop})`); grad.addColorStop(1, `rgb(${skyBot})`);
+  ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
+  if (isNight) drawStars(W, H, cycle);
+  drawCelestial(W, H, cycle);
+}
+
+function drawRomeWorld(W, H, cam) {
+  const ww = getCurrentWorldW();
+  ctx.fillStyle = '#a8a29e'; ctx.fillRect(0, GROUND_Y, ww, H);
+  ctx.strokeStyle = '#78716c'; ctx.lineWidth = 0.5;
+  for (let rx = Math.max(0, Math.floor((cam - 20) / 24) * 24); rx < Math.min(ww, cam + W + 20); rx += 24) {
+    for (let ry = 0; ry < 3; ry++) {
+      const offset = ry % 2 === 0 ? 0 : 12;
+      ctx.beginPath(); ctx.roundRect(rx + offset, GROUND_Y + 4 + ry * 10, 20, 8, 2); ctx.stroke();
+    }
+  }
+  drawRomeScenes(cam, W); drawRomePlatforms(); drawRomeYarnBalls();
+  for (const npc of romeNpcs) drawKitty(npc.x, npc.y, npc.color, npc.facing, npc.walkFrame, npc.accessory);
+  drawPlayerAndUI();
+}
+
+function drawRomePlatforms() {
+  for (const p of level3.platforms) {
+    ctx.fillStyle = 'rgba(0,0,0,0.1)'; ctx.fillRect(p.x + 3, p.y + 3, p.w, 14);
+    const pGrad = ctx.createLinearGradient(p.x, p.y, p.x, p.y + 14);
+    pGrad.addColorStop(0, '#d6d3d1'); pGrad.addColorStop(1, '#a8a29e');
+    ctx.fillStyle = pGrad; ctx.beginPath(); ctx.roundRect(p.x, p.y, p.w, 14, 4); ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.15)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(p.x + 5, p.y + 7); ctx.lineTo(p.x + p.w - 5, p.y + 7); ctx.stroke();
+  }
+}
+
+function drawRomeYarnBalls() {
+  for (const yb of level3.yarnBalls) {
+    if (yb.collected) continue;
+    const bob = Math.sin(gameTime / 400 + yb.bobPhase) * 3;
+    const yx = yb.x, yy = yb.y + bob;
+    ctx.globalAlpha = 0.25; ctx.fillStyle = yb.color;
+    ctx.beginPath(); ctx.arc(yx, yy, 18, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+    ctx.fillStyle = yb.color; ctx.beginPath(); ctx.arc(yx, yy, 12, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(yx, yy, 10, 0.3, 1.8); ctx.stroke();
+    ctx.beginPath(); ctx.arc(yx, yy, 8, 2.0, 3.5); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.beginPath(); ctx.arc(yx - 3, yy - 4, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = yb.color; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(yx + 10, yy + 5);
+    ctx.quadraticCurveTo(yx + 16, yy + 12 + bob, yx + 12, yy + 18); ctx.stroke();
+  }
+}
+
+function drawRomeScenes(cam, W) {
+  for (const s of level3.scenes) {
+    if (s.x < cam - 250 || s.x > cam + W + 250) continue;
+    switch (s.type) {
+      case 'colosseum': drawColosseum(s.x); break;
+      case 'fountain': drawFountain(s.x); break;
+      case 'roman_column': drawRomanColumn(s.x); break;
+      case 'gelato_cart': drawGelatoCart(s.x); break;
+      case 'vespa': drawVespa(s.x); break;
+      case 'olive_tree': drawOliveTree(s.x); break;
+      case 'pantheon': drawPantheon(s.x); break;
+      case 'pasta_shop': drawPastaShop(s.x); break;
+      case 'piazza': drawPiazza(s.x); break;
+    }
+  }
+}
+
+function drawColosseum(x) {
+  const gy = GROUND_Y;
+  ctx.fillStyle = '#d6d3d1';
+  ctx.beginPath(); ctx.ellipse(x, gy - 50, 80, 60, 0, Math.PI, 0); ctx.fill();
+  ctx.fillRect(x - 80, gy - 50, 160, 50);
+  ctx.fillStyle = '#78716c';
+  for (let tier = 0; tier < 3; tier++) {
+    const ty = gy - 85 + tier * 22;
+    const numArches = 8 - tier;
+    const archW = 140 / numArches;
+    for (let i = 0; i < numArches; i++) {
+      const ax = x - 70 + i * archW + archW / 2;
+      ctx.beginPath(); ctx.arc(ax, ty + 8, archW / 2 - 2, Math.PI, 0); ctx.fill();
+    }
+  }
+  ctx.fillStyle = '#d6d3d1';
+  for (let i = 0; i < 8; i++) {
+    const bh = Math.sin(i * 1.3) * 8 + 5;
+    ctx.fillRect(x - 75 + i * 20, gy - 110 - bh, 15, bh);
+  }
+}
+
+function drawFountain(x) {
+  const gy = GROUND_Y;
+  ctx.fillStyle = '#d6d3d1';
+  ctx.beginPath(); ctx.ellipse(x, gy - 8, 40, 12, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#38bdf8';
+  ctx.beginPath(); ctx.ellipse(x, gy - 10, 35, 9, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#d6d3d1'; ctx.fillRect(x - 4, gy - 45, 8, 35);
+  ctx.beginPath(); ctx.ellipse(x, gy - 45, 15, 6, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2;
+  const jt = Math.sin(gameTime / 200) * 3;
+  for (let i = -1; i <= 1; i++) {
+    ctx.beginPath(); ctx.moveTo(x + i * 8, gy - 45);
+    ctx.quadraticCurveTo(x + i * 15, gy - 60 + jt, x + i * 20, gy - 15); ctx.stroke();
+  }
+  ctx.fillStyle = '#fff';
+  for (let i = 0; i < 4; i++) {
+    ctx.globalAlpha = Math.sin(gameTime / 200 + i) * 0.3 + 0.3;
+    ctx.beginPath(); ctx.arc(x - 10 + Math.cos(gameTime / 300 + i * 1.5) * 20, gy - 30 + Math.sin(gameTime / 250 + i * 2) * 15, 1.5, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawRomanColumn(x) {
+  const gy = GROUND_Y;
+  ctx.fillStyle = '#d6d3d1';
+  ctx.fillRect(x - 10, gy - 8, 20, 8); ctx.fillRect(x - 6, gy - 70, 12, 62); ctx.fillRect(x - 10, gy - 74, 20, 6);
+  ctx.strokeStyle = 'rgba(0,0,0,0.1)'; ctx.lineWidth = 1;
+  for (let i = -2; i <= 2; i++) { ctx.beginPath(); ctx.moveTo(x + i * 2, gy - 8); ctx.lineTo(x + i * 2, gy - 70); ctx.stroke(); }
+}
+
+function drawGelatoCart(x) {
+  const gy = GROUND_Y;
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.roundRect(x - 25, gy - 35, 50, 28, 5); ctx.fill();
+  ctx.fillStyle = '#16a34a'; ctx.beginPath(); ctx.arc(x, gy - 50, 28, Math.PI, Math.PI + Math.PI / 3); ctx.lineTo(x, gy - 50); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, gy - 50, 28, Math.PI + Math.PI / 3, Math.PI + 2 * Math.PI / 3); ctx.lineTo(x, gy - 50); ctx.fill();
+  ctx.fillStyle = '#dc2626'; ctx.beginPath(); ctx.arc(x, gy - 50, 28, Math.PI + 2 * Math.PI / 3, 0); ctx.lineTo(x, gy - 50); ctx.fill();
+  ctx.fillStyle = '#94a3b8'; ctx.fillRect(x - 1, gy - 50, 2, 15);
+  const gc = ['#fda4af','#86efac','#fde68a','#c4b5fd'];
+  for (let i = 0; i < 4; i++) { ctx.fillStyle = gc[i]; ctx.beginPath(); ctx.arc(x - 15 + i * 10, gy - 25, 5, Math.PI, 0); ctx.fill(); }
+  ctx.fillStyle = '#1f2937';
+  ctx.beginPath(); ctx.arc(x - 18, gy - 4, 5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 18, gy - 4, 5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#78350f'; ctx.font = 'bold 5px system-ui'; ctx.textAlign = 'center'; ctx.fillText('GELATO', x, gy - 12);
+}
+
+function drawVespa(x) {
+  const gy = GROUND_Y;
+  ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.roundRect(x - 18, gy - 22, 36, 16, 6); ctx.fill();
+  ctx.fillStyle = '#78350f'; ctx.beginPath(); ctx.roundRect(x - 8, gy - 26, 20, 6, 3); ctx.fill();
+  ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(x - 14, gy - 22); ctx.lineTo(x - 18, gy - 30); ctx.stroke();
+  ctx.fillStyle = '#1f2937';
+  ctx.beginPath(); ctx.arc(x - 14, gy - 4, 6, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 14, gy - 4, 6, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#fde68a'; ctx.beginPath(); ctx.arc(x - 18, gy - 16, 3, 0, Math.PI * 2); ctx.fill();
+}
+
+function drawOliveTree(x) {
+  const gy = GROUND_Y;
+  ctx.fillStyle = '#78350f';
+  ctx.beginPath(); ctx.moveTo(x - 5, gy); ctx.quadraticCurveTo(x - 8, gy - 25, x - 3, gy - 45);
+  ctx.lineTo(x + 3, gy - 45); ctx.quadraticCurveTo(x + 8, gy - 25, x + 5, gy); ctx.fill();
+  ctx.fillStyle = '#6b8e6b';
+  ctx.beginPath(); ctx.arc(x, gy - 55, 22, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x - 14, gy - 48, 16, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 14, gy - 48, 16, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#365314';
+  for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.arc(x - 12 + i * 6, gy - 42 + Math.cos(i * 1.7) * 8, 2.5, 0, Math.PI * 2); ctx.fill(); }
+}
+
+function drawPantheon(x) {
+  const gy = GROUND_Y;
+  for (let i = 0; i < 6; i++) {
+    const cx2 = x - 50 + i * 20;
+    ctx.fillStyle = '#d6d3d1'; ctx.fillRect(cx2 - 3, gy - 80, 6, 80); ctx.fillRect(cx2 - 5, gy - 82, 10, 4);
+  }
+  ctx.fillStyle = '#d6d3d1';
+  ctx.beginPath(); ctx.moveTo(x - 55, gy - 82); ctx.lineTo(x, gy - 105); ctx.lineTo(x + 55, gy - 82); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#a8a29e'; ctx.beginPath(); ctx.arc(x, gy - 60, 50, Math.PI, 0); ctx.fill();
+  ctx.fillStyle = '#78716c'; ctx.font = 'bold 5px system-ui'; ctx.textAlign = 'center'; ctx.fillText('PANTHEON', x, gy - 90);
+}
+
+function drawPastaShop(x) {
+  const gy = GROUND_Y;
+  ctx.fillStyle = '#fef3c7'; ctx.fillRect(x - 35, gy - 50, 70, 50);
+  ctx.fillStyle = '#16a34a'; ctx.fillRect(x - 38, gy - 50, 76, 8);
+  for (let i = 0; i < 6; i++) { ctx.beginPath(); ctx.arc(x - 30 + i * 12, gy - 42, 6, 0, Math.PI); ctx.fill(); }
+  ctx.fillStyle = '#fde68a'; ctx.fillRect(x - 25, gy - 38, 50, 20);
+  ctx.fillStyle = '#78350f'; ctx.beginPath(); ctx.roundRect(x - 8, gy - 30, 16, 30, [4, 4, 0, 0]); ctx.fill();
+  ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 1.5;
+  for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.moveTo(x - 20 + i * 12, gy - 36); ctx.lineTo(x - 20 + i * 12, gy - 22); ctx.stroke(); }
+  ctx.fillStyle = '#dc2626'; ctx.font = 'bold 6px system-ui'; ctx.textAlign = 'center'; ctx.fillText('PASTA', x, gy - 52);
+}
+
+function drawPiazza(x) {
+  const gy = GROUND_Y;
+  ctx.fillStyle = '#e7e5e4'; ctx.beginPath(); ctx.ellipse(x, gy, 70, 8, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#a8a29e';
+  ctx.beginPath(); ctx.moveTo(x - 4, gy); ctx.lineTo(x - 3, gy - 50); ctx.lineTo(x, gy - 60);
+  ctx.lineTo(x + 3, gy - 50); ctx.lineTo(x + 4, gy); ctx.fill();
+  ctx.fillStyle = '#78350f'; ctx.fillRect(x - 50, gy - 10, 20, 4); ctx.fillRect(x + 30, gy - 10, 20, 4);
+  for (let i = 0; i < 4; i++) {
+    const px = x - 30 + i * 20 + Math.sin(gameTime / 600 + i * 2) * 8;
+    ctx.fillStyle = '#9ca3af'; ctx.beginPath(); ctx.ellipse(px, gy - 4, 4, 3, 0, 0, Math.PI * 2); ctx.fill();
   }
 }
 
