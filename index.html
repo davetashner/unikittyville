@@ -138,6 +138,7 @@
 
 <canvas id="game"></canvas>
 <div id="hud">
+  <span id="hudLevel">Level 1</span>
   <span id="hudName"></span>
   <span>Score: <b id="hudScore">0</b></span>
   <span>Fish: <b id="hudFish">0</b></span>
@@ -177,6 +178,8 @@ let fishing = { active: false, timer: 0, caught: false };
 let popups = []; // floating score popups
 let keys = {};
 let lastMeowTime = 0;
+let currentLevel = 1;
+let levelTransition = { active: false, timer: 0, toLevel: 0 };
 const meowSounds = [];
 
 function initMeows() {
@@ -314,9 +317,168 @@ const bgScenes = [
   { type: 'beehive', x: 4000 },
   // Scene 7: Waterfall rocks
   { type: 'waterfall', x: 4350 },
-  // Scene 8: Rainbow bridge
+  // Scene 8: Rainbow bridge (portal to Level 2)
   { type: 'bridge', x: 4600 },
 ];
+
+// ── Level 2: New York City ──
+const BRIDGE_PORTAL = { x: 4600, radius: 55 }; // rainbow bridge hitbox
+
+const level2 = {
+  worldW: 4800,
+  platforms: [
+    // Fire escapes & ledges on buildings
+    { x: 150, y: 340, w: 80 },
+    { x: 350, y: 280, w: 90 },
+    { x: 550, y: 330, w: 70 },
+    { x: 700, y: 260, w: 80 },
+    { x: 900, y: 340, w: 100 },
+    { x: 1100, y: 290, w: 80 },
+    { x: 1300, y: 230, w: 90 },
+    { x: 1500, y: 340, w: 80 },
+    { x: 1700, y: 280, w: 90 },
+    { x: 1900, y: 220, w: 80 },
+    { x: 2150, y: 340, w: 100 },
+    { x: 2350, y: 270, w: 80 },
+    { x: 2550, y: 210, w: 90 },
+    { x: 2800, y: 330, w: 80 },
+    { x: 3000, y: 260, w: 90 },
+    { x: 3200, y: 340, w: 100 },
+    { x: 3400, y: 280, w: 80 },
+    { x: 3600, y: 220, w: 90 },
+    { x: 3850, y: 340, w: 80 },
+    { x: 4050, y: 270, w: 90 },
+    { x: 4250, y: 210, w: 80 },
+    { x: 4500, y: 340, w: 100 },
+  ],
+  yarnBalls: [],
+  buildings: [
+    // NYC skyline buildings: x, width, height, color, windows
+    { x: 50, w: 120, h: 250, c: '#64748b', windows: true },
+    { x: 200, w: 80, h: 180, c: '#78716c', windows: true },
+    { x: 310, w: 100, h: 320, c: '#475569', windows: true, spire: true },
+    { x: 450, w: 90, h: 200, c: '#6b7280', windows: true },
+    { x: 580, w: 130, h: 280, c: '#57534e', windows: true },
+    { x: 750, w: 70, h: 160, c: '#71717a', windows: true },
+    { x: 860, w: 110, h: 340, c: '#44403c', windows: true, spire: true },
+    { x: 1010, w: 90, h: 220, c: '#64748b', windows: true },
+    { x: 1140, w: 120, h: 260, c: '#525252', windows: true },
+    { x: 1300, w: 80, h: 190, c: '#78716c', windows: true },
+    { x: 1420, w: 100, h: 300, c: '#475569', windows: true },
+    { x: 1560, w: 110, h: 230, c: '#6b7280', windows: true },
+    { x: 1710, w: 90, h: 350, c: '#44403c', windows: true, spire: true },
+    { x: 1840, w: 120, h: 200, c: '#57534e', windows: true },
+    { x: 2000, w: 80, h: 270, c: '#71717a', windows: true },
+    { x: 2120, w: 130, h: 180, c: '#64748b', windows: true },
+    { x: 2290, w: 100, h: 310, c: '#525252', windows: true, spire: true },
+    { x: 2430, w: 90, h: 220, c: '#78716c', windows: true },
+    { x: 2560, w: 110, h: 250, c: '#475569', windows: true },
+    { x: 2710, w: 80, h: 190, c: '#6b7280', windows: true },
+    { x: 2830, w: 120, h: 280, c: '#44403c', windows: true },
+    { x: 2990, w: 100, h: 340, c: '#57534e', windows: true, spire: true },
+    { x: 3130, w: 90, h: 210, c: '#71717a', windows: true },
+    { x: 3260, w: 110, h: 260, c: '#64748b', windows: true },
+    { x: 3410, w: 80, h: 300, c: '#525252', windows: true },
+    { x: 3530, w: 120, h: 180, c: '#78716c', windows: true },
+    { x: 3690, w: 100, h: 320, c: '#475569', windows: true, spire: true },
+    { x: 3830, w: 90, h: 240, c: '#6b7280', windows: true },
+    { x: 3960, w: 130, h: 200, c: '#44403c', windows: true },
+    { x: 4130, w: 80, h: 280, c: '#57534e', windows: true },
+    { x: 4250, w: 110, h: 350, c: '#525252', windows: true, spire: true },
+    { x: 4400, w: 100, h: 220, c: '#71717a', windows: true },
+  ],
+  scenes: [
+    // NYC-themed scenes
+    { type: 'taxi', x: 300 },
+    { type: 'taxi', x: 1200 },
+    { type: 'taxi', x: 2400 },
+    { type: 'taxi', x: 3600 },
+    { type: 'hotdog_cart', x: 600 },
+    { type: 'hotdog_cart', x: 2000 },
+    { type: 'hotdog_cart', x: 3400 },
+    { type: 'fire_hydrant', x: 180 },
+    { type: 'fire_hydrant', x: 900 },
+    { type: 'fire_hydrant', x: 1600 },
+    { type: 'fire_hydrant', x: 2800 },
+    { type: 'fire_hydrant', x: 4100 },
+    { type: 'streetlamp', x: 400 },
+    { type: 'streetlamp', x: 800 },
+    { type: 'streetlamp', x: 1400 },
+    { type: 'streetlamp', x: 1900 },
+    { type: 'streetlamp', x: 2500 },
+    { type: 'streetlamp', x: 3100 },
+    { type: 'streetlamp', x: 3700 },
+    { type: 'streetlamp', x: 4300 },
+    { type: 'pizza_shop', x: 1000 },
+    { type: 'central_park', x: 2200 },
+    { type: 'statue_liberty', x: 4550 },
+    { type: 'subway', x: 1700 },
+    { type: 'pigeon_flock', x: 500 },
+    { type: 'pigeon_flock', x: 2600 },
+    { type: 'pigeon_flock', x: 3800 },
+  ],
+};
+
+// Init level 2 yarn balls on higher platforms
+for (const p of level2.platforms) {
+  if (p.y < 290) {
+    level2.yarnBalls.push({
+      x: p.x + p.w / 2,
+      y: p.y - 14,
+      color: yarnColors[level2.yarnBalls.length % yarnColors.length],
+      collected: false,
+      bobPhase: Math.random() * Math.PI * 2
+    });
+  }
+}
+
+// Level 2 NPCs
+const nycNpcs = [];
+const nycNpcColors = ['#fca5a5','#93c5fd','#d8b4fe','#fde68a'];
+const nycNpcAccessories = ['glasses','scarf','bow','flower'];
+for (let i = 0; i < 4; i++) {
+  nycNpcs.push({
+    x: 400 + i * 900 + Math.random() * 200,
+    y: GROUND_Y,
+    color: nycNpcColors[i],
+    accessory: nycNpcAccessories[i],
+    vx: (Math.random() - 0.5) * 1.5,
+    walkFrame: 0, walkTimer: 0,
+    facing: 1,
+    idleTimer: Math.random() * 200
+  });
+}
+
+function switchToLevel(lvl) {
+  levelTransition.active = true;
+  levelTransition.timer = 0;
+  levelTransition.toLevel = lvl;
+}
+
+function completeTransition() {
+  currentLevel = levelTransition.toLevel;
+  levelTransition.active = false;
+  player.x = 100;
+  player.y = GROUND_Y;
+  player.vy = 0;
+  player.onGround = true;
+  popups = [];
+  cooking.active = false;
+  fishing.active = false;
+  insideHouse = false;
+}
+
+function getCurrentPlatforms() {
+  return currentLevel === 1 ? platforms : level2.platforms;
+}
+
+function getCurrentYarnBalls() {
+  return currentLevel === 1 ? yarnBalls : level2.yarnBalls;
+}
+
+function getCurrentWorldW() {
+  return currentLevel === 1 ? WORLD_W : level2.worldW;
+}
 
 // ── Canvas Setup ──
 const canvas = document.getElementById('game');
@@ -371,6 +533,15 @@ function loop(ts) {
 
 // ── Update ──
 function update(dt) {
+  // Level transition animation
+  if (levelTransition.active) {
+    levelTransition.timer += dt;
+    if (levelTransition.timer > 1500) {
+      completeTransition();
+    }
+    return;
+  }
+
   if (insideHouse) {
     if (keys['Enter']) {
       keys['Enter'] = false;
@@ -401,7 +572,7 @@ function update(dt) {
   // Platform collision (only when falling)
   let onPlatform = false;
   if (player.vy >= 0) {
-    for (const p of platforms) {
+    for (const p of getCurrentPlatforms()) {
       if (player.x > p.x - 10 && player.x < p.x + p.w + 10 &&
           player.y >= p.y && player.y - player.vy <= p.y) {
         player.y = p.y;
@@ -424,7 +595,7 @@ function update(dt) {
   }
 
   // Yarn ball collection
-  for (const yb of yarnBalls) {
+  for (const yb of getCurrentYarnBalls()) {
     if (yb.collected) continue;
     const dx = player.x - yb.x;
     const dy = (player.y - 20) - yb.y;
@@ -437,7 +608,7 @@ function update(dt) {
   }
 
   // World bounds
-  player.x = Math.max(20, Math.min(WORLD_W - 20, player.x));
+  player.x = Math.max(20, Math.min(getCurrentWorldW() - 20, player.x));
 
   // Walk animation
   if (Math.abs(player.vx) > 0) {
@@ -450,8 +621,8 @@ function update(dt) {
     player.walkFrame = 0;
   }
 
-  // Fishing
-  const inPond = player.x > POND.x && player.x < POND.x + POND.w;
+  // Fishing (level 1 only)
+  const inPond = currentLevel === 1 && player.x > POND.x && player.x < POND.x + POND.w;
   if (keys['KeyF'] && inPond && !fishing.active && !cooking.active) {
     keys['KeyF'] = false;
     fishing.active = true;
@@ -481,8 +652,8 @@ function update(dt) {
     }
   }
 
-  // Cooking
-  const nearGrill = Math.abs(player.x - GRILL.x) < 60;
+  // Cooking (level 1 only)
+  const nearGrill = currentLevel === 1 && Math.abs(player.x - GRILL.x) < 60;
   if (keys['KeyC'] && nearGrill && !cooking.active && !fishing.active) {
     keys['KeyC'] = false;
     cooking.active = true;
@@ -504,31 +675,45 @@ function update(dt) {
     }
   }
 
-  // House entry
-  const nearHouse = player.x > HOUSE.x - 20 && player.x < HOUSE.x + HOUSE.w + 20;
+  // House entry (level 1 only)
+  const nearHouse = currentLevel === 1 && player.x > HOUSE.x - 20 && player.x < HOUSE.x + HOUSE.w + 20;
   if (keys['Enter'] && nearHouse && !insideHouse) {
     keys['Enter'] = false;
     insideHouse = true;
   }
 
-  // Pond fish AI
-  for (const f of pondFish) {
-    f.wobble += 0.03;
-    f.x += f.vx;
-    f.y += Math.sin(f.wobble) * 0.3;
-    if (f.x < POND.x + 20 || f.x > POND.x + POND.w - 20) f.vx *= -1;
-    f.y = Math.max(GROUND_Y + 5, Math.min(GROUND_Y + POND.depth - 10, f.y));
+  // Rainbow bridge portal (level 1 → level 2)
+  if (currentLevel === 1) {
+    const dx = player.x - BRIDGE_PORTAL.x;
+    const dy = player.y - GROUND_Y;
+    if (dx * dx + dy * dy < BRIDGE_PORTAL.radius * BRIDGE_PORTAL.radius && keys['Enter']) {
+      keys['Enter'] = false;
+      switchToLevel(2);
+    }
+  }
+
+  // Pond fish AI (level 1 only)
+  if (currentLevel === 1) {
+    for (const f of pondFish) {
+      f.wobble += 0.03;
+      f.x += f.vx;
+      f.y += Math.sin(f.wobble) * 0.3;
+      if (f.x < POND.x + 20 || f.x > POND.x + POND.w - 20) f.vx *= -1;
+      f.y = Math.max(GROUND_Y + 5, Math.min(GROUND_Y + POND.depth - 10, f.y));
+    }
   }
 
   // NPC AI
-  for (const npc of npcs) {
+  const activeNpcs = currentLevel === 1 ? npcs : nycNpcs;
+  const worldW = getCurrentWorldW();
+  for (const npc of activeNpcs) {
     npc.idleTimer -= dt / 16;
     if (npc.idleTimer <= 0) {
       npc.vx = (Math.random() - 0.5) * 2;
       npc.idleTimer = 100 + Math.random() * 200;
     }
     npc.x += npc.vx * 0.5;
-    npc.x = Math.max(40, Math.min(WORLD_W - 40, npc.x));
+    npc.x = Math.max(40, Math.min(worldW - 40, npc.x));
     npc.facing = npc.vx >= 0 ? 1 : -1;
     if (Math.abs(npc.vx) > 0.1) {
       npc.walkTimer += dt;
@@ -550,14 +735,15 @@ function update(dt) {
   document.getElementById('hudFish').textContent = fishCount;
   document.getElementById('hudBacon').textContent = baconCount;
   document.getElementById('hudYarn').textContent = yarnCount;
+  document.getElementById('hudLevel').textContent = currentLevel === 1 ? 'Meadow' : 'NYC';
 
   // Prompt
   updatePrompt(inPond, nearGrill, nearHouse);
 }
 
 function getGroundLevel(x) {
-  // Pond area is lower
-  if (x > POND.x + 20 && x < POND.x + POND.w - 20) {
+  // Pond area is lower (level 1 only)
+  if (currentLevel === 1 && x > POND.x + 20 && x < POND.x + POND.w - 20) {
     return GROUND_Y + POND.depth;
   }
   return GROUND_Y;
@@ -585,6 +771,9 @@ function updatePrompt(inPond, nearGrill, nearHouse) {
   } else if (nearHouse) {
     el.textContent = 'Press Enter to go inside';
     el.style.display = 'block';
+  } else if (currentLevel === 1 && Math.abs(player.x - BRIDGE_PORTAL.x) < 60) {
+    el.textContent = 'Press Enter to travel to NYC!';
+    el.style.display = 'block';
   } else {
     el.style.display = 'none';
   }
@@ -593,13 +782,40 @@ function updatePrompt(inPond, nearGrill, nearHouse) {
 // ── Draw ──
 function draw() {
   const W = canvas.width, H = canvas.height;
-  const cam = Math.max(0, Math.min(WORLD_W - W, player.x - W / 2));
+  const ww = getCurrentWorldW();
+  const cam = Math.max(0, Math.min(ww - W, player.x - W / 2));
+
+  // Level transition effect
+  if (levelTransition.active) {
+    drawLevelTransition(W, H);
+    return;
+  }
 
   // Day/night cycle (0..1, 0=noon, 0.5=midnight)
   const cycle = (Math.sin(gameTime / DAY_LENGTH * Math.PI * 2 - Math.PI / 2) + 1) / 2;
   const isNight = cycle > 0.5;
 
-  // Sky
+  if (currentLevel === 1) {
+    drawLevel1Sky(W, H, cycle, isNight, cam);
+  } else {
+    drawLevel2Sky(W, H, cycle, isNight);
+  }
+
+  ctx.save();
+  ctx.translate(-cam, 0);
+
+  if (insideHouse) {
+    drawHouseInterior(cam, W, H);
+  } else if (currentLevel === 1) {
+    drawLevel1World(W, H, cam, cycle, isNight);
+  } else {
+    drawLevel2World(W, H, cam, cycle, isNight);
+  }
+
+  ctx.restore();
+}
+
+function drawLevel1Sky(W, H, cycle, isNight, cam) {
   const dayTop = [135, 206, 250];
   const nightTop = [15, 23, 42];
   const dayBot = [255, 253, 240];
@@ -612,89 +828,528 @@ function draw() {
   grad.addColorStop(1, `rgb(${skyBot})`);
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, W, H);
-
-  // Stars at night
   if (isNight) drawStars(W, H, cycle);
-
-  // Rainbow at night
-  if (isNight) drawRainbow(W, H, cam);
-
-  // Sun or moon
+  if (isNight) drawRainbow(W, H, 0);
   drawCelestial(W, H, cycle);
+  drawHills(W, H, 0);
+}
 
-  // Background hills
-  drawHills(W, H, cam);
+function drawLevel2Sky(W, H, cycle, isNight) {
+  // NYC has a more urban sky — deeper blues/grays
+  const dayTop = [120, 160, 200];
+  const nightTop = [10, 15, 30];
+  const dayBot = [200, 210, 220];
+  const nightBot = [25, 30, 50];
+  const t = cycle;
+  const skyTop = lerpColor(dayTop, nightTop, t);
+  const skyBot = lerpColor(dayBot, nightBot, t);
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, `rgb(${skyTop})`);
+  grad.addColorStop(1, `rgb(${skyBot})`);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+  if (isNight) drawStars(W, H, cycle);
+  drawCelestial(W, H, cycle);
+}
 
-  ctx.save();
-  ctx.translate(-cam, 0);
+function drawLevel1World(W, H, cam) {
+  drawGround(W, H, cam);
+  drawBgScenes(cam, W);
+  drawPond();
+  for (const f of pondFish) drawFish(f);
+  drawGrill();
+  drawPlatforms();
+  drawYarnBalls();
+  drawHouse();
+  for (const npc of npcs) drawKitty(npc.x, npc.y, npc.color, npc.facing, npc.walkFrame, npc.accessory);
+  drawPlayerAndUI();
+}
 
-  if (insideHouse) {
-    drawHouseInterior(cam, W, H);
-  } else {
-    // Ground
-    drawGround(W, H, cam);
+function drawLevel2World(W, H, cam) {
+  // Sidewalk/road
+  ctx.fillStyle = '#4b5563';
+  ctx.fillRect(0, GROUND_Y, getCurrentWorldW(), H);
+  ctx.fillStyle = '#6b7280';
+  ctx.fillRect(0, GROUND_Y, getCurrentWorldW(), 4);
+  // Road markings
+  ctx.fillStyle = '#fbbf24';
+  for (let rx = 0; rx < getCurrentWorldW(); rx += 80) {
+    ctx.fillRect(rx, GROUND_Y + 20, 40, 3);
+  }
+  // Sidewalk
+  ctx.fillStyle = '#9ca3af';
+  ctx.fillRect(0, GROUND_Y - 2, getCurrentWorldW(), 6);
 
-    // Background scenes
-    drawBgScenes(cam, W);
+  // Background buildings (behind everything)
+  drawNYCBuildings(cam, W);
 
-    // Pond
-    drawPond();
+  // NYC scenes
+  drawNYCScenes(cam, W);
 
-    // Fish
-    for (const f of pondFish) drawFish(f);
+  // Platforms (fire escapes)
+  drawNYCPlatforms();
 
-    // Grill
-    drawGrill();
+  // Yarn balls
+  drawNYCYarnBalls();
 
-    // Platforms
-    drawPlatforms();
+  // NPCs
+  for (const npc of nycNpcs) drawKitty(npc.x, npc.y, npc.color, npc.facing, npc.walkFrame, npc.accessory);
 
-    // Yarn balls
-    drawYarnBalls();
+  drawPlayerAndUI();
+}
 
-    // House
-    drawHouse();
+function drawPlayerAndUI() {
+  drawKitty(player.x, player.y, player.color, player.facing, player.walkFrame, 'horn');
 
-    // NPCs
-    for (const npc of npcs) drawKitty(npc.x, npc.y, npc.color, npc.facing, npc.walkFrame, npc.accessory);
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 12px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText(playerName, player.x, player.y - 38);
 
-    // Player
-    drawKitty(player.x, player.y, player.color, player.facing, player.walkFrame, 'horn');
+  if (fishing.active) {
+    ctx.strokeStyle = '#a3a3a3';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(player.x + player.facing * 10, player.y - 10);
+    ctx.lineTo(player.x + player.facing * 30, player.y + 20);
+    ctx.stroke();
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath();
+    ctx.arc(player.x + player.facing * 30, player.y + 20, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
-    // Player name above head
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 12px system-ui';
+  for (const p of popups) {
+    const alpha = Math.min(1, p.life / 500);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = p.color;
+    ctx.font = 'bold 16px system-ui';
     ctx.textAlign = 'center';
-    ctx.fillText(playerName, player.x, player.y - 38);
+    ctx.fillText(p.text, p.x, p.y);
+    ctx.globalAlpha = 1;
+  }
+}
 
-    // Fishing line
-    if (fishing.active) {
-      ctx.strokeStyle = '#a3a3a3';
-      ctx.lineWidth = 1.5;
+function drawLevelTransition(W, H) {
+  const t = levelTransition.timer / 1500;
+  // Rainbow wipe effect
+  const colors = ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6','#ec4899'];
+  const bandH = H / colors.length;
+  for (let i = 0; i < colors.length; i++) {
+    ctx.fillStyle = colors[i];
+    const delay = i * 0.08;
+    const progress = Math.max(0, Math.min(1, (t - delay) / 0.5));
+    ctx.fillRect(0, i * bandH, W * progress, bandH + 1);
+  }
+  // Level name text
+  if (t > 0.4) {
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 36px system-ui';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const textAlpha = Math.min(1, (t - 0.4) / 0.3);
+    ctx.globalAlpha = textAlpha;
+    const levelName = levelTransition.toLevel === 2 ? 'Welcome to NYC!' : 'Back to the Meadow!';
+    ctx.fillText(levelName, W / 2, H / 2 - 20);
+    ctx.font = '20px system-ui';
+    ctx.fillText(playerName + ' arrives in the big city!', W / 2, H / 2 + 20);
+    ctx.globalAlpha = 1;
+    ctx.textBaseline = 'alphabetic';
+  }
+}
+
+function drawNYCBuildings(cam, W) {
+  for (const b of level2.buildings) {
+    if (b.x + b.w < cam - 50 || b.x > cam + W + 50) continue;
+    const bx = b.x, by = GROUND_Y;
+
+    // Building body
+    ctx.fillStyle = b.c;
+    ctx.fillRect(bx, by - b.h, b.w, b.h);
+
+    // Spire
+    if (b.spire) {
+      ctx.fillStyle = '#94a3b8';
       ctx.beginPath();
-      ctx.moveTo(player.x + player.facing * 10, player.y - 10);
-      ctx.lineTo(player.x + player.facing * 30, player.y + 20);
-      ctx.stroke();
-      // bobber
-      ctx.fillStyle = '#ef4444';
-      ctx.beginPath();
-      ctx.arc(player.x + player.facing * 30, player.y + 20, 4, 0, Math.PI * 2);
+      ctx.moveTo(bx + b.w / 2 - 4, by - b.h);
+      ctx.lineTo(bx + b.w / 2, by - b.h - 30);
+      ctx.lineTo(bx + b.w / 2 + 4, by - b.h);
       ctx.fill();
     }
 
-    // Popups
-    for (const p of popups) {
-      const alpha = Math.min(1, p.life / 500);
-      ctx.globalAlpha = alpha;
-      ctx.fillStyle = p.color;
-      ctx.font = 'bold 16px system-ui';
-      ctx.textAlign = 'center';
-      ctx.fillText(p.text, p.x, p.y);
-      ctx.globalAlpha = 1;
+    // Windows
+    if (b.windows) {
+      const rows = Math.floor((b.h - 20) / 18);
+      const cols = Math.floor((b.w - 10) / 16);
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const wx = bx + 8 + c * 16;
+          const wy = by - b.h + 12 + r * 18;
+          // Some windows lit, some dark
+          const lit = Math.sin((bx + r * 7 + c * 13) * 0.1 + gameTime / 5000) > 0;
+          ctx.fillStyle = lit ? '#fde68a' : 'rgba(0,0,0,0.3)';
+          ctx.fillRect(wx, wy, 8, 10);
+        }
+      }
+    }
+
+    // Roof edge
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.fillRect(bx - 2, by - b.h - 3, b.w + 4, 5);
+  }
+}
+
+function drawNYCPlatforms() {
+  for (const p of level2.platforms) {
+    // Fire escape style platforms — metallic
+    ctx.fillStyle = 'rgba(0,0,0,0.1)';
+    ctx.fillRect(p.x + 3, p.y + 3, p.w, 12);
+
+    const pGrad = ctx.createLinearGradient(p.x, p.y, p.x, p.y + 12);
+    pGrad.addColorStop(0, '#94a3b8');
+    pGrad.addColorStop(1, '#64748b');
+    ctx.fillStyle = pGrad;
+    ctx.beginPath();
+    ctx.roundRect(p.x, p.y, p.w, 12, 3);
+    ctx.fill();
+
+    // Railing
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    ctx.lineTo(p.x, p.y - 16);
+    ctx.moveTo(p.x + p.w, p.y);
+    ctx.lineTo(p.x + p.w, p.y - 16);
+    ctx.moveTo(p.x, p.y - 16);
+    ctx.lineTo(p.x + p.w, p.y - 16);
+    ctx.stroke();
+  }
+}
+
+function drawNYCYarnBalls() {
+  for (const yb of level2.yarnBalls) {
+    if (yb.collected) continue;
+    const bob = Math.sin(gameTime / 400 + yb.bobPhase) * 3;
+    const yx = yb.x, yy = yb.y + bob;
+
+    ctx.globalAlpha = 0.25;
+    ctx.fillStyle = yb.color;
+    ctx.beginPath();
+    ctx.arc(yx, yy, 18, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    ctx.fillStyle = yb.color;
+    ctx.beginPath();
+    ctx.arc(yx, yy, 12, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(yx, yy, 10, 0.3, 1.8); ctx.stroke();
+    ctx.beginPath(); ctx.arc(yx, yy, 8, 2.0, 3.5); ctx.stroke();
+    ctx.beginPath(); ctx.arc(yx, yy, 6, 4.0, 5.5); ctx.stroke();
+
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.beginPath();
+    ctx.arc(yx - 3, yy - 4, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = yb.color;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(yx + 10, yy + 5);
+    ctx.quadraticCurveTo(yx + 16, yy + 12 + bob, yx + 12, yy + 18);
+    ctx.stroke();
+  }
+}
+
+function drawNYCScenes(cam, W) {
+  for (const s of level2.scenes) {
+    if (s.x < cam - 200 || s.x > cam + W + 200) continue;
+    switch (s.type) {
+      case 'taxi': drawTaxi(s.x); break;
+      case 'hotdog_cart': drawHotdogCart(s.x); break;
+      case 'fire_hydrant': drawFireHydrant(s.x); break;
+      case 'streetlamp': drawStreetlamp(s.x); break;
+      case 'pizza_shop': drawPizzaShop(s.x); break;
+      case 'central_park': drawCentralPark(s.x); break;
+      case 'statue_liberty': drawStatueLiberty(s.x); break;
+      case 'subway': drawSubwayEntrance(s.x); break;
+      case 'pigeon_flock': drawPigeons(s.x); break;
     }
   }
+}
 
-  ctx.restore();
+function drawTaxi(x) {
+  const gy = GROUND_Y;
+  // Body
+  ctx.fillStyle = '#fbbf24';
+  ctx.beginPath(); ctx.roundRect(x - 30, gy - 22, 60, 18, 4); ctx.fill();
+  // Roof
+  ctx.fillStyle = '#eab308';
+  ctx.beginPath(); ctx.roundRect(x - 14, gy - 32, 28, 12, 4); ctx.fill();
+  // Windows
+  ctx.fillStyle = '#bae6fd';
+  ctx.fillRect(x - 12, gy - 30, 10, 8);
+  ctx.fillRect(x + 2, gy - 30, 10, 8);
+  // Wheels
+  ctx.fillStyle = '#1f2937';
+  ctx.beginPath(); ctx.arc(x - 18, gy - 4, 6, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 18, gy - 4, 6, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#6b7280';
+  ctx.beginPath(); ctx.arc(x - 18, gy - 4, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 18, gy - 4, 3, 0, Math.PI * 2); ctx.fill();
+  // TAXI sign
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.roundRect(x - 8, gy - 36, 16, 5, 2); ctx.fill();
+  ctx.fillStyle = '#1f2937';
+  ctx.font = 'bold 4px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText('TAXI', x, gy - 32);
+}
+
+function drawHotdogCart(x) {
+  const gy = GROUND_Y;
+  // Cart body
+  ctx.fillStyle = '#dc2626';
+  ctx.beginPath(); ctx.roundRect(x - 25, gy - 35, 50, 25, 5); ctx.fill();
+  // Umbrella
+  ctx.fillStyle = '#2563eb';
+  ctx.beginPath(); ctx.arc(x, gy - 50, 30, Math.PI, 0); ctx.fill();
+  ctx.fillStyle = '#fbbf24';
+  // Umbrella stripes
+  for (let i = 0; i < 3; i++) {
+    ctx.beginPath();
+    ctx.arc(x, gy - 50, 30, Math.PI + i * 0.5, Math.PI + i * 0.5 + 0.25);
+    ctx.lineTo(x, gy - 50);
+    ctx.fill();
+  }
+  // Pole
+  ctx.fillStyle = '#94a3b8';
+  ctx.fillRect(x - 1, gy - 50, 2, 15);
+  // Wheels
+  ctx.fillStyle = '#1f2937';
+  ctx.beginPath(); ctx.arc(x - 18, gy - 4, 5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 18, gy - 4, 5, 0, Math.PI * 2); ctx.fill();
+  // HOT DOGS text
+  ctx.fillStyle = '#fbbf24';
+  ctx.font = 'bold 6px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText('HOT DOGS', x, gy - 20);
+}
+
+function drawFireHydrant(x) {
+  const gy = GROUND_Y;
+  ctx.fillStyle = '#ef4444';
+  ctx.beginPath(); ctx.roundRect(x - 6, gy - 22, 12, 22, 3); ctx.fill();
+  // Top cap
+  ctx.fillRect(x - 8, gy - 24, 16, 4);
+  // Side nozzles
+  ctx.fillRect(x - 10, gy - 16, 4, 4);
+  ctx.fillRect(x + 6, gy - 16, 4, 4);
+  // Highlight
+  ctx.fillStyle = 'rgba(255,255,255,0.2)';
+  ctx.fillRect(x - 2, gy - 20, 3, 16);
+}
+
+function drawStreetlamp(x) {
+  const gy = GROUND_Y;
+  // Pole
+  ctx.fillStyle = '#374151';
+  ctx.fillRect(x - 2, gy - 80, 4, 80);
+  // Arm
+  ctx.beginPath();
+  ctx.moveTo(x, gy - 75);
+  ctx.quadraticCurveTo(x + 15, gy - 78, x + 20, gy - 70);
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = '#374151';
+  ctx.stroke();
+  // Light
+  const cycle = (Math.sin(gameTime / DAY_LENGTH * Math.PI * 2 - Math.PI / 2) + 1) / 2;
+  if (cycle > 0.4) {
+    // Glow
+    ctx.globalAlpha = 0.15;
+    ctx.fillStyle = '#fde68a';
+    ctx.beginPath(); ctx.arc(x + 20, gy - 66, 30, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+  ctx.fillStyle = cycle > 0.4 ? '#fde68a' : '#d1d5db';
+  ctx.beginPath(); ctx.arc(x + 20, gy - 66, 5, 0, Math.PI * 2); ctx.fill();
+}
+
+function drawPizzaShop(x) {
+  const gy = GROUND_Y;
+  // Storefront
+  ctx.fillStyle = '#dc2626';
+  ctx.fillRect(x - 40, gy - 55, 80, 55);
+  // Window
+  ctx.fillStyle = '#fde68a';
+  ctx.fillRect(x - 32, gy - 45, 64, 30);
+  // Door
+  ctx.fillStyle = '#78350f';
+  ctx.fillRect(x - 8, gy - 35, 16, 35);
+  // Sign
+  ctx.fillStyle = '#fbbf24';
+  ctx.beginPath(); ctx.roundRect(x - 30, gy - 60, 60, 10, 3); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 7px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText('PIZZA', x, gy - 52.5);
+  // Pizza slice in window
+  ctx.fillStyle = '#f97316';
+  ctx.beginPath();
+  ctx.moveTo(x - 10, gy - 25);
+  ctx.lineTo(x, gy - 40);
+  ctx.lineTo(x + 10, gy - 25);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#fbbf24';
+  ctx.beginPath();
+  ctx.moveTo(x - 8, gy - 27);
+  ctx.lineTo(x, gy - 38);
+  ctx.lineTo(x + 8, gy - 27);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawCentralPark(x) {
+  const gy = GROUND_Y;
+  // Green patch
+  ctx.fillStyle = '#4ade80';
+  ctx.beginPath();
+  ctx.ellipse(x, gy, 80, 6, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Trees
+  for (let i = -2; i <= 2; i++) {
+    const tx = x + i * 30;
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(tx - 3, gy - 40, 6, 40);
+    ctx.fillStyle = '#16a34a';
+    ctx.beginPath(); ctx.arc(tx, gy - 50, 18, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#22c55e';
+    ctx.beginPath(); ctx.arc(tx + 5, gy - 55, 14, 0, Math.PI * 2); ctx.fill();
+  }
+  // Bench
+  ctx.fillStyle = '#92400e';
+  ctx.fillRect(x - 15, gy - 12, 30, 3);
+  ctx.fillRect(x - 15, gy - 18, 30, 3);
+  ctx.fillRect(x - 14, gy - 12, 3, 12);
+  ctx.fillRect(x + 11, gy - 12, 3, 12);
+  // Sign
+  ctx.fillStyle = '#16a34a';
+  ctx.beginPath(); ctx.roundRect(x + 50, gy - 25, 30, 12, 2); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.font = '5px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText('CENTRAL', x + 65, gy - 17);
+  ctx.fillText('PARK', x + 65, gy - 12);
+}
+
+function drawStatueLiberty(x) {
+  const gy = GROUND_Y;
+  // Pedestal
+  ctx.fillStyle = '#9ca3af';
+  ctx.fillRect(x - 20, gy - 30, 40, 30);
+  ctx.fillRect(x - 25, gy - 5, 50, 5);
+  // Body
+  ctx.fillStyle = '#86efac';
+  ctx.beginPath();
+  ctx.moveTo(x - 12, gy - 30);
+  ctx.lineTo(x - 8, gy - 80);
+  ctx.lineTo(x + 8, gy - 80);
+  ctx.lineTo(x + 12, gy - 30);
+  ctx.fill();
+  // Head
+  ctx.beginPath(); ctx.arc(x, gy - 88, 10, 0, Math.PI * 2); ctx.fill();
+  // Crown
+  ctx.fillStyle = '#86efac';
+  for (let i = 0; i < 7; i++) {
+    const a = Math.PI + (i / 6) * Math.PI;
+    ctx.beginPath();
+    ctx.moveTo(x, gy - 88);
+    ctx.lineTo(x + Math.cos(a) * 16, gy - 88 + Math.sin(a) * 16);
+    ctx.lineTo(x + Math.cos(a) * 14, gy - 88 + Math.sin(a) * 12);
+    ctx.fill();
+  }
+  // Torch arm
+  ctx.strokeStyle = '#86efac';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(x + 8, gy - 80);
+  ctx.lineTo(x + 20, gy - 105);
+  ctx.stroke();
+  // Torch flame
+  ctx.fillStyle = '#fbbf24';
+  const flicker = Math.sin(gameTime / 150) * 2;
+  ctx.beginPath();
+  ctx.moveTo(x + 16, gy - 105);
+  ctx.quadraticCurveTo(x + 20, gy - 118 + flicker, x + 24, gy - 105);
+  ctx.fill();
+  // Tablet
+  ctx.fillStyle = '#4ade80';
+  ctx.fillRect(x - 10, gy - 65, 8, 14);
+}
+
+function drawSubwayEntrance(x) {
+  const gy = GROUND_Y;
+  // Railing
+  ctx.fillStyle = '#16a34a';
+  ctx.fillRect(x - 25, gy - 25, 4, 25);
+  ctx.fillRect(x + 21, gy - 25, 4, 25);
+  ctx.fillRect(x - 25, gy - 25, 50, 4);
+  // Steps going down
+  ctx.fillStyle = '#6b7280';
+  for (let i = 0; i < 3; i++) {
+    ctx.fillRect(x - 20 + i * 3, gy - 4 + i * 3, 40 - i * 6, 4);
+  }
+  // Globe lamp
+  ctx.fillStyle = '#22c55e';
+  ctx.beginPath(); ctx.arc(x, gy - 30, 6, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#4ade80';
+  ctx.beginPath(); ctx.arc(x, gy - 30, 4, 0, Math.PI * 2); ctx.fill();
+  // S sign
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 6px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText('S', x, gy - 28);
+}
+
+function drawPigeons(x) {
+  for (let i = 0; i < 5; i++) {
+    const px = x + i * 16 - 32 + Math.sin(gameTime / 800 + i * 2) * 5;
+    const py = GROUND_Y - 6;
+    const facing = Math.sin(gameTime / 1200 + i * 3) > 0 ? 1 : -1;
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.scale(facing, 1);
+    // Body
+    ctx.fillStyle = '#9ca3af';
+    ctx.beginPath(); ctx.ellipse(0, 0, 6, 4, 0, 0, Math.PI * 2); ctx.fill();
+    // Head
+    ctx.fillStyle = '#6b7280';
+    ctx.beginPath(); ctx.arc(5, -3, 3, 0, Math.PI * 2); ctx.fill();
+    // Neck shimmer
+    ctx.fillStyle = '#818cf8';
+    ctx.beginPath(); ctx.arc(4, -1, 2, 0, Math.PI * 2); ctx.fill();
+    // Eye
+    ctx.fillStyle = '#f97316';
+    ctx.beginPath(); ctx.arc(6, -4, 1, 0, Math.PI * 2); ctx.fill();
+    // Beak
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath();
+    ctx.moveTo(7, -3);
+    ctx.lineTo(10, -2.5);
+    ctx.lineTo(7, -2);
+    ctx.fill();
+    // Pecking animation
+    if (Math.sin(gameTime / 300 + i * 1.7) > 0.7) {
+      ctx.fillStyle = '#9ca3af';
+      ctx.beginPath(); ctx.arc(5, -1, 3, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
 }
 
 function lerpColor(a, b, t) {
