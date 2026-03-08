@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unikittyville</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #1a1a2e;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    overflow: hidden;
+  }
+  #startScreen {
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 50%, #a18cd1 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+  }
+  #startScreen h1 {
+    font-size: 4rem;
+    color: #fff;
+    text-shadow: 3px 3px 0 #c084fc, 6px 6px 0 #7c3aed;
+    margin-bottom: 0.5rem;
+    letter-spacing: 2px;
+  }
+  #startScreen .subtitle {
+    font-size: 1.2rem;
+    color: #fff;
+    opacity: 0.9;
+    margin-bottom: 2rem;
+  }
+  #startScreen label {
+    font-size: 1.2rem;
+    color: #fff;
+    margin-bottom: 0.5rem;
+  }
+  #nameInput {
+    font-size: 1.5rem;
+    padding: 12px 24px;
+    border: 3px solid #c084fc;
+    border-radius: 16px;
+    outline: none;
+    text-align: center;
+    background: rgba(255,255,255,0.9);
+    color: #4c1d95;
+    width: 300px;
+    margin-bottom: 1.5rem;
+  }
+  #nameInput:focus { border-color: #7c3aed; box-shadow: 0 0 20px rgba(124,58,237,0.3); }
+  #startBtn {
+    font-size: 1.3rem;
+    padding: 14px 48px;
+    background: linear-gradient(135deg, #7c3aed, #c084fc);
+    color: #fff;
+    border: none;
+    border-radius: 16px;
+    cursor: pointer;
+    font-weight: 700;
+    letter-spacing: 1px;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  #startBtn:hover { transform: scale(1.05); box-shadow: 0 8px 25px rgba(124,58,237,0.4); }
+  canvas { border-radius: 12px; display: block; }
+  #hud {
+    position: fixed;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: none;
+    gap: 24px;
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(12px);
+    padding: 10px 28px;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.25);
+    font-size: 1.05rem;
+    color: #fff;
+    font-weight: 600;
+    z-index: 10;
+  }
+  #hud span { display: flex; align-items: center; gap: 6px; }
+  #controls {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: none;
+    background: rgba(255,255,255,0.12);
+    backdrop-filter: blur(12px);
+    padding: 8px 20px;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.2);
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.8);
+    z-index: 10;
+    gap: 16px;
+  }
+  #prompt {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: none;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(8px);
+    padding: 10px 24px;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    color: #fde68a;
+    font-weight: 600;
+    z-index: 10;
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+
+<div id="startScreen">
+  <h1>Unikittyville</h1>
+  <div class="subtitle">A Unicorn Kitty Adventure</div>
+  <label for="nameInput">Name your kitty:</label>
+  <input type="text" id="nameInput" placeholder="Sparkle" maxlength="16" autofocus>
+  <button id="startBtn">Play!</button>
+</div>
+
+<canvas id="game"></canvas>
+<div id="hud">
+  <span id="hudName"></span>
+  <span>Score: <b id="hudScore">0</b></span>
+  <span>Fish: <b id="hudFish">0</b></span>
+  <span>Bacon: <b id="hudBacon">0</b></span>
+</div>
+<div id="controls">
+  <span>Arrow Keys: Move</span>
+  <span>Space: Jump</span>
+  <span>F: Fish</span>
+  <span>C: Cook</span>
+  <span>Enter: Enter/Exit House</span>
+</div>
+<div id="prompt"></div>
+
+<script>
+// ── Constants ──
+const WORLD_W = 2400;
+const GROUND_Y = 420;
+const GRAVITY = 0.6;
+const JUMP_VEL = -12;
+const MOVE_SPEED = 4;
+const DAY_LENGTH = 30000; // 30s full cycle
+
+// Zone positions in world coords
+const POND = { x: 200, w: 400, depth: 80 };
+const GRILL = { x: 1000, w: 60 };
+const HOUSE = { x: 1600, w: 160, h: 160 };
+
+// ── State ──
+let playerName = 'Sparkle';
+let score = 0, fishCount = 0, baconCount = 0;
+let gameTime = 0;
+let insideHouse = false;
+let cooking = { active: false, progress: 0, burnt: false };
+let fishing = { active: false, timer: 0, caught: false };
+let popups = []; // floating score popups
+let keys = {};
+
+// Player
+const player = {
+  x: 600, y: GROUND_Y, vx: 0, vy: 0,
+  w: 40, h: 48,
+  onGround: true,
+  facing: 1, // 1 right, -1 left
+  walkFrame: 0, walkTimer: 0,
+  color: '#e879f9' // pink-purple
+};
+
+// Fish in pond
+let pondFish = [];
+function spawnPondFish() {
+  pondFish = [];
+  const colors = ['#fb923c','#38bdf8','#4ade80','#f472b6'];
+  for (let i = 0; i < 5; i++) {
+    pondFish.push({
+      x: POND.x + 40 + Math.random() * (POND.w - 80),
+      y: GROUND_Y + 10 + Math.random() * (POND.depth - 30),
+      vx: (Math.random() - 0.5) * 1.5,
+      color: colors[i % colors.length],
+      size: 14 + Math.random() * 8,
+      wobble: Math.random() * Math.PI * 2
+    });
+  }
+}
+spawnPondFish();
+
+// NPCs
+const npcs = [];
+const npcColors = ['#86efac','#c4b5fd','#fdba74','#7dd3fc'];
+const npcAccessories = ['bow','scarf','glasses','flower'];
+for (let i = 0; i < 4; i++) {
+  npcs.push({
+    x: 300 + i * 450 + Math.random() * 100,
+    y: GROUND_Y,
+    color: npcColors[i],
+    accessory: npcAccessories[i],
+    vx: (Math.random() - 0.5) * 1.2,
+    walkFrame: 0, walkTimer: 0,
+    facing: 1,
+    idleTimer: Math.random() * 200
+  });
+}
+
+// ── Canvas Setup ──
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+  canvas.width = Math.min(window.innerWidth - 20, 960);
+  canvas.height = Math.min(window.innerHeight - 20, 540);
+}
+resize();
+window.addEventListener('resize', resize);
+
+// ── Input ──
+window.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (e.code === 'Space') e.preventDefault();
+});
+window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+// ── Start ──
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('nameInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') startGame();
+});
+
+function startGame() {
+  const name = document.getElementById('nameInput').value.trim();
+  playerName = name || 'Sparkle';
+  document.getElementById('startScreen').style.display = 'none';
+  document.getElementById('hud').style.display = 'flex';
+  document.getElementById('controls').style.display = 'flex';
+  document.getElementById('hudName').textContent = playerName;
+  requestAnimationFrame(loop);
+}
+
+// ── Game Loop ──
+let lastTime = 0;
+function loop(ts) {
+  const dt = Math.min(ts - (lastTime || ts), 33);
+  lastTime = ts;
+  gameTime += dt;
+
+  update(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+
+// ── Update ──
+function update(dt) {
+  if (insideHouse) {
+    if (keys['Enter']) {
+      keys['Enter'] = false;
+      insideHouse = false;
+    }
+    return;
+  }
+
+  // Movement
+  player.vx = 0;
+  if (keys['ArrowLeft']) { player.vx = -MOVE_SPEED; player.facing = -1; }
+  if (keys['ArrowRight']) { player.vx = MOVE_SPEED; player.facing = 1; }
+  if (keys['ArrowUp']) { player.vx += 0; } // up on land is no-op for now
+  if (keys['ArrowDown']) { player.vx += 0; }
+
+  // Jump
+  if (keys['Space'] && player.onGround) {
+    player.vy = JUMP_VEL;
+    player.onGround = false;
+  }
+
+  // Physics
+  player.vy += GRAVITY;
+  player.x += player.vx;
+  player.y += player.vy;
+
+  // Ground collision
+  const groundLevel = getGroundLevel(player.x);
+  if (player.y >= groundLevel) {
+    player.y = groundLevel;
+    player.vy = 0;
+    player.onGround = true;
+  }
+
+  // World bounds
+  player.x = Math.max(20, Math.min(WORLD_W - 20, player.x));
+
+  // Walk animation
+  if (Math.abs(player.vx) > 0) {
+    player.walkTimer += dt;
+    if (player.walkTimer > 120) {
+      player.walkTimer = 0;
+      player.walkFrame = (player.walkFrame + 1) % 4;
+    }
+  } else {
+    player.walkFrame = 0;
+  }
+
+  // Fishing
+  const inPond = player.x > POND.x && player.x < POND.x + POND.w;
+  if (keys['KeyF'] && inPond && !fishing.active && !cooking.active) {
+    keys['KeyF'] = false;
+    fishing.active = true;
+    fishing.timer = 0;
+    fishing.caught = false;
+  }
+  if (fishing.active) {
+    fishing.timer += dt;
+    if (fishing.timer > 1500 + Math.random() * 500) {
+      fishing.active = false;
+      fishing.caught = true;
+      fishCount++;
+      score += 10;
+      addPopup(player.x, player.y - 40, '+10 Fish!', '#38bdf8');
+      // respawn a fish
+      if (pondFish.length < 8) {
+        const colors = ['#fb923c','#38bdf8','#4ade80','#f472b6'];
+        pondFish.push({
+          x: POND.x + 40 + Math.random() * (POND.w - 80),
+          y: GROUND_Y + 10 + Math.random() * (POND.depth - 30),
+          vx: (Math.random() - 0.5) * 1.5,
+          color: colors[Math.floor(Math.random() * 4)],
+          size: 14 + Math.random() * 8,
+          wobble: Math.random() * Math.PI * 2
+        });
+      }
+    }
+  }
+
+  // Cooking
+  const nearGrill = Math.abs(player.x - GRILL.x) < 60;
+  if (keys['KeyC'] && nearGrill && !cooking.active && !fishing.active) {
+    keys['KeyC'] = false;
+    cooking.active = true;
+    cooking.progress = 0;
+    cooking.burnt = false;
+  }
+  if (cooking.active) {
+    cooking.progress += dt;
+    if (cooking.progress > 3000 && cooking.progress < 5000) {
+      // perfectly cooked window — auto collect
+      cooking.active = false;
+      baconCount++;
+      score += 15;
+      addPopup(GRILL.x, GROUND_Y - 60, '+15 Bacon!', '#fb923c');
+    } else if (cooking.progress >= 5000) {
+      cooking.active = false;
+      cooking.burnt = true;
+      addPopup(GRILL.x, GROUND_Y - 60, 'Burnt!', '#ef4444');
+    }
+  }
+
+  // House entry
+  const nearHouse = player.x > HOUSE.x - 20 && player.x < HOUSE.x + HOUSE.w + 20;
+  if (keys['Enter'] && nearHouse && !insideHouse) {
+    keys['Enter'] = false;
+    insideHouse = true;
+  }
+
+  // Pond fish AI
+  for (const f of pondFish) {
+    f.wobble += 0.03;
+    f.x += f.vx;
+    f.y += Math.sin(f.wobble) * 0.3;
+    if (f.x < POND.x + 20 || f.x > POND.x + POND.w - 20) f.vx *= -1;
+    f.y = Math.max(GROUND_Y + 5, Math.min(GROUND_Y + POND.depth - 10, f.y));
+  }
+
+  // NPC AI
+  for (const npc of npcs) {
+    npc.idleTimer -= dt / 16;
+    if (npc.idleTimer <= 0) {
+      npc.vx = (Math.random() - 0.5) * 2;
+      npc.idleTimer = 100 + Math.random() * 200;
+    }
+    npc.x += npc.vx * 0.5;
+    npc.x = Math.max(40, Math.min(WORLD_W - 40, npc.x));
+    npc.facing = npc.vx >= 0 ? 1 : -1;
+    if (Math.abs(npc.vx) > 0.1) {
+      npc.walkTimer += dt;
+      if (npc.walkTimer > 150) { npc.walkTimer = 0; npc.walkFrame = (npc.walkFrame + 1) % 4; }
+    } else {
+      npc.walkFrame = 0;
+    }
+  }
+
+  // Popups
+  for (let i = popups.length - 1; i >= 0; i--) {
+    popups[i].y -= 1;
+    popups[i].life -= dt;
+    if (popups[i].life <= 0) popups.splice(i, 1);
+  }
+
+  // HUD update
+  document.getElementById('hudScore').textContent = score;
+  document.getElementById('hudFish').textContent = fishCount;
+  document.getElementById('hudBacon').textContent = baconCount;
+
+  // Prompt
+  updatePrompt(inPond, nearGrill, nearHouse);
+}
+
+function getGroundLevel(x) {
+  // Pond area is lower
+  if (x > POND.x + 20 && x < POND.x + POND.w - 20) {
+    return GROUND_Y + POND.depth;
+  }
+  return GROUND_Y;
+}
+
+function addPopup(x, y, text, color) {
+  popups.push({ x, y, text, color, life: 1500 });
+}
+
+function updatePrompt(inPond, nearGrill, nearHouse) {
+  const el = document.getElementById('prompt');
+  if (fishing.active) {
+    el.textContent = 'Fishing...';
+    el.style.display = 'block';
+  } else if (cooking.active) {
+    const pct = Math.min(100, (cooking.progress / 3000) * 100);
+    el.textContent = `Cooking... ${Math.round(pct)}%`;
+    el.style.display = 'block';
+  } else if (inPond && !fishing.active) {
+    el.textContent = 'Press F to fish';
+    el.style.display = 'block';
+  } else if (nearGrill && !cooking.active) {
+    el.textContent = 'Press C to cook bacon';
+    el.style.display = 'block';
+  } else if (nearHouse) {
+    el.textContent = 'Press Enter to go inside';
+    el.style.display = 'block';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+// ── Draw ──
+function draw() {
+  const W = canvas.width, H = canvas.height;
+  const cam = Math.max(0, Math.min(WORLD_W - W, player.x - W / 2));
+
+  // Day/night cycle (0..1, 0=noon, 0.5=midnight)
+  const cycle = (Math.sin(gameTime / DAY_LENGTH * Math.PI * 2 - Math.PI / 2) + 1) / 2;
+  const isNight = cycle > 0.5;
+
+  // Sky
+  const dayTop = [135, 206, 250];
+  const nightTop = [15, 23, 42];
+  const dayBot = [255, 253, 240];
+  const nightBot = [30, 41, 82];
+  const t = cycle;
+  const skyTop = lerpColor(dayTop, nightTop, t);
+  const skyBot = lerpColor(dayBot, nightBot, t);
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, `rgb(${skyTop})`);
+  grad.addColorStop(1, `rgb(${skyBot})`);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Stars at night
+  if (isNight) drawStars(W, H, cycle);
+
+  // Rainbow at night
+  if (isNight) drawRainbow(W, H, cam);
+
+  // Sun or moon
+  drawCelestial(W, H, cycle);
+
+  // Background hills
+  drawHills(W, H, cam);
+
+  ctx.save();
+  ctx.translate(-cam, 0);
+
+  if (insideHouse) {
+    drawHouseInterior(cam, W, H);
+  } else {
+    // Ground
+    drawGround(W, H, cam);
+
+    // Pond
+    drawPond();
+
+    // Fish
+    for (const f of pondFish) drawFish(f);
+
+    // Grill
+    drawGrill();
+
+    // House
+    drawHouse();
+
+    // NPCs
+    for (const npc of npcs) drawKitty(npc.x, npc.y, npc.color, npc.facing, npc.walkFrame, npc.accessory);
+
+    // Player
+    drawKitty(player.x, player.y, player.color, player.facing, player.walkFrame, 'horn');
+
+    // Player name above head
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 12px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText(playerName, player.x, player.y - 38);
+
+    // Fishing line
+    if (fishing.active) {
+      ctx.strokeStyle = '#a3a3a3';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(player.x + player.facing * 10, player.y - 10);
+      ctx.lineTo(player.x + player.facing * 30, player.y + 20);
+      ctx.stroke();
+      // bobber
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.arc(player.x + player.facing * 30, player.y + 20, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Popups
+    for (const p of popups) {
+      const alpha = Math.min(1, p.life / 500);
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = p.color;
+      ctx.font = 'bold 16px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText(p.text, p.x, p.y);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  ctx.restore();
+}
+
+function lerpColor(a, b, t) {
+  return a.map((v, i) => Math.round(v + (b[i] - v) * t));
+}
+
+function drawStars(W, H) {
+  // deterministic stars
+  const seed = 42;
+  for (let i = 0; i < 60; i++) {
+    const sx = ((seed * (i + 1) * 7) % W);
+    const sy = ((seed * (i + 1) * 13) % (H * 0.5));
+    const twinkle = Math.sin(gameTime / 400 + i) * 0.3 + 0.7;
+    ctx.globalAlpha = twinkle * 0.8;
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(sx, sy, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawRainbow(W, H, cam) {
+  const colors = ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6'];
+  const cx = WORLD_W / 2 - cam;
+  const cy = H * 0.15;
+  const baseR = 280;
+  ctx.globalAlpha = 0.35;
+  for (let i = 0; i < colors.length; i++) {
+    ctx.strokeStyle = colors[i];
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.arc(cx, cy + 100, baseR - i * 8, Math.PI, 0);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawCelestial(W, H, cycle) {
+  const angle = cycle * Math.PI;
+  const cx = W / 2 + Math.cos(angle + Math.PI) * (W * 0.35);
+  const cy = H * 0.15 - Math.sin(angle) * (H * 0.2) + H * 0.15;
+  if (cycle < 0.5) {
+    // Sun
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 24, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fde68a';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 28, 0, Math.PI * 2);
+    ctx.globalAlpha = 0.3;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  } else {
+    // Moon
+    ctx.fillStyle = '#e2e8f0';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 20, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#1a1a2e';
+    ctx.beginPath();
+    ctx.arc(cx + 6, cy - 4, 16, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawHills(W, H, cam) {
+  // far hills
+  ctx.fillStyle = 'rgba(100, 160, 100, 0.3)';
+  ctx.beginPath();
+  ctx.moveTo(0, H);
+  for (let x = 0; x <= W; x += 10) {
+    const wx = x + cam * 0.2;
+    const y = H * 0.6 + Math.sin(wx / 200) * 30 + Math.sin(wx / 80) * 15;
+    ctx.lineTo(x, y);
+  }
+  ctx.lineTo(W, H);
+  ctx.fill();
+
+  // near hills
+  ctx.fillStyle = 'rgba(80, 140, 80, 0.4)';
+  ctx.beginPath();
+  ctx.moveTo(0, H);
+  for (let x = 0; x <= W; x += 10) {
+    const wx = x + cam * 0.5;
+    const y = H * 0.7 + Math.sin(wx / 150) * 20 + Math.sin(wx / 60) * 10;
+    ctx.lineTo(x, y);
+  }
+  ctx.lineTo(W, H);
+  ctx.fill();
+}
+
+function drawGround(W, H, cam) {
+  // Main ground
+  ctx.fillStyle = '#4ade80';
+  ctx.fillRect(0, GROUND_Y, WORLD_W, H);
+
+  // Grass detail
+  ctx.fillStyle = '#22c55e';
+  for (let x = 0; x < WORLD_W; x += 20) {
+    if (x > POND.x && x < POND.x + POND.w) continue;
+    ctx.fillRect(x, GROUND_Y - 2, 3, 6);
+    ctx.fillRect(x + 8, GROUND_Y - 1, 2, 4);
+  }
+
+  // Dirt layer
+  ctx.fillStyle = '#92400e';
+  ctx.fillRect(0, GROUND_Y + 40, WORLD_W, 200);
+}
+
+function drawPond() {
+  // Water
+  const waterGrad = ctx.createLinearGradient(POND.x, GROUND_Y, POND.x, GROUND_Y + POND.depth);
+  waterGrad.addColorStop(0, 'rgba(56, 189, 248, 0.6)');
+  waterGrad.addColorStop(1, 'rgba(14, 116, 144, 0.8)');
+  ctx.fillStyle = waterGrad;
+
+  // Pond shape (rounded)
+  ctx.beginPath();
+  ctx.moveTo(POND.x, GROUND_Y);
+  ctx.quadraticCurveTo(POND.x - 10, GROUND_Y + POND.depth / 2, POND.x + 20, GROUND_Y + POND.depth);
+  ctx.lineTo(POND.x + POND.w - 20, GROUND_Y + POND.depth);
+  ctx.quadraticCurveTo(POND.x + POND.w + 10, GROUND_Y + POND.depth / 2, POND.x + POND.w, GROUND_Y);
+  ctx.fill();
+
+  // Water shimmer
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 5; i++) {
+    const sx = POND.x + 40 + i * 70;
+    const sy = GROUND_Y + 15 + Math.sin(gameTime / 500 + i) * 5;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(sx + 20, sy);
+    ctx.stroke();
+  }
+}
+
+function drawFish(f) {
+  ctx.save();
+  ctx.translate(f.x, f.y);
+  const dir = f.vx >= 0 ? 1 : -1;
+  ctx.scale(dir, 1);
+
+  // Body
+  ctx.fillStyle = f.color;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, f.size, f.size * 0.6, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Tail
+  ctx.beginPath();
+  ctx.moveTo(-f.size, 0);
+  ctx.lineTo(-f.size - 8, -6);
+  ctx.lineTo(-f.size - 8, 6);
+  ctx.closePath();
+  ctx.fill();
+
+  // Eye (big googly)
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(f.size * 0.4, -2, 5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#000';
+  ctx.beginPath();
+  ctx.arc(f.size * 0.5, -2, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Smile
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(f.size * 0.3, 3, 3, 0, Math.PI);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function drawGrill() {
+  const gx = GRILL.x, gy = GROUND_Y;
+
+  // Legs
+  ctx.fillStyle = '#404040';
+  ctx.fillRect(gx - 20, gy - 30, 4, 30);
+  ctx.fillRect(gx + 16, gy - 30, 4, 30);
+
+  // Grill body
+  ctx.fillStyle = '#525252';
+  ctx.fillRect(gx - 25, gy - 40, 50, 12);
+
+  // Grill grates
+  ctx.strokeStyle = '#737373';
+  ctx.lineWidth = 2;
+  for (let i = 0; i < 5; i++) {
+    ctx.beginPath();
+    ctx.moveTo(gx - 22 + i * 11, gy - 40);
+    ctx.lineTo(gx - 22 + i * 11, gy - 28);
+    ctx.stroke();
+  }
+
+  // Bacon on grill if cooking
+  if (cooking.active) {
+    const cookPct = cooking.progress / 3000;
+    const r = Math.round(255 - cookPct * 100);
+    const g = Math.round(180 - cookPct * 120);
+    const b = Math.round(180 - cookPct * 160);
+    ctx.fillStyle = `rgb(${r},${g},${b})`;
+    for (let i = 0; i < 3; i++) {
+      ctx.fillRect(gx - 15 + i * 12, gy - 38, 8, 3);
+      // wavy bacon
+      ctx.fillRect(gx - 14 + i * 12, gy - 35, 8, 3);
+    }
+
+    // Smoke
+    ctx.globalAlpha = 0.4;
+    ctx.fillStyle = '#d4d4d4';
+    for (let i = 0; i < 3; i++) {
+      const smokeY = gy - 50 - Math.sin(gameTime / 300 + i) * 10 - i * 12;
+      const smokeX = gx - 5 + Math.sin(gameTime / 500 + i * 2) * 8;
+      ctx.beginPath();
+      ctx.arc(smokeX, smokeY, 5 + i * 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+
+function drawHouse() {
+  const hx = HOUSE.x, hy = GROUND_Y, hw = HOUSE.w, hh = HOUSE.h;
+
+  // Wall
+  ctx.fillStyle = '#fef3c7';
+  ctx.fillRect(hx, hy - hh, hw, hh);
+
+  // Roof
+  ctx.fillStyle = '#a855f7';
+  ctx.beginPath();
+  ctx.moveTo(hx - 15, hy - hh);
+  ctx.lineTo(hx + hw / 2, hy - hh - 60);
+  ctx.lineTo(hx + hw + 15, hy - hh);
+  ctx.closePath();
+  ctx.fill();
+
+  // Roof edge
+  ctx.strokeStyle = '#7c3aed';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // Door
+  ctx.fillStyle = '#92400e';
+  ctx.fillRect(hx + hw / 2 - 15, hy - 50, 30, 50);
+  // Doorknob
+  ctx.fillStyle = '#fbbf24';
+  ctx.beginPath();
+  ctx.arc(hx + hw / 2 + 8, hy - 25, 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Windows
+  ctx.fillStyle = '#bae6fd';
+  ctx.fillRect(hx + 15, hy - hh + 30, 30, 30);
+  ctx.fillRect(hx + hw - 45, hy - hh + 30, 30, 30);
+  // Window frames
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(hx + 15, hy - hh + 30, 30, 30);
+  ctx.strokeRect(hx + hw - 45, hy - hh + 30, 30, 30);
+  // Cross
+  ctx.beginPath();
+  ctx.moveTo(hx + 30, hy - hh + 30); ctx.lineTo(hx + 30, hy - hh + 60);
+  ctx.moveTo(hx + 15, hy - hh + 45); ctx.lineTo(hx + 45, hy - hh + 45);
+  ctx.stroke();
+
+  // Flower boxes
+  ctx.fillStyle = '#f472b6';
+  for (let i = 0; i < 3; i++) {
+    ctx.beginPath();
+    ctx.arc(hx + 18 + i * 7, hy - hh + 28, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawHouseInterior(cam, W, H) {
+  // Simple cozy interior
+  const cx = player.x;
+  const cy = GROUND_Y - 80;
+
+  // Floor
+  ctx.fillStyle = '#d4a574';
+  ctx.fillRect(cx - 200, cy, 400, 160);
+
+  // Back wall
+  ctx.fillStyle = '#fef3c7';
+  ctx.fillRect(cx - 200, cy - 140, 400, 140);
+
+  // Rug
+  ctx.fillStyle = '#c084fc';
+  ctx.beginPath();
+  ctx.ellipse(cx, cy + 40, 80, 30, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Fireplace
+  ctx.fillStyle = '#78350f';
+  ctx.fillRect(cx - 40, cy - 80, 80, 80);
+  ctx.fillStyle = '#f97316';
+  ctx.beginPath();
+  ctx.moveTo(cx - 20, cy);
+  ctx.quadraticCurveTo(cx, cy - 50, cx + 20, cy);
+  ctx.fill();
+  ctx.fillStyle = '#fbbf24';
+  ctx.beginPath();
+  ctx.moveTo(cx - 10, cy);
+  ctx.quadraticCurveTo(cx, cy - 30, cx + 10, cy);
+  ctx.fill();
+
+  // Cozy text
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 18px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText('Home sweet home!', cx, cy - 110);
+  ctx.font = '14px system-ui';
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.fillText('Press Enter to go outside', cx, cy + 130);
+
+  // Draw player inside
+  drawKitty(cx, cy + 60, player.color, 1, 0, 'horn');
+}
+
+function drawKitty(x, y, color, facing, walkFrame, accessory) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(facing, 1);
+
+  const bounce = walkFrame % 2 === 1 ? -2 : 0;
+
+  // Body
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.ellipse(0, -12 + bounce, 16, 14, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Head
+  ctx.beginPath();
+  ctx.arc(0, -30 + bounce, 14, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Ears
+  ctx.beginPath();
+  ctx.moveTo(-10, -40 + bounce);
+  ctx.lineTo(-6, -50 + bounce);
+  ctx.lineTo(-2, -40 + bounce);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(2, -40 + bounce);
+  ctx.lineTo(6, -50 + bounce);
+  ctx.lineTo(10, -40 + bounce);
+  ctx.fill();
+
+  // Inner ears
+  ctx.fillStyle = '#fda4af';
+  ctx.beginPath();
+  ctx.moveTo(-8, -41 + bounce);
+  ctx.lineTo(-6, -47 + bounce);
+  ctx.lineTo(-4, -41 + bounce);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(4, -41 + bounce);
+  ctx.lineTo(6, -47 + bounce);
+  ctx.lineTo(8, -41 + bounce);
+  ctx.fill();
+
+  // Eyes (big!)
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.ellipse(-5, -32 + bounce, 5, 6, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(5, -32 + bounce, 5, 6, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Pupils
+  ctx.fillStyle = '#1e1b4b';
+  ctx.beginPath();
+  ctx.arc(-4, -31 + bounce, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(6, -31 + bounce, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Eye shine
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(-3, -33 + bounce, 1, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(7, -33 + bounce, 1, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Mouth (happy)
+  ctx.strokeStyle = '#831843';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.arc(-2, -25 + bounce, 3, 0, Math.PI);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(2, -25 + bounce, 3, 0, Math.PI);
+  ctx.stroke();
+
+  // Whiskers
+  ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+  ctx.lineWidth = 0.8;
+  for (let side = -1; side <= 1; side += 2) {
+    ctx.beginPath();
+    ctx.moveTo(side * 8, -28 + bounce);
+    ctx.lineTo(side * 20, -30 + bounce);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(side * 8, -26 + bounce);
+    ctx.lineTo(side * 20, -26 + bounce);
+    ctx.stroke();
+  }
+
+  // Legs
+  ctx.fillStyle = color;
+  const legOffset = walkFrame % 4;
+  const frontLeg = Math.sin(legOffset * Math.PI / 2) * 4;
+  const backLeg = -frontLeg;
+  ctx.fillRect(-10, -2 + bounce, 6, 6 + frontLeg);
+  ctx.fillRect(4, -2 + bounce, 6, 6 + backLeg);
+
+  // Tail
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(-14, -8 + bounce);
+  ctx.quadraticCurveTo(-24, -20 + bounce, -18, -28 + bounce + Math.sin(gameTime / 300) * 4);
+  ctx.stroke();
+
+  // Unicorn horn
+  if (accessory === 'horn') {
+    const hornGrad = ctx.createLinearGradient(0, -50 + bounce, 0, -58 + bounce);
+    hornGrad.addColorStop(0, '#fbbf24');
+    hornGrad.addColorStop(0.5, '#f472b6');
+    hornGrad.addColorStop(1, '#a78bfa');
+    ctx.fillStyle = hornGrad;
+    ctx.beginPath();
+    ctx.moveTo(-3, -43 + bounce);
+    ctx.lineTo(0, -58 + bounce);
+    ctx.lineTo(3, -43 + bounce);
+    ctx.closePath();
+    ctx.fill();
+    // Horn spiral lines
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+    ctx.lineWidth = 0.8;
+    for (let i = 0; i < 3; i++) {
+      const hy = -45 - i * 4 + bounce;
+      ctx.beginPath();
+      ctx.moveTo(-2, hy);
+      ctx.lineTo(2, hy - 2);
+      ctx.stroke();
+    }
+  }
+
+  // NPC accessories
+  if (accessory === 'bow') {
+    ctx.fillStyle = '#f43f5e';
+    ctx.beginPath();
+    ctx.arc(8, -42 + bounce, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(12, -42 + bounce, 3, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (accessory === 'scarf') {
+    ctx.fillStyle = '#2563eb';
+    ctx.fillRect(-10, -18 + bounce, 20, 5);
+    ctx.fillRect(8, -18 + bounce, 4, 12);
+  } else if (accessory === 'glasses') {
+    ctx.strokeStyle = '#1e1b4b';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(-5, -32 + bounce, 6, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(5, -32 + bounce, 6, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(1, -32 + bounce);
+    ctx.lineTo(-1, -32 + bounce);
+    ctx.stroke();
+  } else if (accessory === 'flower') {
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath();
+    ctx.arc(8, -44 + bounce, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#f472b6';
+    for (let a = 0; a < 5; a++) {
+      const fa = (a / 5) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.arc(8 + Math.cos(fa) * 4, -44 + bounce + Math.sin(fa) * 4, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  ctx.restore();
+}
+</script>
+</body>
+</html>
