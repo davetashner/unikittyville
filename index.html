@@ -125,6 +125,8 @@
 <body>
 
 <audio id="bgMusic" src="assets/music/theme.mp3" loop preload="auto"></audio>
+<audio id="meow1" src="assets/sfx/kitty-meow-01.mp3" preload="auto"></audio>
+<audio id="meow2" src="assets/sfx/kitty-meow-02.mp3" preload="auto"></audio>
 
 <div id="startScreen">
   <h1>Unikittyville</h1>
@@ -174,6 +176,23 @@ let cooking = { active: false, progress: 0, burnt: false };
 let fishing = { active: false, timer: 0, caught: false };
 let popups = []; // floating score popups
 let keys = {};
+let lastMeowTime = 0;
+const meowSounds = [];
+
+function initMeows() {
+  meowSounds.push(document.getElementById('meow1'));
+  meowSounds.push(document.getElementById('meow2'));
+  for (const m of meowSounds) m.volume = 0.5;
+}
+
+function playMeow() {
+  const now = performance.now();
+  if (now - lastMeowTime < 3000) return;
+  lastMeowTime = now;
+  const sound = meowSounds[Math.floor(Math.random() * meowSounds.length)];
+  sound.currentTime = 0;
+  sound.play().catch(() => {});
+}
 
 // Player
 const player = {
@@ -330,6 +349,7 @@ function startGame() {
   document.getElementById('hud').style.display = 'flex';
   document.getElementById('controls').style.display = 'flex';
   document.getElementById('hudName').textContent = playerName;
+  initMeows();
   // Start music (requires user gesture, which the click/enter provides)
   const music = document.getElementById('bgMusic');
   music.volume = 0.4;
@@ -370,6 +390,7 @@ function update(dt) {
   if (keys['Space'] && player.onGround) {
     player.vy = JUMP_VEL;
     player.onGround = false;
+    playMeow();
   }
 
   // Physics
