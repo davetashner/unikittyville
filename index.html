@@ -124,6 +124,8 @@
 </head>
 <body>
 
+<audio id="bgMusic" src="assets/music/theme.mp3" loop preload="auto"></audio>
+
 <div id="startScreen">
   <h1>Unikittyville</h1>
   <div class="subtitle">A Unicorn Kitty Adventure</div>
@@ -248,6 +250,10 @@ function startGame() {
   document.getElementById('hud').style.display = 'flex';
   document.getElementById('controls').style.display = 'flex';
   document.getElementById('hudName').textContent = playerName;
+  // Start music (requires user gesture, which the click/enter provides)
+  const music = document.getElementById('bgMusic');
+  music.volume = 0.4;
+  music.play().catch(() => {});
   requestAnimationFrame(loop);
 }
 
