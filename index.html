@@ -78,8 +78,8 @@
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(26, 26, 46, 0.95);
-    z-index: 200;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    z-index: 9999;
     flex-direction: column;
     justify-content: center;
     align-items: center;
@@ -89,13 +89,17 @@
     padding: 2rem;
   }
   #orientationOverlay .rotate-icon {
-    font-size: 4rem;
-    margin-bottom: 1rem;
+    font-size: 5rem;
+    margin-bottom: 1.5rem;
     animation: rotateHint 2s ease-in-out infinite;
   }
+  #orientationOverlay h2 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
   #orientationOverlay p {
-    font-size: 1.3rem;
-    opacity: 0.9;
+    font-size: 1.1rem;
+    opacity: 0.7;
   }
   @keyframes rotateHint {
     0%, 100% { transform: rotate(0deg); }
@@ -203,7 +207,7 @@
     bottom: 0;
     left: 0;
     right: 0;
-    height: 160px;
+    height: 80px;
     z-index: 50;
     pointer-events: none;
     user-select: none;
@@ -215,56 +219,56 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(255,255,255,0.25);
-    border: 2px solid rgba(255,255,255,0.4);
-    border-radius: 16px;
+    background: rgba(255,255,255,0.2);
+    border: 1.5px solid rgba(255,255,255,0.3);
+    border-radius: 12px;
     color: #fff;
     font-weight: 700;
-    font-size: 1.3rem;
-    opacity: 0.6;
+    font-size: 1rem;
+    opacity: 0.5;
     -webkit-tap-highlight-color: transparent;
     touch-action: none;
   }
   #touch-controls .touch-btn.active {
-    opacity: 0.9;
-    background: rgba(255,255,255,0.45);
+    opacity: 0.85;
+    background: rgba(255,255,255,0.4);
   }
   #touch-dpad-left {
-    left: 16px;
-    bottom: 40px;
-    width: 72px;
-    height: 72px;
-    font-size: 1.8rem;
+    left: 10px;
+    bottom: 12px;
+    width: 56px;
+    height: 56px;
+    font-size: 1.4rem;
   }
   #touch-dpad-right {
-    left: 104px;
-    bottom: 40px;
-    width: 72px;
-    height: 72px;
-    font-size: 1.8rem;
+    left: 76px;
+    bottom: 12px;
+    width: 56px;
+    height: 56px;
+    font-size: 1.4rem;
   }
   #touch-jump {
-    right: 16px;
-    bottom: 40px;
-    width: 80px;
-    height: 80px;
+    right: 10px;
+    bottom: 12px;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
-    font-size: 1.1rem;
-    background: rgba(124,58,237,0.35);
-    border-color: rgba(192,132,252,0.6);
+    font-size: 0.9rem;
+    background: rgba(124,58,237,0.3);
+    border-color: rgba(192,132,252,0.5);
   }
   #touch-action {
-    right: 112px;
-    bottom: 48px;
-    width: 68px;
-    height: 68px;
+    right: 82px;
+    bottom: 16px;
+    width: 52px;
+    height: 52px;
     border-radius: 50%;
-    font-size: 0.85rem;
-    background: rgba(251,191,36,0.3);
-    border-color: rgba(253,224,71,0.5);
+    font-size: 0.75rem;
+    background: rgba(251,191,36,0.25);
+    border-color: rgba(253,224,71,0.4);
   }
   .touch-active #prompt {
-    bottom: 170px;
+    bottom: 90px;
   }
 
   /* ── Mobile-friendly HUD and menus ── */
@@ -363,7 +367,8 @@
 <canvas id="game"></canvas>
 <div id="orientationOverlay">
   <div class="rotate-icon">&#x1F4F1;</div>
-  <p>Please rotate your device to landscape mode</p>
+  <h2>Turn your phone sideways!</h2>
+  <p>Unikittyville plays best in landscape mode</p>
 </div>
 <div id="hud">
   <span id="hudLevel">Level 1</span>
