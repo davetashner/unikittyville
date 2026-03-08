@@ -173,6 +173,7 @@
 <audio id="musicRome" src="assets/music/rome.mp3" loop preload="auto"></audio>
 <audio id="musicHawaii" src="assets/music/hawaii.mp3" loop preload="auto"></audio>
 <audio id="musicAlps" src="assets/music/alps.mp3" loop preload="auto"></audio>
+<audio id="musicSledding" src="assets/music/sledding.mp3" loop preload="auto"></audio>
 <audio id="musicChalet" src="assets/music/chalet.mp3" loop preload="auto"></audio>
 <audio id="meow1" src="assets/sfx/kitty-meow-01.mp3" preload="auto"></audio>
 <audio id="meow2" src="assets/sfx/kitty-meow-02.mp3" preload="auto"></audio>
@@ -193,14 +194,15 @@
   <span>Score: <b id="hudScore">0</b></span>
   <span class="hud-item" data-levels="1">Fish: <b id="hudFish">0</b></span>
   <span class="hud-item" data-levels="1">Bacon: <b id="hudBacon">0</b></span>
-  <span class="hud-item" data-levels="1,2,3,4">Yarn: <b id="hudYarn">0</b></span>
-  <span class="hud-item" data-levels="2">Pizza: <b id="hudPizza">0</b></span>
-  <span class="hud-item" data-levels="2">Hot Dogs: <b id="hudHotdog">0</b></span>
-  <span class="hud-item" data-levels="3">Gelato: <b id="hudGelato">0</b></span>
+  <span class="hud-item" data-levels="1,3,4,5">Yarn: <b id="hudYarn">0</b></span>
+  <span class="hud-item" data-levels="3">Pizza: <b id="hudPizza">0</b></span>
+  <span class="hud-item" data-levels="3">Hot Dogs: <b id="hudHotdog">0</b></span>
+  <span class="hud-item" data-levels="4">Gelato: <b id="hudGelato">0</b></span>
   <span class="hud-item" data-levels="1">Honey: <b id="hudHoney">0</b></span>
-  <span class="hud-item" data-levels="4">Tiki: <b id="hudTiki">0</b></span>
-  <span class="hud-item" data-levels="4">Coconuts: <b id="hudCoconut">0</b></span>
-  <span class="hud-item" data-levels="5">Diamonds: <b id="hudDiamond">0</b></span>
+  <span class="hud-item" data-levels="5">Tiki: <b id="hudTiki">0</b></span>
+  <span class="hud-item" data-levels="5">Coconuts: <b id="hudCoconut">0</b></span>
+  <span class="hud-item" data-levels="6">Diamonds: <b id="hudDiamond">0</b></span>
+  <span class="hud-item" data-levels="2">Snowballs: <b id="hudSnowball">0</b></span>
 </div>
 <div id="controls">
   <span>Arrow Keys: Move</span>
@@ -269,6 +271,12 @@ let insideChalet = false;
 let marshmallow = { active: false, x: 0, y: 0, vx: 0, vy: 0, landed: false };
 let marshmallowScore = 0;
 let hotChocolate = { x: 0, y: 0 }; // set when entering chalet
+// Sledding level
+let sledding = false;
+let snowballCount = 0;
+const SLED_SPEED = 3.0;
+const SLED_WORLD_W = 5000;
+
 let popups = []; // floating score popups
 let keys = {};
 let lastMeowTime = 0;
@@ -363,7 +371,7 @@ function applyVolume() {
 
 // ── Music system with crossfade ──
 const FADE_DURATION = 1200; // ms
-const levelMusic = { 1: 'musicMeadow', 2: 'musicNYC', 3: 'musicRome', 4: 'musicHawaii', 5: 'musicAlps', 6: 'musicChalet' };
+const levelMusic = { 1: 'musicMeadow', 2: 'musicSledding', 3: 'musicNYC', 4: 'musicRome', 5: 'musicHawaii', 6: 'musicAlps', 7: 'musicChalet' };
 let currentMusicId = null;
 let musicFade = null; // { out: AudioElement, in: AudioElement, timer: 0 }
 
@@ -526,8 +534,104 @@ const bgScenes = [
   { type: 'bridge', x: 4600 },
 ];
 
-// ── Level 2: New York City ──
+// ── Level 2: Sledding ──
 const BRIDGE_PORTAL = { x: 4600, radius: 55 }; // rainbow bridge hitbox
+
+const level2Sled = {
+  worldW: SLED_WORLD_W,
+  // Snow platforms/ledges
+  platforms: [
+    { x: 400, y: 340, w: 100 },
+    { x: 800, y: 310, w: 90 },
+    { x: 1200, y: 280, w: 110 },
+    { x: 1600, y: 340, w: 80 },
+    { x: 2000, y: 300, w: 100 },
+    { x: 2400, y: 260, w: 90 },
+    { x: 2800, y: 330, w: 100 },
+    { x: 3200, y: 290, w: 80 },
+    { x: 3600, y: 320, w: 110 },
+    { x: 4000, y: 270, w: 90 },
+    { x: 4400, y: 340, w: 100 },
+  ],
+  yarnBalls: [],
+  // Snowballs to collect
+  snowballs: [],
+  // Snowmen to dodge
+  snowmen: [],
+  // Background pine trees (decorative)
+  pines: [],
+};
+
+// Generate snowballs along the slope
+for (const p of level2Sled.platforms) {
+  // Snowballs above each platform
+  for (let i = 0; i < 2; i++) {
+    level2Sled.snowballs.push({
+      x: p.x + 20 + i * (p.w - 40),
+      y: p.y - 25 - i * 8,
+      collected: false,
+      bobPhase: Math.random() * Math.PI * 2
+    });
+  }
+}
+// Extra snowballs between platforms
+for (let sx = 300; sx < SLED_WORLD_W - 300; sx += 200 + Math.random() * 150) {
+  let onPlatform = false;
+  for (const p of level2Sled.platforms) {
+    if (sx > p.x - 30 && sx < p.x + p.w + 30) { onPlatform = true; break; }
+  }
+  if (!onPlatform) {
+    level2Sled.snowballs.push({
+      x: sx,
+      y: GROUND_Y - 35 - Math.random() * 25,
+      collected: false,
+      bobPhase: Math.random() * Math.PI * 2
+    });
+  }
+}
+
+// Generate snowmen obstacles
+for (let smx = 500; smx < SLED_WORLD_W - 300; smx += 250 + Math.random() * 200) {
+  let onPlatform = false;
+  for (const p of level2Sled.platforms) {
+    if (smx > p.x - 20 && smx < p.x + p.w + 20) { onPlatform = true; break; }
+  }
+  if (!onPlatform) {
+    level2Sled.snowmen.push({
+      x: smx,
+      y: GROUND_Y,
+      hit: false,
+      size: 0.8 + Math.random() * 0.4
+    });
+  }
+}
+
+// Background pine trees
+for (let px = 100; px < SLED_WORLD_W; px += 180 + Math.random() * 120) {
+  level2Sled.pines.push({
+    x: px,
+    size: 0.7 + Math.random() * 0.5
+  });
+}
+
+// Sledding NPCs
+const sledNpcs = [];
+const sledNpcColors = ['#bae6fd','#fda4af','#bbf7d0','#e9d5ff'];
+const sledNpcAccessories = ['scarf','bow','glasses','flower'];
+for (let i = 0; i < 4; i++) {
+  sledNpcs.push({
+    x: 600 + i * 1000 + Math.random() * 200,
+    y: GROUND_Y,
+    color: sledNpcColors[i],
+    accessory: sledNpcAccessories[i],
+    vx: (Math.random() - 0.5) * 0.8,
+    walkFrame: 0, walkTimer: 0,
+    facing: 1,
+    idleTimer: Math.random() * 200
+  });
+}
+
+// ── Level 3: New York City ──
 
 const level2 = {
   worldW: 4800,
@@ -680,21 +784,22 @@ function completeTransition() {
   swimming = false;
   surfing = false;
   skiing = false;
+  sledding = false;
   insideChalet = false;
   pizzaMaking.stage = 'idle';
   pizzaMaking.progress = 0;
 }
 
 function getCurrentPlatforms() {
-  return currentLevel === 1 ? platforms : currentLevel === 2 ? level2.platforms : currentLevel === 3 ? level3.platforms : currentLevel === 4 ? level4.platforms : level5.platforms;
+  return currentLevel === 1 ? platforms : currentLevel === 2 ? level2Sled.platforms : currentLevel === 3 ? level2.platforms : currentLevel === 4 ? level3.platforms : currentLevel === 5 ? level4.platforms : level5.platforms;
 }
 
 function getCurrentYarnBalls() {
-  return currentLevel === 1 ? yarnBalls : currentLevel === 2 ? level2.yarnBalls : currentLevel === 3 ? level3.yarnBalls : currentLevel === 4 ? level4.yarnBalls : level5.yarnBalls;
+  return currentLevel === 1 ? yarnBalls : currentLevel === 2 ? level2Sled.yarnBalls : currentLevel === 3 ? level2.yarnBalls : currentLevel === 4 ? level3.yarnBalls : currentLevel === 5 ? level4.yarnBalls : level5.yarnBalls;
 }
 
 function getCurrentWorldW() {
-  return currentLevel === 1 ? WORLD_W : currentLevel === 2 ? level2.worldW : currentLevel === 3 ? level3.worldW : currentLevel === 4 ? level4.worldW : level5.worldW;
+  return currentLevel === 1 ? WORLD_W : currentLevel === 2 ? level2Sled.worldW : currentLevel === 3 ? level2.worldW : currentLevel === 4 ? level3.worldW : currentLevel === 5 ? level4.worldW : level5.worldW;
 }
 
 // ── Level 3: Rome ──
@@ -1113,7 +1218,7 @@ function update(dt) {
     if (keys['Enter']) {
       keys['Enter'] = false;
       insideChalet = false;
-      crossfadeToLevel(5); // back to alps music
+      crossfadeToLevel(6); // back to alps music
     }
     return;
   }
@@ -1302,7 +1407,7 @@ function update(dt) {
   }
 
   // Pizza shop entry (level 2 only)
-  const nearPizza = currentLevel === 2 && Math.abs(player.x - PIZZA_SHOP.x) < 50;
+  const nearPizza = currentLevel === 3 && Math.abs(player.x - PIZZA_SHOP.x) < 50;
   if (keys['Enter'] && nearPizza && !insidePizza) {
     keys['Enter'] = false;
     insidePizza = true;
@@ -1313,7 +1418,7 @@ function update(dt) {
 
   // Hot dog stands (level 2 — buy for 10 points)
   let nearHotdog = false;
-  if (currentLevel === 2) {
+  if (currentLevel === 3) {
     for (const hx of HOTDOG_POSITIONS) {
       if (Math.abs(player.x - hx) < 40) {
         nearHotdog = true;
@@ -1329,7 +1434,7 @@ function update(dt) {
   }
 
   // Central Park entry (level 2)
-  const nearPark = currentLevel === 2 &&
+  const nearPark = currentLevel === 3 &&
     player.x > CENTRAL_PARK_POS.x - 80 && player.x < CENTRAL_PARK_POS.x + 80;
   if (keys['Enter'] && nearPark && !insidePark && !insidePizza) {
     keys['Enter'] = false;
@@ -1338,13 +1443,13 @@ function update(dt) {
 
   // Taxi → Rome (level 2)
   let nearTaxi = false;
-  if (currentLevel === 2) {
+  if (currentLevel === 3) {
     for (const tx of TAXI_POSITIONS) {
       if (Math.abs(player.x - tx) < 40) {
         nearTaxi = true;
         if (keys['Enter'] && !insidePizza && !insidePark) {
           keys['Enter'] = false;
-          switchToLevel(3);
+          switchToLevel(4);
         }
         break;
       }
@@ -1356,7 +1461,7 @@ function update(dt) {
   let nearGelato = false;
   let nearPantheonDoor = false;
   let nearFiat = false;
-  if (currentLevel === 3) {
+  if (currentLevel === 4) {
     // Fountain swimming
     if (Math.abs(player.x - FOUNTAIN_POS.x) < 45) {
       nearFountain = true;
@@ -1392,7 +1497,7 @@ function update(dt) {
       nearFiat = true;
       if (keys['Enter'] && !insidePantheon) {
         keys['Enter'] = false;
-        switchToLevel(4);
+        switchToLevel(5);
       }
     }
   }
@@ -1402,7 +1507,7 @@ function update(dt) {
   let nearCoconut = false;
   let nearSurf = false;
   let nearAirport = false;
-  if (currentLevel === 4) {
+  if (currentLevel === 5) {
     // Tiki torches
     for (const tx of TIKI_POSITIONS) {
       if (Math.abs(player.x - tx) < 40) {
@@ -1444,14 +1549,14 @@ function update(dt) {
       nearAirport = true;
       if (keys['Enter']) {
         keys['Enter'] = false;
-        switchToLevel(5);
+        switchToLevel(6);
       }
     }
   }
 
   // Alps interactions (level 5)
   let nearChalet = false;
-  if (currentLevel === 5) {
+  if (currentLevel === 6) {
     // Auto-ski: push player right continuously
     player.vx = Math.max(player.vx, ALPS_SPEED);
 
@@ -1495,18 +1600,66 @@ function update(dt) {
         // Position hot chocolate mug relative to player
         hotChocolate.x = player.x + 60;
         hotChocolate.y = GROUND_Y - 30;
-        crossfadeToLevel(6); // chalet music
+        crossfadeToLevel(7); // chalet music
       }
     }
   }
 
-  // Rainbow bridge portal (level 1 → level 2)
+  // Rainbow bridge portal (level 1 → level 2 sledding)
   if (currentLevel === 1) {
     const dx = player.x - BRIDGE_PORTAL.x;
     const dy = player.y - GROUND_Y;
     if (dx * dx + dy * dy < BRIDGE_PORTAL.radius * BRIDGE_PORTAL.radius && keys['Enter']) {
       keys['Enter'] = false;
       switchToLevel(2);
+    }
+  }
+
+  // Sledding interactions (level 2)
+  let nearTrain = false;
+  if (currentLevel === 2) {
+    // Auto-sled: push player right
+    player.vx = Math.max(player.vx, SLED_SPEED);
+    sledding = true;
+
+    // Snowball collection
+    for (const sb of level2Sled.snowballs) {
+      if (sb.collected) continue;
+      const sdx = player.x - sb.x;
+      const sdy = (player.y - 20) - sb.y;
+      if (sdx * sdx + sdy * sdy < 625) {
+        sb.collected = true;
+        snowballCount++;
+        score += 15;
+        addPopup(sb.x, sb.y - 20, '+15 Snowball!', '#bae6fd');
+        playChaChing();
+      }
+    }
+
+    // Snowman collision
+    for (const sm of level2Sled.snowmen) {
+      if (sm.hit) continue;
+      if (Math.abs(player.x - sm.x) < 15 && player.y > sm.y - 40 * sm.size) {
+        sm.hit = true;
+        score = Math.max(0, score - 10);
+        addPopup(sm.x, player.y - 40, '-10 Ouch!', '#ef4444');
+        player.vx = 1;
+      }
+    }
+
+    // Reset snowmen behind player
+    for (const sm of level2Sled.snowmen) {
+      if (sm.hit && player.x - sm.x > 300) sm.hit = false;
+    }
+
+    // Train at end
+    if (player.x > SLED_WORLD_W - 200) {
+      nearTrain = true;
+      player.vx = 0;
+      if (keys['Enter']) {
+        keys['Enter'] = false;
+        switchToLevel(3); // go to NYC
+      }
     }
   }
 
@@ -1522,7 +1675,7 @@ function update(dt) {
   }
 
   // NPC AI
-  const activeNpcs = currentLevel === 1 ? npcs : currentLevel === 2 ? nycNpcs : currentLevel === 3 ? romeNpcs : currentLevel === 4 ? hawaiiNpcs : alpsNpcs;
+  const activeNpcs = currentLevel === 1 ? npcs : currentLevel === 2 ? sledNpcs : currentLevel === 3 ? nycNpcs : currentLevel === 4 ? romeNpcs : currentLevel === 5 ? hawaiiNpcs : alpsNpcs;
   const worldW = getCurrentWorldW();
   for (const npc of activeNpcs) {
     npc.idleTimer -= dt / 16;
@@ -1553,7 +1706,7 @@ function update(dt) {
   document.getElementById('hudFish').textContent = fishCount;
   document.getElementById('hudBacon').textContent = baconCount;
   document.getElementById('hudYarn').textContent = yarnCount;
-  document.getElementById('hudLevel').textContent = currentLevel === 1 ? 'Meadow' : currentLevel === 2 ? 'NYC' : currentLevel === 3 ? 'Rome' : currentLevel === 4 ? 'Hawaii' : 'Alps';
+  document.getElementById('hudLevel').textContent = currentLevel === 1 ? 'Meadow' : currentLevel === 2 ? 'Sledding' : currentLevel === 3 ? 'NYC' : currentLevel === 4 ? 'Rome' : currentLevel === 5 ? 'Hawaii' : 'Alps';
   document.getElementById('hudPizza').textContent = pizzaMaking.pizzaCount;
   document.getElementById('hudHotdog').textContent = hotdogCount;
   document.getElementById('hudGelato').textContent = gelatoCount;
@@ -1561,6 +1714,7 @@ function update(dt) {
   document.getElementById('hudTiki').textContent = tikiCount;
   document.getElementById('hudCoconut').textContent = coconutCount;
   document.getElementById('hudDiamond').textContent = diamondCount;
+  document.getElementById('hudSnowball').textContent = snowballCount;
 
   // Show/hide HUD items based on current level
   for (const el of document.querySelectorAll('.hud-item')) {
@@ -1569,7 +1723,7 @@ function update(dt) {
   }
 
   // Prompt
-  updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf, nearAirport, nearChalet);
+  updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf, nearAirport, nearChalet, nearTrain);
 }
 
 function getGroundLevel(x) {
@@ -1638,7 +1792,7 @@ function updatePizzaMinigame(dt) {
   document.getElementById('hudPizza').textContent = pizzaMaking.pizzaCount;
 }
 
-function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf, nearAirport, nearChalet) {
+function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf, nearAirport, nearChalet, nearTrain) {
   const el = document.getElementById('prompt');
   if (insideChalet) {
     el.textContent = marshmallow.active ? 'Tossing...' : 'Press Space to toss a marshmallow! (Enter to leave)';
@@ -1751,11 +1905,17 @@ function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, ne
   } else if (nearChalet) {
     el.textContent = 'Press Enter to warm up in the chalet!';
     el.style.display = 'block';
-  } else if (currentLevel === 5) {
+  } else if (nearTrain) {
+    el.textContent = 'Press Enter to take the train to NYC!';
+    el.style.display = 'block';
+  } else if (currentLevel === 2 && !nearTrain) {
+    el.textContent = 'Sled downhill! Dodge snowmen, collect snowballs!';
+    el.style.display = 'block';
+  } else if (currentLevel === 6) {
     el.textContent = 'Ski downhill! Dodge trees, jump cornices, collect diamonds!';
     el.style.display = 'block';
   } else if (currentLevel === 1 && Math.abs(player.x - BRIDGE_PORTAL.x) < 60) {
-    el.textContent = 'Press Enter to travel to NYC!';
+    el.textContent = 'Press Enter to go sledding!';
     el.style.display = 'block';
   } else {
     el.style.display = 'none';
@@ -1781,10 +1941,12 @@ function draw() {
   if (currentLevel === 1) {
     drawLevel1Sky(W, H, cycle, isNight, cam);
   } else if (currentLevel === 2) {
-    drawLevel2Sky(W, H, cycle, isNight);
+    drawSleddingSky(W, H, cycle, isNight);
   } else if (currentLevel === 3) {
-    drawRomeSky(W, H, cycle, isNight);
+    drawLevel2Sky(W, H, cycle, isNight);
   } else if (currentLevel === 4) {
+    drawRomeSky(W, H, cycle, isNight);
+  } else if (currentLevel === 5) {
     drawHawaiiSky(W, H, cycle, isNight);
   } else {
     drawAlpsSky(W, H, cycle, isNight);
@@ -1814,10 +1976,12 @@ function draw() {
   } else if (currentLevel === 1) {
     drawLevel1World(W, H, cam, cycle, isNight);
   } else if (currentLevel === 2) {
-    drawLevel2World(W, H, cam, cycle, isNight);
+    drawSleddingWorld(W, H, cam, cycle, isNight);
   } else if (currentLevel === 3) {
-    drawRomeWorld(W, H, cam, cycle, isNight);
+    drawLevel2World(W, H, cam, cycle, isNight);
   } else if (currentLevel === 4) {
+    drawRomeWorld(W, H, cam, cycle, isNight);
+  } else if (currentLevel === 5) {
     drawHawaiiWorld(W, H, cam, cycle, isNight);
   } else {
     drawAlpsWorld(W, H, cam, cycle, isNight);
@@ -1960,8 +2124,8 @@ function drawLevelTransition(W, H) {
     ctx.textBaseline = 'middle';
     const textAlpha = Math.min(1, (t - 0.4) / 0.3);
     ctx.globalAlpha = textAlpha;
-    const levelNames = { 1: 'Back to the Meadow!', 2: 'Welcome to NYC!', 3: 'Benvenuto a Roma!', 4: 'Aloha Hawaii!', 5: 'Welcome to the Alps!' };
-    const levelSubtitles = { 1: playerName + ' returns home!', 2: playerName + ' arrives in the big city!', 3: playerName + ' explores the Eternal City!', 4: playerName + ' hits the beach!', 5: playerName + ' hits the slopes!' };
+    const levelNames = { 1: 'Back to the Meadow!', 2: 'Time to Sled!', 3: 'Welcome to NYC!', 4: 'Benvenuto a Roma!', 5: 'Aloha Hawaii!', 6: 'Welcome to the Alps!' };
+    const levelSubtitles = { 1: playerName + ' returns home!', 2: playerName + ' hits the snowy hills!', 3: playerName + ' arrives in the big city!', 4: playerName + ' explores the Eternal City!', 5: playerName + ' hits the beach!', 6: playerName + ' hits the slopes!' };
     ctx.fillText(levelNames[levelTransition.toLevel] || 'New Level!', W / 2, H / 2 - 20);
     ctx.font = '20px system-ui';
     ctx.fillText(levelSubtitles[levelTransition.toLevel] || '', W / 2, H / 2 + 20);
@@ -4211,6 +4375,334 @@ function drawAirport(x) {
 }
 
 // ── Alps Draw Functions ──
+// ── Sledding Level Drawing Functions ──
+
+function drawSleddingSky(W, H, cycle, isNight) {
+  const dayTop = [200, 220, 240];
+  const nightTop = [15, 20, 35];
+  const dayBot = [230, 240, 250];
+  const nightBot = [25, 30, 55];
+  const t = cycle;
+  const skyTop = lerpColor(dayTop, nightTop, t);
+  const skyBot = lerpColor(dayBot, nightBot, t);
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, `rgb(${skyTop})`);
+  grad.addColorStop(1, `rgb(${skyBot})`);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+  if (isNight) drawStars(W, H, cycle);
+  drawCelestial(W, H, cycle);
+  // Snowy mountains in background
+  drawSledMountains(W, H);
+}
+
+function drawSleddingWorld(W, H, cam, cycle, isNight) {
+  const ww = level2Sled.worldW;
+
+  // Snowy ground
+  ctx.fillStyle = '#f0f4f8';
+  ctx.fillRect(0, GROUND_Y, ww, H);
+  ctx.fillStyle = '#e2e8f0';
+  ctx.fillRect(0, GROUND_Y, ww, 4);
+  // Snow sparkle detail
+  ctx.fillStyle = '#fff';
+  for (let x = 0; x < ww; x += 30) {
+    ctx.fillRect(x + Math.sin(x) * 5, GROUND_Y - 1, 2, 3);
+  }
+
+  // Background pine trees
+  for (const pine of level2Sled.pines) {
+    if (pine.x < cam - 100 || pine.x > cam + W + 100) continue;
+    drawPineTree(pine.x, GROUND_Y, pine.size);
+  }
+
+  // Snow platforms
+  drawSleddingPlatforms();
+
+  // Snowballs
+  drawSnowballs();
+
+  // Snowmen
+  drawSnowmen(cam, W);
+
+  // Train at end
+  drawTrain(ww - 150);
+
+  // Falling snowflakes
+  drawSnowflakes(cam, W, H);
+
+  // NPCs
+  for (const npc of sledNpcs) drawKitty(npc.x, npc.y, npc.color, npc.facing, npc.walkFrame, npc.accessory);
+
+  drawPlayerAndUI();
+}
+
+function drawSledMountains(W, H) {
+  ctx.fillStyle = 'rgba(200, 215, 230, 0.5)';
+  ctx.beginPath();
+  ctx.moveTo(0, H);
+  for (let x = 0; x <= W; x += 20) {
+    const y = H * 0.35 + Math.sin(x / 120) * 40 + Math.cos(x / 60) * 20;
+    ctx.lineTo(x, y);
+  }
+  ctx.lineTo(W, H);
+  ctx.fill();
+  // Snow caps
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+  ctx.beginPath();
+  ctx.moveTo(0, H);
+  for (let x = 0; x <= W; x += 20) {
+    const y = H * 0.35 + Math.sin(x / 120) * 40 + Math.cos(x / 60) * 20;
+    ctx.lineTo(x, y - 5);
+  }
+  for (let x = W; x >= 0; x -= 20) {
+    const y = H * 0.35 + Math.sin(x / 120) * 40 + Math.cos(x / 60) * 20;
+    ctx.lineTo(x, y + 8);
+  }
+  ctx.fill();
+}
+
+function drawPineTree(x, gy, size) {
+  const s = size;
+  // Trunk
+  ctx.fillStyle = '#5c3a1e';
+  ctx.fillRect(x - 3 * s, gy - 15 * s, 6 * s, 15 * s);
+  // Snow-covered layers
+  for (let i = 0; i < 3; i++) {
+    const ly = gy - 15 * s - i * 18 * s;
+    const lw = (30 - i * 8) * s;
+    // Green
+    ctx.fillStyle = '#2d6a4f';
+    ctx.beginPath();
+    ctx.moveTo(x - lw / 2, ly);
+    ctx.lineTo(x, ly - 22 * s);
+    ctx.lineTo(x + lw / 2, ly);
+    ctx.fill();
+    // Snow on top
+    ctx.fillStyle = '#f0f4f8';
+    ctx.beginPath();
+    ctx.moveTo(x - lw / 2 + 4, ly);
+    ctx.lineTo(x, ly - 18 * s);
+    ctx.lineTo(x + lw / 2 - 4, ly);
+    ctx.fill();
+  }
+}
+
+function drawSleddingPlatforms() {
+  for (const p of level2Sled.platforms) {
+    // Ice/snow platform
+    ctx.fillStyle = 'rgba(0,0,0,0.05)';
+    ctx.fillRect(p.x + 3, p.y + 3, p.w, 12);
+
+    const pGrad = ctx.createLinearGradient(p.x, p.y, p.x, p.y + 12);
+    pGrad.addColorStop(0, '#e2e8f0');
+    pGrad.addColorStop(1, '#cbd5e1');
+    ctx.fillStyle = pGrad;
+    ctx.beginPath();
+    ctx.roundRect(p.x, p.y, p.w, 12, 4);
+    ctx.fill();
+
+    // Snow cap
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.roundRect(p.x - 2, p.y - 3, p.w + 4, 6, 3);
+    ctx.fill();
+  }
+}
+
+function drawSnowballs() {
+  for (const sb of level2Sled.snowballs) {
+    if (sb.collected) continue;
+    const bob = Math.sin(gameTime / 400 + sb.bobPhase) * 3;
+    const sx = sb.x, sy = sb.y + bob;
+
+    // Glow
+    ctx.globalAlpha = 0.2;
+    ctx.fillStyle = '#bae6fd';
+    ctx.beginPath();
+    ctx.arc(sx, sy, 16, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // Snowball
+    ctx.fillStyle = '#f0f4f8';
+    ctx.beginPath();
+    ctx.arc(sx, sy, 10, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.beginPath();
+    ctx.arc(sx - 3, sy - 3, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Snow sparkle
+    ctx.fillStyle = '#bae6fd';
+    ctx.beginPath();
+    ctx.arc(sx + 2, sy + 2, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawSnowmen(cam, W) {
+  for (const sm of level2Sled.snowmen) {
+    if (sm.x < cam - 50 || sm.x > cam + W + 50) continue;
+    const s = sm.size;
+    const gy = sm.y;
+
+    // Bottom ball
+    ctx.fillStyle = '#f8fafc';
+    ctx.beginPath();
+    ctx.arc(sm.x, gy - 12 * s, 12 * s, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Middle ball
+    ctx.fillStyle = '#f1f5f9';
+    ctx.beginPath();
+    ctx.arc(sm.x, gy - 28 * s, 9 * s, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Head
+    ctx.fillStyle = '#f8fafc';
+    ctx.beginPath();
+    ctx.arc(sm.x, gy - 40 * s, 7 * s, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Eyes
+    ctx.fillStyle = '#1f2937';
+    ctx.beginPath();
+    ctx.arc(sm.x - 3 * s, gy - 42 * s, 1.5 * s, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(sm.x + 3 * s, gy - 42 * s, 1.5 * s, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Carrot nose
+    ctx.fillStyle = '#f97316';
+    ctx.beginPath();
+    ctx.moveTo(sm.x, gy - 40 * s);
+    ctx.lineTo(sm.x + 8 * s, gy - 39 * s);
+    ctx.lineTo(sm.x, gy - 38 * s);
+    ctx.fill();
+
+    // Scarf
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(sm.x - 8 * s, gy - 33 * s, 16 * s, 3 * s);
+    ctx.fillRect(sm.x + 4 * s, gy - 33 * s, 3 * s, 8 * s);
+
+    // Stick arms
+    ctx.strokeStyle = '#78350f';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(sm.x - 9 * s, gy - 28 * s);
+    ctx.lineTo(sm.x - 22 * s, gy - 35 * s);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(sm.x + 9 * s, gy - 28 * s);
+    ctx.lineTo(sm.x + 22 * s, gy - 35 * s);
+    ctx.stroke();
+
+    // Top hat
+    ctx.fillStyle = '#1f2937';
+    ctx.fillRect(sm.x - 6 * s, gy - 52 * s, 12 * s, 10 * s);
+    ctx.fillRect(sm.x - 8 * s, gy - 46 * s, 16 * s, 3 * s);
+  }
+}
+
+function drawTrain(x) {
+  const gy = GROUND_Y;
+  // Railroad tracks
+  ctx.fillStyle = '#78350f';
+  ctx.fillRect(x - 70, gy - 3, 140, 3);
+  ctx.fillRect(x - 70, gy + 2, 140, 3);
+  // Ties
+  ctx.fillStyle = '#92400e';
+  for (let i = -3; i <= 3; i++) {
+    ctx.fillRect(x + i * 18 - 4, gy - 5, 8, 12);
+  }
+  // Engine body
+  ctx.fillStyle = '#dc2626';
+  ctx.beginPath(); ctx.roundRect(x - 35, gy - 40, 70, 32, 5); ctx.fill();
+  // Cabin
+  ctx.fillStyle = '#b91c1c';
+  ctx.fillRect(x + 10, gy - 58, 25, 20);
+  // Cabin roof
+  ctx.fillStyle = '#7f1d1d';
+  ctx.fillRect(x + 7, gy - 62, 31, 5);
+  // Cabin window
+  ctx.fillStyle = '#bae6fd';
+  ctx.fillRect(x + 15, gy - 55, 14, 10);
+  // Front windows
+  ctx.fillStyle = '#bae6fd';
+  ctx.fillRect(x - 28, gy - 35, 12, 10);
+  ctx.fillRect(x - 10, gy - 35, 12, 10);
+  // Smokestack
+  ctx.fillStyle = '#374151';
+  ctx.fillRect(x - 22, gy - 55, 10, 16);
+  ctx.fillRect(x - 25, gy - 58, 16, 5);
+  // Steam puffs
+  ctx.globalAlpha = 0.35;
+  ctx.fillStyle = '#e5e7eb';
+  for (let i = 0; i < 4; i++) {
+    const sy = gy - 65 - i * 10 - Math.sin(gameTime / 350 + i) * 4;
+    const sx = x - 17 + Math.sin(gameTime / 500 + i * 1.5) * 6;
+    ctx.beginPath();
+    ctx.arc(sx, sy, 5 + i * 2.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  // Cowcatcher
+  ctx.fillStyle = '#4b5563';
+  ctx.beginPath();
+  ctx.moveTo(x - 35, gy - 8);
+  ctx.lineTo(x - 45, gy);
+  ctx.lineTo(x - 35, gy);
+  ctx.fill();
+  // Wheels
+  ctx.fillStyle = '#1f2937';
+  ctx.beginPath(); ctx.arc(x - 20, gy - 4, 7, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x, gy - 4, 7, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 20, gy - 4, 7, 0, Math.PI * 2); ctx.fill();
+  // Wheel hubs
+  ctx.fillStyle = '#6b7280';
+  ctx.beginPath(); ctx.arc(x - 20, gy - 4, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x, gy - 4, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 20, gy - 4, 3, 0, Math.PI * 2); ctx.fill();
+  // Connecting rod (animated)
+  const rodOffset = Math.sin(gameTime / 200) * 3;
+  ctx.strokeStyle = '#6b7280';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x - 20, gy - 4 + rodOffset);
+  ctx.lineTo(x + 20, gy - 4 - rodOffset);
+  ctx.stroke();
+  // Snow on top
+  ctx.fillStyle = '#f0f4f8';
+  ctx.beginPath();
+  ctx.ellipse(x - 10, gy - 40, 28, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(x + 22, gy - 58, 12, 3, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // NYC sign on side
+  ctx.fillStyle = '#fde68a';
+  ctx.font = 'bold 7px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText('NYC EXPRESS', x - 5, gy - 18);
+}
+
+function drawSnowflakes(cam, W, H) {
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+  for (let i = 0; i < 30; i++) {
+    const sx = cam + ((i * 173 + Math.sin(gameTime / 800 + i * 0.7) * 40) % W);
+    const sy = ((gameTime / 15 + i * 67) % H);
+    const size = 1.5 + (i % 3);
+    ctx.beginPath();
+    ctx.arc(sx, sy, size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
 function drawAlpsSky(W, H, cycle, isNight) {
   const dayTop = [180, 210, 240]; const nightTop = [15, 20, 40];
   const dayBot = [230, 240, 255]; const nightBot = [30, 35, 60];
