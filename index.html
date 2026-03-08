@@ -15,6 +15,8 @@
     height: 100vh;
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
     overflow: hidden;
+    touch-action: manipulation;
+    -webkit-touch-callout: none;
   }
   #startScreen {
     position: fixed;
@@ -70,7 +72,8 @@
     transition: transform 0.15s, box-shadow 0.15s;
   }
   #startBtn:hover { transform: scale(1.05); box-shadow: 0 8px 25px rgba(124,58,237,0.4); }
-  canvas { border-radius: 12px; display: block; margin: 0 auto; }
+  #startBtn { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  canvas { border-radius: 12px; display: block; margin: 0 auto; touch-action: none; }
   #orientationOverlay {
     display: none;
     position: fixed;
@@ -157,6 +160,8 @@
     transition: background 0.15s;
   }
   #volumeBtn:hover { background: rgba(255,255,255,0.25); }
+  #volumeBtn { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  #volumeSlider { touch-action: none; }
   #volumeSliderWrap {
     background: rgba(255,255,255,0.15);
     backdrop-filter: blur(12px);
@@ -508,22 +513,78 @@ const sfxRatio = 1.25; // sfx slightly louder than music
 function getSfxVolume() { return muted ? 0 : Math.min(1, masterVolume * sfxRatio); }
 
 // Wire up volume UI
-document.getElementById('volumeBtn').addEventListener('click', () => {
-  muted = !muted;
-  document.getElementById('volumeBtn').innerHTML = muted ? '&#128263;' : '&#128264;';
-  applyVolume();
-  showSlider();
-});
-
+const volBtn = document.getElementById('volumeBtn');
 const sliderEl = document.getElementById('volumeSlider');
 const sliderWrap = document.getElementById('volumeSliderWrap');
+let volSliderOpen = false;
+
+if (isMobile) {
+  // On mobile: tap speaker icon to toggle slider visibility (no hover)
+  volBtn.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    volSliderOpen = !volSliderOpen;
+    if (volSliderOpen) {
+      sliderWrap.classList.add('visible');
+      clearTimeout(sliderHideTimer);
+      // Auto-hide after 4s of inactivity on mobile
+      sliderHideTimer = setTimeout(() => {
+        sliderWrap.classList.remove('visible');
+        volSliderOpen = false;
+      }, 4000);
+    } else {
+      sliderWrap.classList.remove('visible');
+      clearTimeout(sliderHideTimer);
+    }
+  }, { passive: false });
+  // Long-press speaker to toggle mute
+  let volLongPress = null;
+  volBtn.addEventListener('touchstart', () => {
+    volLongPress = setTimeout(() => {
+      muted = !muted;
+      volBtn.innerHTML = muted ? '&#128263;' : '&#128264;';
+      applyVolume();
+    }, 500);
+  }, { passive: true });
+  volBtn.addEventListener('touchend', () => { clearTimeout(volLongPress); }, { passive: true });
+  volBtn.addEventListener('touchcancel', () => { clearTimeout(volLongPress); }, { passive: true });
+  // Keep slider open while interacting with it
+  sliderWrap.addEventListener('touchstart', () => {
+    clearTimeout(sliderHideTimer);
+  }, { passive: true });
+  sliderWrap.addEventListener('touchend', () => {
+    sliderHideTimer = setTimeout(() => {
+      sliderWrap.classList.remove('visible');
+      volSliderOpen = false;
+    }, 4000);
+  }, { passive: true });
+} else {
+  // Desktop: click to toggle mute, hover to show slider
+  volBtn.addEventListener('click', () => {
+    muted = !muted;
+    volBtn.innerHTML = muted ? '&#128263;' : '&#128264;';
+    applyVolume();
+    showSlider();
+  });
+  sliderWrap.addEventListener('mouseenter', () => { clearTimeout(sliderHideTimer); });
+  sliderWrap.addEventListener('mouseleave', () => {
+    sliderHideTimer = setTimeout(() => sliderWrap.classList.remove('visible'), 2000);
+  });
+}
 
 sliderEl.addEventListener('input', () => {
   masterVolume = sliderEl.value / 100;
   if (masterVolume > 0) muted = false;
-  document.getElementById('volumeBtn').innerHTML = masterVolume === 0 ? '&#128263;' : '&#128264;';
+  volBtn.innerHTML = masterVolume === 0 ? '&#128263;' : '&#128264;';
   applyVolume();
-  showSlider();
+  if (!isMobile) showSlider();
+  else {
+    // Reset auto-hide timer on interaction
+    clearTimeout(sliderHideTimer);
+    sliderHideTimer = setTimeout(() => {
+      sliderWrap.classList.remove('visible');
+      volSliderOpen = false;
+    }, 4000);
+  }
 });
 
 function showSlider() {
@@ -531,15 +592,6 @@ function showSlider() {
   clearTimeout(sliderHideTimer);
   sliderHideTimer = setTimeout(() => sliderWrap.classList.remove('visible'), 2000);
 }
-
-sliderWrap.addEventListener('mouseenter', () => { clearTimeout(sliderHideTimer); });
-sliderWrap.addEventListener('mouseleave', () => {
-  sliderHideTimer = setTimeout(() => sliderWrap.classList.remove('visible'), 2000);
-});
-sliderWrap.addEventListener('touchstart', () => { clearTimeout(sliderHideTimer); }, { passive: true });
-sliderWrap.addEventListener('touchend', () => {
-  sliderHideTimer = setTimeout(() => sliderWrap.classList.remove('visible'), 2000);
-});
 
 function applyVolume() {
   const mv = getMusicVolume();
@@ -1354,6 +1406,16 @@ function startGame() {
   document.getElementById('volumeControl').style.display = 'flex';
   document.getElementById('hudName').textContent = playerName;
   initMeows();
+  // Unlock audio on mobile: browsers require a user gesture before playing audio.
+  // The Play button click/tap is that gesture. We briefly play/pause SFX elements
+  // so subsequent play() calls succeed even outside a direct gesture context.
+  // (Music elements are unlocked by startLevelMusic below.)
+  for (const sfx of [...meowSounds, chaChingSound]) {
+    if (sfx) {
+      const p = sfx.play();
+      if (p) p.then(() => { sfx.pause(); sfx.currentTime = 0; }).catch(() => {});
+    }
+  }
   // Start music (requires user gesture, which the click/enter provides)
   startLevelMusic(1);
   requestAnimationFrame(loop);
