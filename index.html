@@ -140,6 +140,7 @@
   <span>Score: <b id="hudScore">0</b></span>
   <span>Fish: <b id="hudFish">0</b></span>
   <span>Bacon: <b id="hudBacon">0</b></span>
+  <span>Yarn: <b id="hudYarn">0</b></span>
 </div>
 <div id="controls">
   <span>Arrow Keys: Move</span>
@@ -152,7 +153,7 @@
 
 <script>
 // ── Constants ──
-const WORLD_W = 2400;
+const WORLD_W = 4800;
 const GROUND_Y = 420;
 const GRAVITY = 0.6;
 const JUMP_VEL = -12;
@@ -166,7 +167,7 @@ const HOUSE = { x: 1600, w: 160, h: 160 };
 
 // ── State ──
 let playerName = 'Sparkle';
-let score = 0, fishCount = 0, baconCount = 0;
+let score = 0, fishCount = 0, baconCount = 0, yarnCount = 0;
 let gameTime = 0;
 let insideHouse = false;
 let cooking = { active: false, progress: 0, burnt: false };
@@ -218,6 +219,85 @@ for (let i = 0; i < 4; i++) {
     idleTimer: Math.random() * 200
   });
 }
+
+// Platforms — staircase arrangement across the world
+const platforms = [
+  // Pond area platforms (left side)
+  { x: 100, y: 340, w: 90 },
+  { x: 240, y: 290, w: 80 },
+  { x: 400, y: 250, w: 70 },
+  // Middle area platforms
+  { x: 700, y: 340, w: 100 },
+  { x: 850, y: 280, w: 80 },
+  { x: 980, y: 220, w: 90 },
+  { x: 1100, y: 340, w: 80 },
+  // Right side platforms
+  { x: 1300, y: 320, w: 90 },
+  { x: 1450, y: 260, w: 80 },
+  { x: 1600, y: 200, w: 100 },
+  // Far right original
+  { x: 1850, y: 330, w: 90 },
+  { x: 2000, y: 270, w: 80 },
+  { x: 2150, y: 210, w: 90 },
+  // Extended world platforms
+  { x: 2500, y: 340, w: 100 },
+  { x: 2680, y: 280, w: 80 },
+  { x: 2850, y: 220, w: 90 },
+  { x: 3100, y: 330, w: 80 },
+  { x: 3280, y: 260, w: 90 },
+  { x: 3500, y: 340, w: 100 },
+  { x: 3650, y: 280, w: 80 },
+  { x: 3820, y: 210, w: 90 },
+  { x: 4050, y: 320, w: 80 },
+  { x: 4200, y: 250, w: 90 },
+  { x: 4400, y: 340, w: 100 },
+  { x: 4550, y: 270, w: 80 },
+];
+
+// Yarn balls — placed on top of the higher platforms
+const yarnColors = ['#fda4af','#c4b5fd','#a5f3fc','#fde68a','#bbf7d0','#fbcfe8','#ddd6fe'];
+const yarnBalls = [];
+for (const p of platforms) {
+  if (p.y < 300) { // only on higher platforms
+    yarnBalls.push({
+      x: p.x + p.w / 2,
+      y: p.y - 14,
+      color: yarnColors[yarnBalls.length % yarnColors.length],
+      collected: false,
+      bobPhase: Math.random() * Math.PI * 2
+    });
+  }
+}
+
+// Background scenes — decorations that appear as you scroll right
+const bgScenes = [
+  // Camper RVs
+  { type: 'rv', x: 800, color: '#fbbf24' },
+  { type: 'rv', x: 2300, color: '#fb7185' },
+  { type: 'rv', x: 3800, color: '#67e8f9' },
+  // Cacti
+  { type: 'cactus', x: 650, size: 1 },
+  { type: 'cactus', x: 1200, size: 0.8 },
+  { type: 'cactus', x: 2600, size: 1.2 },
+  { type: 'cactus', x: 3400, size: 0.9 },
+  { type: 'cactus', x: 4300, size: 1.1 },
+  // Scene 1: Mushroom grove
+  { type: 'mushroom', x: 1900, count: 4 },
+  // Scene 2: Flower garden
+  { type: 'flowers', x: 2450 },
+  // Scene 3: Campfire with log seating
+  { type: 'campfire', x: 2800 },
+  // Scene 4: Windmill
+  { type: 'windmill', x: 3200 },
+  // Scene 5: Crystal cluster
+  { type: 'crystals', x: 3600 },
+  // Scene 6: Beehive in a tree
+  { type: 'beehive', x: 4000 },
+  // Scene 7: Waterfall rocks
+  { type: 'waterfall', x: 4350 },
+  // Scene 8: Rainbow bridge
+  { type: 'bridge', x: 4600 },
+];
 
 // ── Canvas Setup ──
 const canvas = document.getElementById('game');
@@ -303,6 +383,32 @@ function update(dt) {
     player.y = groundLevel;
     player.vy = 0;
     player.onGround = true;
+  }
+
+  // Platform collision (only when falling)
+  if (player.vy > 0) {
+    for (const p of platforms) {
+      if (player.x > p.x - 10 && player.x < p.x + p.w + 10 &&
+          player.y >= p.y && player.y - player.vy < p.y) {
+        player.y = p.y;
+        player.vy = 0;
+        player.onGround = true;
+        break;
+      }
+    }
+  }
+
+  // Yarn ball collection
+  for (const yb of yarnBalls) {
+    if (yb.collected) continue;
+    const dx = player.x - yb.x;
+    const dy = (player.y - 20) - yb.y;
+    if (dx * dx + dy * dy < 625) { // ~25px radius
+      yb.collected = true;
+      yarnCount++;
+      score += 20;
+      addPopup(yb.x, yb.y - 20, '+20 Yarn!', yb.color);
+    }
   }
 
   // World bounds
@@ -418,6 +524,7 @@ function update(dt) {
   document.getElementById('hudScore').textContent = score;
   document.getElementById('hudFish').textContent = fishCount;
   document.getElementById('hudBacon').textContent = baconCount;
+  document.getElementById('hudYarn').textContent = yarnCount;
 
   // Prompt
   updatePrompt(inPond, nearGrill, nearHouse);
@@ -502,6 +609,9 @@ function draw() {
     // Ground
     drawGround(W, H, cam);
 
+    // Background scenes
+    drawBgScenes(cam, W);
+
     // Pond
     drawPond();
 
@@ -510,6 +620,12 @@ function draw() {
 
     // Grill
     drawGrill();
+
+    // Platforms
+    drawPlatforms();
+
+    // Yarn balls
+    drawYarnBalls();
 
     // House
     drawHouse();
@@ -779,6 +895,466 @@ function drawGrill() {
       ctx.fill();
     }
     ctx.globalAlpha = 1;
+  }
+}
+
+function drawBgScenes(cam, W) {
+  for (const s of bgScenes) {
+    // Skip if offscreen
+    if (s.x < cam - 200 || s.x > cam + W + 200) continue;
+    switch (s.type) {
+      case 'rv': drawRV(s.x, s.color); break;
+      case 'cactus': drawCactus(s.x, s.size); break;
+      case 'mushroom': drawMushrooms(s.x, s.count); break;
+      case 'flowers': drawFlowerGarden(s.x); break;
+      case 'campfire': drawCampfire(s.x); break;
+      case 'windmill': drawWindmill(s.x); break;
+      case 'crystals': drawCrystals(s.x); break;
+      case 'beehive': drawBeehive(s.x); break;
+      case 'waterfall': drawWaterfall(s.x); break;
+      case 'bridge': drawRainbowBridge(s.x); break;
+    }
+  }
+}
+
+function drawRV(x, color) {
+  const gy = GROUND_Y;
+  // Wheels
+  ctx.fillStyle = '#1f2937';
+  ctx.beginPath(); ctx.arc(x - 25, gy - 4, 8, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 25, gy - 4, 8, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#6b7280';
+  ctx.beginPath(); ctx.arc(x - 25, gy - 4, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 25, gy - 4, 4, 0, Math.PI * 2); ctx.fill();
+  // Body
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.roundRect(x - 40, gy - 50, 80, 42, 6); ctx.fill();
+  // Roof
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(x - 38, gy - 54, 76, 6);
+  // Window
+  ctx.fillStyle = '#bae6fd';
+  ctx.fillRect(x - 28, gy - 44, 20, 16);
+  ctx.fillRect(x + 8, gy - 44, 20, 16);
+  // Door
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(x - 4, gy - 40, 12, 28);
+  ctx.fillStyle = '#fbbf24';
+  ctx.beginPath(); ctx.arc(x + 5, gy - 26, 2, 0, Math.PI * 2); ctx.fill();
+  // Awning stripe
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ctx.fillRect(x - 38, gy - 50, 76, 4);
+}
+
+function drawCactus(x, size) {
+  const gy = GROUND_Y;
+  const h = 50 * size;
+  ctx.fillStyle = '#22c55e';
+  // Main trunk
+  ctx.beginPath(); ctx.roundRect(x - 6 * size, gy - h, 12 * size, h, 5); ctx.fill();
+  // Left arm
+  ctx.beginPath(); ctx.roundRect(x - 20 * size, gy - h * 0.7, 14 * size, 8 * size, 4); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(x - 20 * size, gy - h * 0.7 - 18 * size, 8 * size, 20 * size, 4); ctx.fill();
+  // Right arm
+  ctx.beginPath(); ctx.roundRect(x + 6 * size, gy - h * 0.5, 14 * size, 8 * size, 4); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(x + 14 * size, gy - h * 0.5 - 14 * size, 8 * size, 16 * size, 4); ctx.fill();
+  // Highlights
+  ctx.fillStyle = 'rgba(255,255,255,0.15)';
+  ctx.fillRect(x - 2 * size, gy - h + 5, 3 * size, h - 10);
+  // Flower on top
+  ctx.fillStyle = '#f472b6';
+  ctx.beginPath(); ctx.arc(x, gy - h - 4, 4 * size, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#fbbf24';
+  ctx.beginPath(); ctx.arc(x, gy - h - 4, 2 * size, 0, Math.PI * 2); ctx.fill();
+}
+
+function drawMushrooms(x, count) {
+  const gy = GROUND_Y;
+  const colors = ['#ef4444','#f472b6','#a78bfa','#fbbf24'];
+  for (let i = 0; i < count; i++) {
+    const mx = x + i * 28 - 40;
+    const mh = 14 + (i % 3) * 6;
+    const mc = colors[i % 4];
+    // Stem
+    ctx.fillStyle = '#fef3c7';
+    ctx.fillRect(mx - 3, gy - mh, 6, mh);
+    // Cap
+    ctx.fillStyle = mc;
+    ctx.beginPath(); ctx.arc(mx, gy - mh, 12, Math.PI, 0); ctx.fill();
+    // Spots
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(mx - 4, gy - mh - 4, 2.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(mx + 5, gy - mh - 2, 2, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+function drawFlowerGarden(x) {
+  const gy = GROUND_Y;
+  const flowerColors = ['#f43f5e','#fbbf24','#a78bfa','#38bdf8','#4ade80','#f472b6'];
+  for (let i = 0; i < 8; i++) {
+    const fx = x + i * 18 - 60;
+    const fh = 12 + Math.sin(i * 1.7) * 5;
+    // Stem
+    ctx.strokeStyle = '#16a34a';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(fx, gy); ctx.lineTo(fx, gy - fh); ctx.stroke();
+    // Leaf
+    if (i % 2 === 0) {
+      ctx.fillStyle = '#4ade80';
+      ctx.beginPath();
+      ctx.ellipse(fx + 4, gy - fh / 2, 4, 2, 0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Petals
+    const fc = flowerColors[i % flowerColors.length];
+    ctx.fillStyle = fc;
+    for (let p = 0; p < 5; p++) {
+      const a = (p / 5) * Math.PI * 2 + gameTime / 2000;
+      ctx.beginPath();
+      ctx.arc(fx + Math.cos(a) * 4, gy - fh + Math.sin(a) * 4, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Center
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath(); ctx.arc(fx, gy - fh, 2.5, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+function drawCampfire(x) {
+  const gy = GROUND_Y;
+  // Log seats
+  ctx.fillStyle = '#78350f';
+  ctx.beginPath(); ctx.roundRect(x - 50, gy - 14, 30, 12, 4); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(x + 20, gy - 14, 30, 12, 4); ctx.fill();
+  // Log rings
+  ctx.strokeStyle = '#92400e';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.ellipse(x - 50, gy - 8, 4, 6, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(x + 50, gy - 8, 4, 6, 0, 0, Math.PI * 2); ctx.stroke();
+  // Fire pit stones
+  ctx.fillStyle = '#6b7280';
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.arc(x + Math.cos(a) * 12, gy - 4 + Math.sin(a) * 5, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // Fire
+  const flicker = Math.sin(gameTime / 100) * 3;
+  ctx.fillStyle = '#f97316';
+  ctx.beginPath();
+  ctx.moveTo(x - 8, gy - 4);
+  ctx.quadraticCurveTo(x - 4, gy - 30 + flicker, x, gy - 4);
+  ctx.fill();
+  ctx.fillStyle = '#fbbf24';
+  ctx.beginPath();
+  ctx.moveTo(x - 4, gy - 4);
+  ctx.quadraticCurveTo(x + 2, gy - 22 - flicker, x + 5, gy - 4);
+  ctx.fill();
+  ctx.fillStyle = '#fde68a';
+  ctx.beginPath();
+  ctx.moveTo(x - 2, gy - 4);
+  ctx.quadraticCurveTo(x, gy - 14 + flicker * 0.5, x + 3, gy - 4);
+  ctx.fill();
+  // Sparks
+  ctx.fillStyle = '#fbbf24';
+  for (let i = 0; i < 3; i++) {
+    const sy = gy - 30 - Math.sin(gameTime / 200 + i * 2) * 12;
+    const sx = x - 3 + Math.cos(gameTime / 300 + i * 3) * 8;
+    ctx.globalAlpha = 0.6;
+    ctx.beginPath(); ctx.arc(sx, sy, 1.5, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawWindmill(x) {
+  const gy = GROUND_Y;
+  // Tower
+  ctx.fillStyle = '#e5e7eb';
+  ctx.beginPath();
+  ctx.moveTo(x - 15, gy);
+  ctx.lineTo(x - 8, gy - 80);
+  ctx.lineTo(x + 8, gy - 80);
+  ctx.lineTo(x + 15, gy);
+  ctx.fill();
+  ctx.strokeStyle = '#d1d5db';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(x - 12, gy - 25); ctx.lineTo(x + 12, gy - 25); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x - 10, gy - 50); ctx.lineTo(x + 10, gy - 50); ctx.stroke();
+  // Door
+  ctx.fillStyle = '#78350f';
+  ctx.beginPath(); ctx.arc(x, gy - 8, 6, Math.PI, 0); ctx.fill();
+  ctx.fillRect(x - 6, gy - 8, 12, 8);
+  // Blades
+  const angle = gameTime / 1500;
+  ctx.strokeStyle = '#92400e';
+  ctx.lineWidth = 3;
+  for (let i = 0; i < 4; i++) {
+    const a = angle + (i / 4) * Math.PI * 2;
+    const bx = Math.cos(a) * 35;
+    const by = Math.sin(a) * 35;
+    ctx.beginPath();
+    ctx.moveTo(x, gy - 80);
+    ctx.lineTo(x + bx, gy - 80 + by);
+    ctx.stroke();
+    // Blade surface
+    ctx.fillStyle = 'rgba(210,180,140,0.5)';
+    ctx.beginPath();
+    ctx.moveTo(x, gy - 80);
+    ctx.lineTo(x + bx, gy - 80 + by);
+    ctx.lineTo(x + bx + Math.cos(a + 0.3) * 5, gy - 80 + by + Math.sin(a + 0.3) * 5);
+    ctx.fill();
+  }
+  // Hub
+  ctx.fillStyle = '#78350f';
+  ctx.beginPath(); ctx.arc(x, gy - 80, 4, 0, Math.PI * 2); ctx.fill();
+}
+
+function drawCrystals(x) {
+  const gy = GROUND_Y;
+  const crystalData = [
+    { dx: -20, h: 35, w: 8, c: '#a78bfa' },
+    { dx: -8, h: 50, w: 10, c: '#c084fc' },
+    { dx: 6, h: 40, w: 9, c: '#818cf8' },
+    { dx: 18, h: 28, w: 7, c: '#e879f9' },
+    { dx: -14, h: 22, w: 6, c: '#c4b5fd' },
+  ];
+  for (const cr of crystalData) {
+    const shimmer = Math.sin(gameTime / 600 + cr.dx) * 0.15 + 0.85;
+    ctx.globalAlpha = shimmer;
+    ctx.fillStyle = cr.c;
+    ctx.beginPath();
+    ctx.moveTo(x + cr.dx, gy);
+    ctx.lineTo(x + cr.dx - cr.w / 2, gy - cr.h * 0.3);
+    ctx.lineTo(x + cr.dx, gy - cr.h);
+    ctx.lineTo(x + cr.dx + cr.w / 2, gy - cr.h * 0.3);
+    ctx.closePath();
+    ctx.fill();
+    // Highlight edge
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.beginPath();
+    ctx.moveTo(x + cr.dx, gy - cr.h);
+    ctx.lineTo(x + cr.dx + cr.w / 2, gy - cr.h * 0.3);
+    ctx.lineTo(x + cr.dx + 1, gy - cr.h * 0.5);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  // Sparkle particles
+  ctx.fillStyle = '#fff';
+  for (let i = 0; i < 4; i++) {
+    const sy = gy - 20 - Math.sin(gameTime / 400 + i * 1.5) * 20;
+    const sx = x - 15 + Math.cos(gameTime / 500 + i * 2) * 25;
+    ctx.globalAlpha = Math.sin(gameTime / 300 + i) * 0.4 + 0.3;
+    ctx.beginPath(); ctx.arc(sx, sy, 1.5, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawBeehive(x) {
+  const gy = GROUND_Y;
+  // Tree trunk
+  ctx.fillStyle = '#78350f';
+  ctx.fillRect(x - 8, gy - 90, 16, 90);
+  // Bark lines
+  ctx.strokeStyle = '#92400e';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 4; i++) {
+    ctx.beginPath();
+    ctx.moveTo(x - 4, gy - 20 - i * 18);
+    ctx.lineTo(x - 2, gy - 14 - i * 18);
+    ctx.stroke();
+  }
+  // Foliage
+  ctx.fillStyle = '#16a34a';
+  ctx.beginPath(); ctx.arc(x, gy - 100, 28, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x - 18, gy - 88, 20, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 18, gy - 88, 20, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#22c55e';
+  ctx.beginPath(); ctx.arc(x + 8, gy - 108, 18, 0, Math.PI * 2); ctx.fill();
+  // Beehive
+  ctx.fillStyle = '#fbbf24';
+  ctx.beginPath(); ctx.arc(x + 20, gy - 70, 12, 0, Math.PI * 2); ctx.fill();
+  // Hive stripes
+  ctx.strokeStyle = '#d97706';
+  ctx.lineWidth = 1.5;
+  for (let i = -2; i <= 2; i++) {
+    ctx.beginPath();
+    ctx.moveTo(x + 10, gy - 70 + i * 4);
+    ctx.lineTo(x + 30, gy - 70 + i * 4);
+    ctx.stroke();
+  }
+  // Hole
+  ctx.fillStyle = '#92400e';
+  ctx.beginPath(); ctx.arc(x + 20, gy - 66, 3, 0, Math.PI * 2); ctx.fill();
+  // Bees
+  for (let i = 0; i < 3; i++) {
+    const ba = gameTime / 400 + i * 2.1;
+    const bx = x + 20 + Math.cos(ba) * (18 + i * 5);
+    const by = gy - 70 + Math.sin(ba) * (12 + i * 4);
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath(); ctx.ellipse(bx, by, 3, 2, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#1f2937';
+    ctx.fillRect(bx - 1, by - 2, 1, 4);
+    // Wings
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.beginPath(); ctx.ellipse(bx - 2, by - 3, 2, 1, -0.3, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+function drawWaterfall(x) {
+  const gy = GROUND_Y;
+  // Cliff rocks
+  ctx.fillStyle = '#6b7280';
+  ctx.beginPath();
+  ctx.moveTo(x - 30, gy);
+  ctx.lineTo(x - 25, gy - 70);
+  ctx.lineTo(x - 10, gy - 80);
+  ctx.lineTo(x + 10, gy - 80);
+  ctx.lineTo(x + 25, gy - 70);
+  ctx.lineTo(x + 30, gy);
+  ctx.fill();
+  // Rock detail
+  ctx.fillStyle = '#4b5563';
+  ctx.beginPath();
+  ctx.moveTo(x - 20, gy - 30);
+  ctx.lineTo(x - 10, gy - 50);
+  ctx.lineTo(x, gy - 30);
+  ctx.fill();
+  // Water stream
+  ctx.fillStyle = 'rgba(56, 189, 248, 0.6)';
+  ctx.fillRect(x - 6, gy - 75, 12, 75);
+  // Animated water lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+  ctx.lineWidth = 1.5;
+  for (let i = 0; i < 5; i++) {
+    const wy = ((gameTime / 8 + i * 15) % 75);
+    ctx.beginPath();
+    ctx.moveTo(x - 4, gy - 75 + wy);
+    ctx.lineTo(x + 4, gy - 75 + wy);
+    ctx.stroke();
+  }
+  // Splash at bottom
+  ctx.fillStyle = 'rgba(186, 230, 253, 0.5)';
+  const splash = Math.sin(gameTime / 200) * 3;
+  ctx.beginPath(); ctx.arc(x - 8, gy - 2, 6 + splash, Math.PI, 0); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 8, gy - 2, 5 - splash, Math.PI, 0); ctx.fill();
+  // Mist
+  ctx.globalAlpha = 0.2;
+  ctx.fillStyle = '#bae6fd';
+  ctx.beginPath(); ctx.arc(x, gy - 8, 20, 0, Math.PI * 2); ctx.fill();
+  ctx.globalAlpha = 1;
+}
+
+function drawRainbowBridge(x) {
+  const gy = GROUND_Y;
+  const colors = ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6'];
+  // Bridge arc
+  for (let i = 0; i < colors.length; i++) {
+    ctx.strokeStyle = colors[i];
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.arc(x, gy, 50 + i * 6, Math.PI, 0);
+    ctx.stroke();
+  }
+  // Pillars
+  ctx.fillStyle = '#d1d5db';
+  ctx.fillRect(x - 52, gy - 30, 8, 30);
+  ctx.fillRect(x + 44, gy - 30, 8, 30);
+  // Sparkles on bridge
+  ctx.fillStyle = '#fff';
+  for (let i = 0; i < 6; i++) {
+    const a = Math.PI + (i / 5) * Math.PI * -1;
+    const r = 65 + Math.sin(gameTime / 300 + i) * 5;
+    ctx.globalAlpha = Math.sin(gameTime / 250 + i * 1.2) * 0.4 + 0.4;
+    ctx.beginPath();
+    ctx.arc(x + Math.cos(a) * r, gy + Math.sin(a) * r, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawPlatforms() {
+  for (const p of platforms) {
+    // Platform shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.1)';
+    ctx.fillRect(p.x + 3, p.y + 3, p.w, 14);
+
+    // Main platform body
+    const pGrad = ctx.createLinearGradient(p.x, p.y, p.x, p.y + 14);
+    pGrad.addColorStop(0, '#a78bfa');
+    pGrad.addColorStop(1, '#7c3aed');
+    ctx.fillStyle = pGrad;
+    ctx.beginPath();
+    ctx.roundRect(p.x, p.y, p.w, 14, 6);
+    ctx.fill();
+
+    // Grass tufts on top
+    ctx.fillStyle = '#4ade80';
+    for (let gx = p.x + 8; gx < p.x + p.w - 8; gx += 12) {
+      ctx.beginPath();
+      ctx.moveTo(gx - 3, p.y);
+      ctx.lineTo(gx, p.y - 5);
+      ctx.lineTo(gx + 3, p.y);
+      ctx.fill();
+    }
+
+    // Sparkle dots
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.beginPath();
+    ctx.arc(p.x + 10, p.y + 6, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(p.x + p.w - 10, p.y + 6, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawYarnBalls() {
+  for (const yb of yarnBalls) {
+    if (yb.collected) continue;
+    const bob = Math.sin(gameTime / 400 + yb.bobPhase) * 3;
+    const yx = yb.x, yy = yb.y + bob;
+
+    // Glow
+    ctx.globalAlpha = 0.25;
+    ctx.fillStyle = yb.color;
+    ctx.beginPath();
+    ctx.arc(yx, yy, 18, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // Ball body
+    ctx.fillStyle = yb.color;
+    ctx.beginPath();
+    ctx.arc(yx, yy, 12, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Yarn lines (cross-hatch pattern)
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(yx, yy, 10, 0.3, 1.8);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(yx, yy, 8, 2.0, 3.5);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(yx, yy, 6, 4.0, 5.5);
+    ctx.stroke();
+
+    // Shine
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.beginPath();
+    ctx.arc(yx - 3, yy - 4, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Trailing string
+    ctx.strokeStyle = yb.color;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(yx + 10, yy + 5);
+    ctx.quadraticCurveTo(yx + 16, yy + 12 + bob, yx + 12, yy + 18);
+    ctx.stroke();
   }
 }
 
