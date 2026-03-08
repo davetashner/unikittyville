@@ -398,24 +398,28 @@ function update(dt) {
   player.x += player.vx;
   player.y += player.vy;
 
-  // Ground collision
-  const groundLevel = getGroundLevel(player.x);
-  if (player.y >= groundLevel) {
-    player.y = groundLevel;
-    player.vy = 0;
-    player.onGround = true;
-  }
-
   // Platform collision (only when falling)
-  if (player.vy > 0) {
+  let onPlatform = false;
+  if (player.vy >= 0) {
     for (const p of platforms) {
       if (player.x > p.x - 10 && player.x < p.x + p.w + 10 &&
-          player.y >= p.y && player.y - player.vy < p.y) {
+          player.y >= p.y && player.y - player.vy <= p.y) {
         player.y = p.y;
         player.vy = 0;
         player.onGround = true;
+        onPlatform = true;
         break;
       }
+    }
+  }
+
+  // Ground collision (only if not on a platform)
+  if (!onPlatform) {
+    const groundLevel = getGroundLevel(player.x);
+    if (player.y >= groundLevel) {
+      player.y = groundLevel;
+      player.vy = 0;
+      player.onGround = true;
     }
   }
 
