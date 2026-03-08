@@ -434,6 +434,24 @@ let camperCooking = { active: false, progress: 0, burnt: false };
 let camperNapping = false;
 let camperNapTimer = 0;
 const CAMPER_NAP_DURATION = 3000; // 3 seconds for a nap
+let camperPhone = { ringing: false, answered: false, ringTimer: 0, callTimer: 0, dialogue: '' };
+const CAMPER_PHONE_DIALOGUES = [
+  "Hi, this is Sparkle's mom! Are you eating enough fish?",
+  "HELLO?? We've been trying to reach you about your camper's extended warranty!",
+  "Hey bestie! Did you see that rainbow last night? SO pretty!",
+  "Meow meow meow? ...Sorry, wrong number.",
+  "This is the Meadow Weather Service. Forecast: 100% chance of adventure!",
+  "Hi! I found a yarn ball with your name on it. Want me to send it over?",
+  "Pizza Palace here! Your order of 47 pizzas is on the way!",
+  "Greetings from Rome! Wish you were here! The gelato is amazing!",
+  "Hey, it's your neighbor. Can you keep the glitter down? It's everywhere!",
+  "Aloha! Just calling to say the waves in Hawaii are PERFECT today!",
+  "This is the Alps Ski Lodge. Your hot chocolate loyalty card is full!",
+  "Hi, I'm a butterfly. I don't know how I'm using a phone. Bye!",
+  "UNICORN FACTS HOTLINE: A unicorn's horn is actually called an alicorn!",
+  "Hey, can you check if I left my scarf in the camper? It's pink with stars.",
+  "Moo! ...I mean, meow! Totally a cat calling. Not a cow. Meow.",
+];
 let insideWindmill = false;
 let cooking = { active: false, progress: 0, burnt: false };
 let fishing = { active: false, timer: 0, caught: false };
@@ -1118,6 +1136,7 @@ function completeTransition() {
   camperCooking = { active: false, progress: 0, burnt: false };
   camperNapping = false;
   camperNapTimer = 0;
+  camperPhone = { ringing: false, answered: false, ringTimer: 0, callTimer: 0, dialogue: '' };
   drinkingCocoa = false;
   cocoaDrinkTimer = 0;
 }
@@ -1614,12 +1633,39 @@ function update(dt) {
       camperNapping = true;
       camperNapTimer = 0;
     }
+    // Phone logic — rings periodically, answer with P key
+    if (!camperPhone.ringing && !camperPhone.answered) {
+      camperPhone.ringTimer += dt;
+      if (camperPhone.ringTimer > 5000 + Math.random() * 3000) {
+        camperPhone.ringing = true;
+        camperPhone.ringTimer = 0;
+      }
+    }
+    if (camperPhone.answered) {
+      camperPhone.callTimer += dt;
+      if (camperPhone.callTimer >= 4000) {
+        camperPhone.answered = false;
+        camperPhone.callTimer = 0;
+        camperPhone.dialogue = '';
+      }
+    }
+    if (keys['KeyP'] && camperPhone.ringing && !camperCooking.active) {
+      keys['KeyP'] = false;
+      camperPhone.ringing = false;
+      camperPhone.answered = true;
+      camperPhone.callTimer = 0;
+      camperPhone.dialogue = CAMPER_PHONE_DIALOGUES[Math.floor(Math.random() * CAMPER_PHONE_DIALOGUES.length)];
+      score += 5;
+      addPopup(player.x, player.y - 40, '+5 Answered!', '#38bdf8');
+      playChaChing();
+    }
     // Exit
-    if (keys['Enter'] && !camperCooking.active) {
+    if (keys['Enter'] && !camperCooking.active && !camperPhone.answered) {
       keys['Enter'] = false;
       insideCamper = false;
       camperPlayerX = 0;
       camperCooking = { active: false, progress: 0, burnt: false };
+      camperPhone = { ringing: false, answered: false, ringTimer: 0, callTimer: 0, dialogue: '' };
     }
     return;
   }
@@ -2408,6 +2454,11 @@ function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, ne
   if (insideCamper) {
     if (camperNapping) {
       el.textContent = 'Napping... zzz';
+    } else if (camperPhone.answered) {
+      el.textContent = 'On the phone...';
+    } else if (camperPhone.ringing) {
+      el.textContent = 'Phone is ringing! Press P to answer!';
+      setAction('KeyP', 'Answer');
     } else if (camperCooking.active) {
       if (camperCooking.progress >= 2500 && camperCooking.progress < 4500) {
         el.textContent = 'Fish is ready! Press C to take it off!';
@@ -4136,6 +4187,68 @@ function drawCamperInterior(cam, W, H) {
     }
   }
 
+  // Phone on the wall (between windows)
+  const phoneX = cx - 10, phoneY = cy - 95;
+  // Phone body
+  ctx.fillStyle = '#374151';
+  ctx.beginPath(); ctx.roundRect(phoneX - 5, phoneY, 10, 16, 2); ctx.fill();
+  // Handset
+  ctx.fillStyle = '#1f2937';
+  ctx.beginPath(); ctx.roundRect(phoneX - 6, phoneY + 2, 12, 5, 2); ctx.fill();
+  // Cord
+  ctx.strokeStyle = '#4b5563'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(phoneX, phoneY + 16);
+  const cordSway = Math.sin(gameTime / 400) * 3;
+  ctx.quadraticCurveTo(phoneX + cordSway, phoneY + 26, phoneX - 2, phoneY + 35);
+  ctx.stroke();
+  // Ringing animation
+  if (camperPhone.ringing) {
+    const shake = Math.sin(gameTime / 50) * 3;
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 11px system-ui'; ctx.textAlign = 'center';
+    ctx.fillText('RING!', phoneX + shake, phoneY - 8);
+    // Ring lines
+    ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(phoneX - 10, phoneY - 2, 8 + Math.sin(gameTime / 80) * 3, Math.PI * 0.7, Math.PI * 1.3); ctx.stroke();
+    ctx.beginPath(); ctx.arc(phoneX + 10, phoneY - 2, 8 + Math.sin(gameTime / 80 + 1) * 3, -Math.PI * 0.3, Math.PI * 0.3); ctx.stroke();
+  }
+  // Phone dialogue bubble
+  if (camperPhone.answered && camperPhone.dialogue) {
+    const bubbleW = 280;
+    const bubbleH = 50;
+    const bubbleX = cx - bubbleW / 2;
+    const bubbleY = cy - 140 - bubbleH;
+    // Bubble background
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.beginPath(); ctx.roundRect(bubbleX, bubbleY, bubbleW, bubbleH, 8); ctx.fill();
+    ctx.strokeStyle = '#d1d5db'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.roundRect(bubbleX, bubbleY, bubbleW, bubbleH, 8); ctx.stroke();
+    // Pointer
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.beginPath();
+    ctx.moveTo(phoneX - 6, bubbleY + bubbleH);
+    ctx.lineTo(phoneX, bubbleY + bubbleH + 10);
+    ctx.lineTo(phoneX + 6, bubbleY + bubbleH);
+    ctx.fill();
+    // Text
+    ctx.fillStyle = '#1f2937';
+    ctx.font = '11px system-ui'; ctx.textAlign = 'center';
+    // Word wrap
+    const words = camperPhone.dialogue.split(' ');
+    let line = '', lineY = bubbleY + 18;
+    for (const word of words) {
+      const test = line + word + ' ';
+      if (ctx.measureText(test).width > bubbleW - 20 && line.length > 0) {
+        ctx.fillText(line.trim(), cx, lineY);
+        line = word + ' ';
+        lineY += 16;
+      } else {
+        line = test;
+      }
+    }
+    ctx.fillText(line.trim(), cx, lineY);
+  }
+
   // Napping animation
   if (camperNapping) {
     // Kitty in bed
@@ -4166,11 +4279,14 @@ function drawCamperInterior(cam, W, H) {
   ctx.fillText('Cozy camper vibes!', cx, cy - 120);
   ctx.font = '13px system-ui';
   ctx.fillStyle = 'rgba(255,255,255,0.7)';
-  if (camperPlayerX < -100 && fishCount > 0 && !camperCooking.active && !camperNapping) {
+  if (camperPhone.ringing && !camperNapping) {
+    ctx.fillStyle = '#fbbf24';
+    ctx.fillText('Phone is ringing! Press P to answer', cx, cy + 130);
+  } else if (camperPlayerX < -100 && fishCount > 0 && !camperCooking.active && !camperNapping) {
     ctx.fillText('Press C to cook fish  |  Enter to go outside', cx, cy + 130);
   } else if (camperPlayerX > 80 && !camperCooking.active && !camperNapping) {
     ctx.fillText('Press N to nap  |  Enter to go outside', cx, cy + 130);
-  } else if (!camperNapping) {
+  } else if (!camperNapping && !camperPhone.answered) {
     ctx.fillText('Walk around!  |  Enter to go outside', cx, cy + 130);
   }
 }
