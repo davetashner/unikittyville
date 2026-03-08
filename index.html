@@ -124,7 +124,9 @@
 </head>
 <body>
 
-<audio id="bgMusic" src="assets/music/theme.mp3" loop preload="auto"></audio>
+<audio id="musicMeadow" src="assets/music/theme.mp3" loop preload="auto"></audio>
+<audio id="musicNYC" src="assets/music/city.mp3" loop preload="auto"></audio>
+<audio id="musicRome" src="assets/music/rome.mp3" loop preload="auto"></audio>
 <audio id="meow1" src="assets/sfx/kitty-meow-01.mp3" preload="auto"></audio>
 <audio id="meow2" src="assets/sfx/kitty-meow-02.mp3" preload="auto"></audio>
 <audio id="chaChing" src="assets/sfx/cha-ching.mp3" preload="auto"></audio>
@@ -224,6 +226,47 @@ function playMeow() {
   const sound = meowSounds[Math.floor(Math.random() * meowSounds.length)];
   sound.currentTime = 0;
   sound.play().catch(() => {});
+}
+
+// ── Music system with crossfade ──
+const MUSIC_VOLUME = 0.4;
+const FADE_DURATION = 1200; // ms
+const levelMusic = { 1: 'musicMeadow', 2: 'musicNYC', 3: 'musicRome' };
+let currentMusicId = null;
+let musicFade = null; // { out: AudioElement, in: AudioElement, timer: 0 }
+
+function startLevelMusic(level) {
+  const id = levelMusic[level];
+  if (!id || id === currentMusicId) return;
+  const el = document.getElementById(id);
+  el.volume = MUSIC_VOLUME;
+  el.currentTime = 0;
+  el.play().catch(() => {});
+  currentMusicId = id;
+}
+
+function crossfadeToLevel(level) {
+  const newId = levelMusic[level];
+  if (!newId || newId === currentMusicId) return;
+  const outEl = currentMusicId ? document.getElementById(currentMusicId) : null;
+  const inEl = document.getElementById(newId);
+  inEl.volume = 0;
+  inEl.currentTime = 0;
+  inEl.play().catch(() => {});
+  musicFade = { out: outEl, inEl: inEl, inId: newId, timer: 0 };
+}
+
+function updateMusicFade(dt) {
+  if (!musicFade) return;
+  musicFade.timer += dt;
+  const t = Math.min(1, musicFade.timer / FADE_DURATION);
+  if (musicFade.out) musicFade.out.volume = MUSIC_VOLUME * (1 - t);
+  musicFade.inEl.volume = MUSIC_VOLUME * t;
+  if (t >= 1) {
+    if (musicFade.out) { musicFade.out.pause(); musicFade.out.currentTime = 0; }
+    currentMusicId = musicFade.inId;
+    musicFade = null;
+  }
 }
 
 // Player
@@ -482,6 +525,7 @@ function switchToLevel(lvl) {
   levelTransition.active = true;
   levelTransition.timer = 0;
   levelTransition.toLevel = lvl;
+  crossfadeToLevel(lvl);
 }
 
 function completeTransition() {
@@ -628,9 +672,7 @@ function startGame() {
   document.getElementById('hudName').textContent = playerName;
   initMeows();
   // Start music (requires user gesture, which the click/enter provides)
-  const music = document.getElementById('bgMusic');
-  music.volume = 0.4;
-  music.play().catch(() => {});
+  startLevelMusic(1);
   requestAnimationFrame(loop);
 }
 
@@ -648,6 +690,8 @@ function loop(ts) {
 
 // ── Update ──
 function update(dt) {
+  updateMusicFade(dt);
+
   // Level transition animation
   if (levelTransition.active) {
     levelTransition.timer += dt;
@@ -2615,12 +2659,12 @@ function drawWindmillInterior(cam, W, H) {
 }
 
 function drawPizzaInterior(cam, W, H) {
-  const cx = player.x;
+  const cx = cam + W / 2;
   const cy = GROUND_Y - 80;
 
   // Kitchen floor (checkered)
   ctx.fillStyle = '#f5f5f4';
-  ctx.fillRect(cx - 220, cy, 440, 160);
+  ctx.fillRect(cam, cy, W, H);
   ctx.fillStyle = '#e7e5e4';
   for (let tx = -220; tx < 220; tx += 20) {
     for (let ty = 0; ty < 160; ty += 20) {
@@ -2632,7 +2676,7 @@ function drawPizzaInterior(cam, W, H) {
 
   // Back wall (red)
   ctx.fillStyle = '#dc2626';
-  ctx.fillRect(cx - 220, cy - 140, 440, 140);
+  ctx.fillRect(cam, 0, W, cy);
 
   // Italian flag stripe
   ctx.fillStyle = '#16a34a';
@@ -2785,12 +2829,14 @@ function drawPizzaInterior(cam, W, H) {
 }
 
 function drawParkInterior(cam, W, H) {
-  const cx = player.x;
+  // Use cam-relative center so the scene is always centered on screen
+  const cx = cam + W / 2;
   const cy = GROUND_Y - 80;
+  // Fill entire visible area
   ctx.fillStyle = '#87ceeb';
-  ctx.fillRect(cx - 250, cy - 160, 500, 160);
+  ctx.fillRect(cam, 0, W, cy);
   ctx.fillStyle = '#4ade80';
-  ctx.fillRect(cx - 250, cy, 500, 180);
+  ctx.fillRect(cam, cy, W, H);
   ctx.fillStyle = '#d4a574';
   ctx.beginPath();
   ctx.moveTo(cx - 250, cy + 60);
