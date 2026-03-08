@@ -192,6 +192,75 @@
     z-index: 10;
     white-space: nowrap;
   }
+  #touch-controls {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 160px;
+    z-index: 50;
+    pointer-events: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  #touch-controls .touch-btn {
+    pointer-events: auto;
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.25);
+    border: 2px solid rgba(255,255,255,0.4);
+    border-radius: 16px;
+    color: #fff;
+    font-weight: 700;
+    font-size: 1.3rem;
+    opacity: 0.6;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none;
+  }
+  #touch-controls .touch-btn.active {
+    opacity: 0.9;
+    background: rgba(255,255,255,0.45);
+  }
+  #touch-dpad-left {
+    left: 16px;
+    bottom: 40px;
+    width: 72px;
+    height: 72px;
+    font-size: 1.8rem;
+  }
+  #touch-dpad-right {
+    left: 104px;
+    bottom: 40px;
+    width: 72px;
+    height: 72px;
+    font-size: 1.8rem;
+  }
+  #touch-jump {
+    right: 16px;
+    bottom: 40px;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    font-size: 1.1rem;
+    background: rgba(124,58,237,0.35);
+    border-color: rgba(192,132,252,0.6);
+  }
+  #touch-action {
+    right: 112px;
+    bottom: 48px;
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    font-size: 0.85rem;
+    background: rgba(251,191,36,0.3);
+    border-color: rgba(253,224,71,0.5);
+  }
+  .touch-active #prompt {
+    bottom: 170px;
+  }
 </style>
 </head>
 <body>
@@ -247,6 +316,12 @@
   <span>Q: Talk</span>
 </div>
 <div id="prompt"></div>
+<div id="touch-controls">
+  <div id="touch-dpad-left" class="touch-btn">&larr;</div>
+  <div id="touch-dpad-right" class="touch-btn">&rarr;</div>
+  <div id="touch-jump" class="touch-btn">Jump</div>
+  <div id="touch-action" class="touch-btn" style="display:none;">Action</div>
+</div>
 <div id="volumeControl">
   <button id="volumeBtn" title="Toggle sound">&#128264;</button>
   <div id="volumeSliderWrap"><input type="range" id="volumeSlider" min="0" max="100" value="40"></div>
@@ -384,6 +459,9 @@ const SLED_WORLD_W = 5000;
 
 let popups = []; // floating score popups
 let keys = {};
+const isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+let currentActionKey = null;
+let currentActionLabel = '';
 let lastMeowTime = 0;
 let lastChaChingTime = 0;
 let currentLevel = 1;
@@ -1223,6 +1301,38 @@ window.addEventListener('keydown', e => {
 });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 
+// ── Touch Controls ──
+(function initTouchControls() {
+  function bindTouch(id, keyDown, keyUp) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('touchstart', function(e) {
+      e.preventDefault();
+      el.classList.add('active');
+      if (typeof keyDown === 'function') keyDown();
+      else keys[keyDown] = true;
+    }, { passive: false });
+    el.addEventListener('touchend', function(e) {
+      e.preventDefault();
+      el.classList.remove('active');
+      if (typeof keyUp === 'function') keyUp();
+      else keys[keyUp] = false;
+    }, { passive: false });
+    el.addEventListener('touchcancel', function(e) {
+      el.classList.remove('active');
+      if (typeof keyUp === 'function') keyUp();
+      else keys[keyUp] = false;
+    }, { passive: false });
+  }
+  bindTouch('touch-dpad-left', 'ArrowLeft', 'ArrowLeft');
+  bindTouch('touch-dpad-right', 'ArrowRight', 'ArrowRight');
+  bindTouch('touch-jump', 'Space', 'Space');
+  bindTouch('touch-action',
+    function() { if (currentActionKey) keys[currentActionKey] = true; },
+    function() { if (currentActionKey) keys[currentActionKey] = false; }
+  );
+})();
+
 // ── Start ──
 document.getElementById('startBtn').addEventListener('click', startGame);
 document.getElementById('nameInput').addEventListener('keydown', e => {
@@ -1234,7 +1344,13 @@ function startGame() {
   playerName = name || 'Sparkle';
   document.getElementById('startScreen').style.display = 'none';
   document.getElementById('hud').style.display = 'flex';
-  document.getElementById('controls').style.display = 'flex';
+  if (isMobile) {
+    document.getElementById('controls').style.display = 'none';
+    document.getElementById('touch-controls').style.display = 'block';
+    document.body.classList.add('touch-active');
+  } else {
+    document.getElementById('controls').style.display = 'flex';
+  }
   document.getElementById('volumeControl').style.display = 'flex';
   document.getElementById('hudName').textContent = playerName;
   initMeows();
@@ -1962,136 +2078,188 @@ function updatePizzaMinigame(dt) {
   document.getElementById('hudPizza').textContent = pizzaMaking.pizzaCount;
 }
 
+function setAction(key, label) {
+  currentActionKey = key;
+  currentActionLabel = label;
+  if (isMobile) {
+    const btn = document.getElementById('touch-action');
+    if (key) {
+      btn.textContent = label;
+      btn.style.display = 'flex';
+    } else {
+      btn.style.display = 'none';
+    }
+  }
+}
+
 function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf, nearAirport, nearChalet, nearTrain, nearNpc) {
   const el = document.getElementById('prompt');
   if (insideChalet) {
     el.textContent = marshmallow.active ? 'Tossing...' : 'Press Space to toss a marshmallow! (Enter to leave)';
     el.style.display = 'block';
+    setAction('Enter', 'Exit');
     return;
   }
   if (surfing) {
     el.textContent = 'Surfing the waves! Press S to get off';
     el.style.display = 'block';
+    setAction('KeyS', 'Stop');
     return;
   }
   if (swimming) {
     el.textContent = 'Splashing in the fountain! Press S to get out';
     el.style.display = 'block';
+    setAction('KeyS', 'Exit');
     return;
   }
   if (insidePantheon) {
     el.textContent = 'Inside the Pantheon... Press Enter to leave';
     el.style.display = 'block';
+    setAction('Enter', 'Exit');
     return;
   }
   if (insideCamper) {
     el.textContent = 'Chilling in the camper... Press Enter to go outside';
     el.style.display = 'block';
+    setAction('Enter', 'Exit');
     return;
   }
   if (insideWindmill) {
     el.textContent = 'Inside the windmill... Press Enter to go outside';
     el.style.display = 'block';
+    setAction('Enter', 'Exit');
     return;
   }
   if (insidePark) {
     el.textContent = 'Relaxing in Central Park... Press Enter to leave';
     el.style.display = 'block';
+    setAction('Enter', 'Exit');
     return;
   }
   if (insidePizza) {
     if (pizzaMaking.stage === 'idle') {
       el.textContent = 'Press C to make pizza! (Enter to leave)';
+      setAction('KeyC', 'Cook');
     } else if (pizzaMaking.stage === 'dough') {
       el.textContent = 'Kneading dough... Press C when ready!';
+      setAction('KeyC', 'Cook');
     } else if (pizzaMaking.stage === 'toppings') {
       el.textContent = 'Adding toppings... Press C to put in oven!';
+      setAction('KeyC', 'Cook');
     } else if (pizzaMaking.stage === 'oven') {
       const pct = Math.min(100, (pizzaMaking.progress / 3000) * 100);
       el.textContent = `Baking... ${Math.round(pct)}% — Press C to take out!`;
+      setAction('KeyC', 'Cook');
     }
     el.style.display = 'block';
   } else if (fishing.active) {
     el.textContent = 'Fishing...';
     el.style.display = 'block';
+    setAction(null, '');
   } else if (cooking.active) {
     const pct = Math.min(100, (cooking.progress / 3000) * 100);
     el.textContent = `Cooking... ${Math.round(pct)}%`;
     el.style.display = 'block';
+    setAction(null, '');
   } else if (inPond && !fishing.active) {
     el.textContent = 'Press F to fish';
     el.style.display = 'block';
+    setAction('KeyF', 'Fish');
   } else if (nearGrill && !cooking.active) {
     el.textContent = 'Press C to cook bacon';
     el.style.display = 'block';
+    setAction('KeyC', 'Cook');
   } else if (nearHouse) {
     el.textContent = 'Press Enter to go inside';
     el.style.display = 'block';
+    setAction('Enter', 'Enter');
   } else if (nearCamper) {
     el.textContent = 'Press Enter to enter the camper';
     el.style.display = 'block';
+    setAction('Enter', 'Enter');
   } else if (nearWindmill) {
     el.textContent = 'Press Enter to enter the windmill';
     el.style.display = 'block';
+    setAction('Enter', 'Enter');
   } else if (nearBeehive) {
     el.textContent = 'Press H to collect honey';
     el.style.display = 'block';
+    setAction('KeyH', 'Honey');
   } else if (nearPizza) {
     el.textContent = 'Press Enter to make pizza!';
     el.style.display = 'block';
+    setAction('Enter', 'Pizza');
   } else if (nearHotdog) {
     el.textContent = score >= 10 ? 'Press C to buy a hot dog (-10 pts)' : 'Not enough points for a hot dog!';
     el.style.display = 'block';
+    setAction(score >= 10 ? 'KeyC' : null, 'Buy');
   } else if (nearPark) {
     el.textContent = 'Press Enter to visit Central Park';
     el.style.display = 'block';
+    setAction('Enter', 'Enter');
   } else if (nearTaxi) {
     el.textContent = 'Press Enter to take a taxi to Rome!';
     el.style.display = 'block';
+    setAction('Enter', 'Taxi');
   } else if (nearFountain) {
     el.textContent = 'Press S to go swimming!';
     el.style.display = 'block';
+    setAction('KeyS', 'Swim');
   } else if (nearGelato) {
     el.textContent = 'Press G for gelato! (+5 pts)';
     el.style.display = 'block';
+    setAction('KeyG', 'Gelato');
   } else if (nearPantheonDoor) {
     el.textContent = 'Press Enter to enter the Pantheon';
     el.style.display = 'block';
+    setAction('Enter', 'Enter');
   } else if (nearFiat) {
     el.textContent = 'Press Enter to take a Fiat to Hawaii!';
     el.style.display = 'block';
+    setAction('Enter', 'Fiat');
   } else if (nearTiki) {
     el.textContent = 'Press T to light tiki torch! (+15 pts)';
     el.style.display = 'block';
+    setAction('KeyT', 'Tiki');
   } else if (nearCoconut) {
     el.textContent = 'Press C to collect coconut! (+10 pts)';
     el.style.display = 'block';
+    setAction('KeyC', 'Coconut');
   } else if (nearSurf) {
     el.textContent = 'Press S to go surfing!';
     el.style.display = 'block';
+    setAction('KeyS', 'Surf');
   } else if (nearAirport) {
     el.textContent = 'Press Enter to fly to the Alps!';
     el.style.display = 'block';
+    setAction('Enter', 'Fly');
   } else if (nearChalet) {
     el.textContent = 'Press Enter to warm up in the chalet!';
     el.style.display = 'block';
+    setAction('Enter', 'Enter');
   } else if (nearTrain) {
     el.textContent = 'Press Enter to take the train to NYC!';
     el.style.display = 'block';
+    setAction('Enter', 'Train');
   } else if (nearNpc) {
     el.textContent = 'Press Q to talk!';
     el.style.display = 'block';
+    setAction('KeyQ', 'Talk');
   } else if (currentLevel === 2 && !nearTrain) {
     el.textContent = 'Sled downhill! Dodge snowmen, collect snowballs!';
     el.style.display = 'block';
+    setAction(null, '');
   } else if (currentLevel === 6) {
     el.textContent = 'Ski downhill! Dodge trees, jump cornices, collect diamonds!';
     el.style.display = 'block';
+    setAction(null, '');
   } else if (currentLevel === 1 && Math.abs(player.x - BRIDGE_PORTAL.x) < 60) {
     el.textContent = 'Press Enter to go sledding!';
     el.style.display = 'block';
+    setAction('Enter', 'Sled');
   } else {
     el.style.display = 'none';
+    setAction(null, '');
   }
 }
 
