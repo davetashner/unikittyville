@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "server",
+  "dolt_database": "unikittyville",
+  "project_id": "76d38ff1-6fc2-4117-87ba-6605b952c25d"
+}
