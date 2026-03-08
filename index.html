@@ -212,6 +212,7 @@
   <span>H: Honey</span>
   <span>T: Tiki</span>
   <span>Enter: Enter/Exit Buildings</span>
+  <span>Q: Talk</span>
 </div>
 <div id="prompt"></div>
 <div id="volumeControl">
@@ -275,6 +276,78 @@ let hotChocolate = { x: 0, y: 0 }; // set when entering chalet
 let sledding = false;
 let snowballCount = 0;
 const SLED_SPEED = 3.0;
+// NPC dialogue system
+const NPC_TALK_RANGE = 60;
+let activeSpeechBubbles = []; // { npc, text, life }
+const npcDialogs = {
+  1: [ // Meadow
+    "Did you know unicorns invented rainbows?",
+    "I once caught a fish THIS big! Well, maybe this big...",
+    "Meow! I mean... neigh? I'm confused about what I am!",
+    "Why did the unicorn cross the road? To get to the sparkle side!",
+    "My horn gets great WiFi reception!",
+    "This meadow grass is SO soft! *rolls around*",
+    "I dreamed I was a regular cat last night. Worst nightmare ever!",
+    "Wanna see my yarn ball collection? It's legendary!",
+    "The bees make the best honey here. Don't tell them I said that!",
+    "I heard the windmill is actually a giant cat toy!",
+    "Have you tried the bacon from that grill? *chef's kiss*",
+    "Legend says the rainbow bridge leads somewhere magical!",
+    "I like to sit by the pond and watch the fish. So relaxing!",
+    "My whiskers are tingling — adventure is near!",
+    "Some cats chase mice. I chase rainbows! Much more fun!",
+  ],
+  2: [ // Sledding
+    "Wheee! Watch out for the snowmen!",
+    "My paws are cold but my heart is warm!",
+    "I'm going so fast my ears are flapping!",
+    "Snowball fight? Oh wait, we collect those!",
+    "This hill goes on forever! I love it!",
+    "I can't feel my whiskers and I don't care!",
+    "Race you to the bottom! Oh wait, I can't steer!",
+    "Did you know cats love snow? Okay maybe just unicorn cats!",
+  ],
+  3: [ // NYC
+    "The pizza here is AMAZING! Even for a cat!",
+    "I tried to hail a taxi but they kept driving past!",
+    "Central Park is basically a giant cat playground!",
+    "Hot dogs! Get your hot dogs! ...Can cats eat hot dogs?",
+    "The buildings are so tall I can't see the top of my horn!",
+    "I heard there's a secret cat society under the subway!",
+    "Times Square has nothing on my sparkle power!",
+    "This city never sleeps, and neither do cats! Perfect match!",
+  ],
+  4: [ // Rome
+    "When in Rome, do as the cats do: nap in the sun!",
+    "The gelato here is to die for! All 9 lives!",
+    "I tried to drive a Fiat. Couldn't reach the pedals!",
+    "The Pantheon has the best acoustics for meowing!",
+    "Roman cats have it made — free food everywhere!",
+    "I'm basically a gladiator. A very fluffy gladiator!",
+    "They say all roads lead to Rome. I followed a yarn ball!",
+    "The fountain water is surprisingly refreshing!",
+  ],
+  5: [ // Hawaii
+    "Aloha! That means hello AND goodbye! How efficient!",
+    "I tried surfing — it's like riding a moving floor!",
+    "Coconut milk is basically cat milk from a tree!",
+    "The tiki torches make my horn glow extra sparkly!",
+    "I put a flower on my ear. Do I look tropical enough?",
+    "Beach naps are the BEST kind of naps!",
+    "I buried a fish in the sand. Don't tell anyone!",
+    "The ocean is like a giant bathtub! But salty!",
+  ],
+  6: [ // Alps
+    "These mountains make my horn look tiny!",
+    "I'm basically a mountain goat with better style!",
+    "Diamond hunting is my new favorite hobby!",
+    "The chalet has the coziest fireplace!",
+    "I tried yodeling but it just came out as meowing!",
+    "The snow up here sparkles almost as much as me!",
+    "Watch out for the trees! They jump out at you!",
+    "Hot chocolate after skiing is the best thing ever invented!",
+  ],
+};
 const SLED_WORLD_W = 5000;
 
 let popups = []; // floating score popups
@@ -786,6 +859,7 @@ function completeTransition() {
   skiing = false;
   sledding = false;
   insideChalet = false;
+  activeSpeechBubbles = [];
   pizzaMaking.stage = 'idle';
   pizzaMaking.progress = 0;
 }
@@ -1694,6 +1768,33 @@ function update(dt) {
     }
   }
 
+  // NPC talk — Q key to chat with nearby NPCs
+  let nearNpc = false;
+  if (!insideChalet && !insideHouse && !insideCamper && !insideWindmill && !insidePizza && !insidePark && !insidePantheon && !swimming && !surfing) {
+    for (const npc of activeNpcs) {
+      if (Math.abs(player.x - npc.x) < NPC_TALK_RANGE) {
+        nearNpc = true;
+        if (keys['KeyQ']) {
+          keys['KeyQ'] = false;
+          const alreadyTalking = activeSpeechBubbles.some(b => b.npc === npc);
+          if (!alreadyTalking) {
+            const levelDialogs = npcDialogs[currentLevel] || npcDialogs[1];
+            const text = levelDialogs[Math.floor(Math.random() * levelDialogs.length)];
+            activeSpeechBubbles.push({ npc, text, life: 4000 });
+            npc.facing = player.x < npc.x ? -1 : 1;
+          }
+        }
+        break;
+      }
+    }
+  }
+
+  // Update speech bubbles
+  for (let i = activeSpeechBubbles.length - 1; i >= 0; i--) {
+    activeSpeechBubbles[i].life -= dt;
+    if (activeSpeechBubbles[i].life <= 0) activeSpeechBubbles.splice(i, 1);
+  }
+
   // Popups
   for (let i = popups.length - 1; i >= 0; i--) {
     popups[i].y -= 1;
@@ -1722,8 +1823,12 @@ function update(dt) {
     el.style.display = levels.includes(String(currentLevel)) ? '' : 'none';
   }
 
+  // Hide controls during interior/mini-game scenes
+  const inScene = insideHouse || insideCamper || insideWindmill || insidePizza || insidePark || insidePantheon || swimming || surfing || insideChalet;
+  document.getElementById('controls').style.display = inScene ? 'none' : 'flex';
+
   // Prompt
-  updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf, nearAirport, nearChalet, nearTrain);
+  updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf, nearAirport, nearChalet, nearTrain, nearNpc);
 }
 
 function getGroundLevel(x) {
@@ -1792,7 +1897,7 @@ function updatePizzaMinigame(dt) {
   document.getElementById('hudPizza').textContent = pizzaMaking.pizzaCount;
 }
 
-function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf, nearAirport, nearChalet, nearTrain) {
+function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf, nearAirport, nearChalet, nearTrain, nearNpc) {
   const el = document.getElementById('prompt');
   if (insideChalet) {
     el.textContent = marshmallow.active ? 'Tossing...' : 'Press Space to toss a marshmallow! (Enter to leave)';
@@ -1908,6 +2013,9 @@ function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, ne
   } else if (nearTrain) {
     el.textContent = 'Press Enter to take the train to NYC!';
     el.style.display = 'block';
+  } else if (nearNpc) {
+    el.textContent = 'Press Q to talk!';
+    el.style.display = 'block';
   } else if (currentLevel === 2 && !nearTrain) {
     el.textContent = 'Sled downhill! Dodge snowmen, collect snowballs!';
     el.style.display = 'block';
@@ -1987,7 +2095,60 @@ function draw() {
     drawAlpsWorld(W, H, cam, cycle, isNight);
   }
 
+  // Draw speech bubbles above NPCs (in world coordinates)
+  drawSpeechBubbles();
+
   ctx.restore();
+}
+
+function drawSpeechBubbles() {
+  for (const bubble of activeSpeechBubbles) {
+    const npc = bubble.npc;
+    const alpha = Math.min(1, bubble.life / 800);
+    ctx.globalAlpha = alpha;
+
+    ctx.font = '11px system-ui';
+    const maxWidth = 160;
+    const words = bubble.text.split(' ');
+    const lines = [];
+    let currentLine = '';
+    for (const word of words) {
+      const testLine = currentLine ? currentLine + ' ' + word : word;
+      if (ctx.measureText(testLine).width > maxWidth) {
+        lines.push(currentLine);
+        currentLine = word;
+      } else {
+        currentLine = testLine;
+      }
+    }
+    if (currentLine) lines.push(currentLine);
+
+    const lineHeight = 14;
+    const padX = 10, padY = 6;
+    const boxW = Math.min(maxWidth + padX * 2, Math.max(...lines.map(l => ctx.measureText(l).width)) + padX * 2);
+    const boxH = lines.length * lineHeight + padY * 2;
+    const bx = npc.x - boxW / 2;
+    const by = npc.y - 70 - boxH;
+
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.beginPath(); ctx.roundRect(bx, by, boxW, boxH, 8); ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.15)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.roundRect(bx, by, boxW, boxH, 8); ctx.stroke();
+
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.beginPath();
+    ctx.moveTo(npc.x - 6, by + boxH);
+    ctx.lineTo(npc.x, by + boxH + 8);
+    ctx.lineTo(npc.x + 6, by + boxH);
+    ctx.fill();
+
+    ctx.fillStyle = '#1f2937';
+    ctx.textAlign = 'center';
+    for (let i = 0; i < lines.length; i++) {
+      ctx.fillText(lines[i], npc.x, by + padY + 11 + i * lineHeight);
+    }
+    ctx.globalAlpha = 1;
+  }
 }
 
 function drawLevel1Sky(W, H, cycle, isNight, cam) {
@@ -2074,6 +2235,10 @@ function drawLevel2World(W, H, cam) {
 }
 
 function drawPlayerAndUI() {
+  // Draw sled under kitty on sledding level
+  if (currentLevel === 2 && sledding) {
+    drawSled(player.x, player.y);
+  }
   drawKitty(player.x, player.y, player.color, player.facing, player.walkFrame, 'horn');
 
   ctx.fillStyle = '#fff';
@@ -2103,6 +2268,46 @@ function drawPlayerAndUI() {
     ctx.fillText(p.text, p.x, p.y);
     ctx.globalAlpha = 1;
   }
+}
+
+function drawSled(x, y) {
+  ctx.save();
+  ctx.translate(x, y);
+  // Sled runners (two curved rails)
+  ctx.strokeStyle = '#78350f';
+  ctx.lineWidth = 3;
+  ctx.lineCap = 'round';
+  // Left runner
+  ctx.beginPath();
+  ctx.moveTo(-18, 6);
+  ctx.quadraticCurveTo(-22, 4, -20, 0);
+  ctx.lineTo(16, 0);
+  ctx.stroke();
+  // Right runner
+  ctx.beginPath();
+  ctx.moveTo(-18, 10);
+  ctx.quadraticCurveTo(-22, 8, -20, 4);
+  ctx.lineTo(16, 4);
+  ctx.stroke();
+  // Sled seat (wooden planks)
+  ctx.fillStyle = '#b45309';
+  ctx.fillRect(-16, -4, 30, 4);
+  ctx.fillStyle = '#92400e';
+  ctx.fillRect(-16, -4, 30, 1);
+  // Cross braces
+  ctx.strokeStyle = '#78350f';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(-10, -4); ctx.lineTo(-10, 4); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, -4); ctx.lineTo(0, 4); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(10, -4); ctx.lineTo(10, 4); ctx.stroke();
+  // Front curl
+  ctx.strokeStyle = '#92400e';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(-16, -4);
+  ctx.quadraticCurveTo(-22, -6, -20, -12);
+  ctx.stroke();
+  ctx.restore();
 }
 
 function drawLevelTransition(W, H) {
@@ -4971,7 +5176,7 @@ function drawChalet(x) {
 }
 
 function drawChaletInterior(cam, W, H) {
-  const cx = player.x;
+  const cx = cam + W / 2;
   const cy = GROUND_Y - 80;
 
   // Wooden floor
