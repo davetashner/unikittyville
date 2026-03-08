@@ -127,6 +127,7 @@
 <audio id="musicMeadow" src="assets/music/theme.mp3" loop preload="auto"></audio>
 <audio id="musicNYC" src="assets/music/city.mp3" loop preload="auto"></audio>
 <audio id="musicRome" src="assets/music/rome.mp3" loop preload="auto"></audio>
+<audio id="musicHawaii" src="assets/music/hawaii.mp3" loop preload="auto"></audio>
 <audio id="meow1" src="assets/sfx/kitty-meow-01.mp3" preload="auto"></audio>
 <audio id="meow2" src="assets/sfx/kitty-meow-02.mp3" preload="auto"></audio>
 <audio id="chaChing" src="assets/sfx/cha-ching.mp3" preload="auto"></audio>
@@ -151,6 +152,8 @@
   <span>Hot Dogs: <b id="hudHotdog">0</b></span>
   <span>Gelato: <b id="hudGelato">0</b></span>
   <span>Honey: <b id="hudHoney">0</b></span>
+  <span>Tiki: <b id="hudTiki">0</b></span>
+  <span>Coconuts: <b id="hudCoconut">0</b></span>
 </div>
 <div id="controls">
   <span>Arrow Keys: Move</span>
@@ -158,6 +161,7 @@
   <span>F: Fish</span>
   <span>C: Cook</span>
   <span>H: Honey</span>
+  <span>T: Tiki</span>
   <span>Enter: Enter/Exit Buildings</span>
 </div>
 <div id="prompt"></div>
@@ -201,6 +205,14 @@ let gelatoCount = 0;
 const FOUNTAIN_POS = { x: 1500 };
 const GELATO_POSITIONS = [1000, 2800];
 const PANTHEON_POS = { x: 2600 };
+const FIAT_POS = { x: 4500 };
+// Hawaii interactions
+let tikiCount = 0;
+let coconutCount = 0;
+let surfing = false;
+const TIKI_POSITIONS = [600, 1400, 2200, 3000, 3800];
+const COCONUT_POSITIONS = [400, 1200, 2000, 2800, 3600, 4400];
+const SURF_POS = { x: 1800 };
 let popups = []; // floating score popups
 let keys = {};
 let lastMeowTime = 0;
@@ -238,7 +250,7 @@ function playMeow() {
 // ── Music system with crossfade ──
 const MUSIC_VOLUME = 0.4;
 const FADE_DURATION = 1200; // ms
-const levelMusic = { 1: 'musicMeadow', 2: 'musicNYC', 3: 'musicRome' };
+const levelMusic = { 1: 'musicMeadow', 2: 'musicNYC', 3: 'musicRome', 4: 'musicHawaii' };
 let currentMusicId = null;
 let musicFade = null; // { out: AudioElement, in: AudioElement, timer: 0 }
 
@@ -552,20 +564,21 @@ function completeTransition() {
   insideWindmill = false;
   insidePantheon = false;
   swimming = false;
+  surfing = false;
   pizzaMaking.stage = 'idle';
   pizzaMaking.progress = 0;
 }
 
 function getCurrentPlatforms() {
-  return currentLevel === 1 ? platforms : currentLevel === 2 ? level2.platforms : level3.platforms;
+  return currentLevel === 1 ? platforms : currentLevel === 2 ? level2.platforms : currentLevel === 3 ? level3.platforms : level4.platforms;
 }
 
 function getCurrentYarnBalls() {
-  return currentLevel === 1 ? yarnBalls : currentLevel === 2 ? level2.yarnBalls : level3.yarnBalls;
+  return currentLevel === 1 ? yarnBalls : currentLevel === 2 ? level2.yarnBalls : currentLevel === 3 ? level3.yarnBalls : level4.yarnBalls;
 }
 
 function getCurrentWorldW() {
-  return currentLevel === 1 ? WORLD_W : currentLevel === 2 ? level2.worldW : level3.worldW;
+  return currentLevel === 1 ? WORLD_W : currentLevel === 2 ? level2.worldW : currentLevel === 3 ? level3.worldW : level4.worldW;
 }
 
 // ── Level 3: Rome ──
@@ -616,6 +629,7 @@ const level3 = {
     { type: 'pasta_shop', x: 3800 },
     { type: 'leaning_tower', x: 3000 },
     { type: 'piazza', x: 4200 },
+    { type: 'fiat', x: 4500 },
   ],
 };
 
@@ -642,6 +656,94 @@ for (let i = 0; i < 4; i++) {
     y: GROUND_Y,
     color: romeNpcColors[i],
     accessory: romeNpcAccessories[i],
+    vx: (Math.random() - 0.5) * 1.2,
+    walkFrame: 0, walkTimer: 0,
+    facing: 1,
+    idleTimer: Math.random() * 200
+  });
+}
+
+// ── Level 4: Hawaii ──
+const level4 = {
+  worldW: 5200,
+  platforms: [
+    { x: 200, y: 340, w: 90 },
+    { x: 450, y: 280, w: 80 },
+    { x: 700, y: 220, w: 90 },
+    { x: 950, y: 340, w: 100 },
+    { x: 1200, y: 270, w: 80 },
+    { x: 1450, y: 210, w: 90 },
+    { x: 1700, y: 330, w: 80 },
+    { x: 1950, y: 260, w: 90 },
+    { x: 2200, y: 340, w: 100 },
+    { x: 2450, y: 280, w: 80 },
+    { x: 2700, y: 220, w: 90 },
+    { x: 2950, y: 340, w: 80 },
+    { x: 3200, y: 270, w: 90 },
+    { x: 3450, y: 210, w: 80 },
+    { x: 3700, y: 330, w: 100 },
+    { x: 3950, y: 260, w: 80 },
+    { x: 4200, y: 340, w: 90 },
+    { x: 4450, y: 280, w: 80 },
+    { x: 4700, y: 220, w: 90 },
+    { x: 4950, y: 340, w: 100 },
+  ],
+  yarnBalls: [],
+  scenes: [
+    { type: 'palm_tree', x: 200 },
+    { type: 'palm_tree', x: 800 },
+    { type: 'palm_tree', x: 1600 },
+    { type: 'palm_tree', x: 2400 },
+    { type: 'palm_tree', x: 3200 },
+    { type: 'palm_tree', x: 4000 },
+    { type: 'palm_tree', x: 4800 },
+    { type: 'tiki_torch', x: 600 },
+    { type: 'tiki_torch', x: 1400 },
+    { type: 'tiki_torch', x: 2200 },
+    { type: 'tiki_torch', x: 3000 },
+    { type: 'tiki_torch', x: 3800 },
+    { type: 'coconut_pile', x: 400 },
+    { type: 'coconut_pile', x: 1200 },
+    { type: 'coconut_pile', x: 2000 },
+    { type: 'coconut_pile', x: 2800 },
+    { type: 'coconut_pile', x: 3600 },
+    { type: 'coconut_pile', x: 4400 },
+    { type: 'volcano', x: 4600 },
+    { type: 'beach_hut', x: 1000 },
+    { type: 'beach_hut', x: 3400 },
+    { type: 'surfboard', x: 1800 },
+    { type: 'sea_turtle', x: 500 },
+    { type: 'sea_turtle', x: 2600 },
+    { type: 'sea_turtle', x: 4200 },
+    { type: 'flower_lei', x: 300 },
+    { type: 'flower_lei', x: 1900 },
+    { type: 'flower_lei', x: 3500 },
+  ],
+};
+
+// Init level 4 yarn balls
+for (const p of level4.platforms) {
+  if (p.y < 280) {
+    level4.yarnBalls.push({
+      x: p.x + p.w / 2,
+      y: p.y - 14,
+      color: yarnColors[level4.yarnBalls.length % yarnColors.length],
+      collected: false,
+      bobPhase: Math.random() * Math.PI * 2
+    });
+  }
+}
+
+// Level 4 NPCs
+const hawaiiNpcs = [];
+const hawaiiNpcColors = ['#fda4af','#86efac','#c4b5fd','#fde68a'];
+const hawaiiNpcAccessories = ['flower','bow','glasses','scarf'];
+for (let i = 0; i < 4; i++) {
+  hawaiiNpcs.push({
+    x: 500 + i * 1000 + Math.random() * 200,
+    y: GROUND_Y,
+    color: hawaiiNpcColors[i],
+    accessory: hawaiiNpcAccessories[i],
     vx: (Math.random() - 0.5) * 1.2,
     walkFrame: 0, walkTimer: 0,
     facing: 1,
@@ -754,6 +856,11 @@ function update(dt) {
 
   if (swimming) {
     if (keys['KeyS']) { keys['KeyS'] = false; swimming = false; }
+    return;
+  }
+
+  if (surfing) {
+    if (keys['KeyS']) { keys['KeyS'] = false; surfing = false; }
     return;
   }
 
@@ -994,6 +1101,7 @@ function update(dt) {
   let nearFountain = false;
   let nearGelato = false;
   let nearPantheonDoor = false;
+  let nearFiat = false;
   if (currentLevel === 3) {
     // Fountain swimming
     if (Math.abs(player.x - FOUNTAIN_POS.x) < 45) {
@@ -1025,6 +1133,57 @@ function update(dt) {
         insidePantheon = true;
       }
     }
+    // Fiat → Hawaii
+    if (Math.abs(player.x - FIAT_POS.x) < 45) {
+      nearFiat = true;
+      if (keys['Enter'] && !insidePantheon) {
+        keys['Enter'] = false;
+        switchToLevel(4);
+      }
+    }
+  }
+
+  // Hawaii interactions (level 4)
+  let nearTiki = false;
+  let nearCoconut = false;
+  let nearSurf = false;
+  if (currentLevel === 4) {
+    // Tiki torches
+    for (const tx of TIKI_POSITIONS) {
+      if (Math.abs(player.x - tx) < 40) {
+        nearTiki = true;
+        if (keys['KeyT']) {
+          keys['KeyT'] = false;
+          tikiCount++;
+          score += 15;
+          addPopup(player.x, player.y - 40, '+15 Tiki!', '#f97316');
+          playChaChing();
+        }
+        break;
+      }
+    }
+    // Coconuts
+    for (const cx2 of COCONUT_POSITIONS) {
+      if (Math.abs(player.x - cx2) < 40) {
+        nearCoconut = true;
+        if (keys['KeyC']) {
+          keys['KeyC'] = false;
+          coconutCount++;
+          score += 10;
+          addPopup(player.x, player.y - 40, '+10 Coconut!', '#92400e');
+          playChaChing();
+        }
+        break;
+      }
+    }
+    // Surfing
+    if (Math.abs(player.x - SURF_POS.x) < 45) {
+      nearSurf = true;
+      if (keys['KeyS']) {
+        keys['KeyS'] = false;
+        surfing = true;
+      }
+    }
   }
 
   // Rainbow bridge portal (level 1 → level 2)
@@ -1049,7 +1208,7 @@ function update(dt) {
   }
 
   // NPC AI
-  const activeNpcs = currentLevel === 1 ? npcs : currentLevel === 2 ? nycNpcs : romeNpcs;
+  const activeNpcs = currentLevel === 1 ? npcs : currentLevel === 2 ? nycNpcs : currentLevel === 3 ? romeNpcs : hawaiiNpcs;
   const worldW = getCurrentWorldW();
   for (const npc of activeNpcs) {
     npc.idleTimer -= dt / 16;
@@ -1080,14 +1239,16 @@ function update(dt) {
   document.getElementById('hudFish').textContent = fishCount;
   document.getElementById('hudBacon').textContent = baconCount;
   document.getElementById('hudYarn').textContent = yarnCount;
-  document.getElementById('hudLevel').textContent = currentLevel === 1 ? 'Meadow' : currentLevel === 2 ? 'NYC' : 'Rome';
+  document.getElementById('hudLevel').textContent = currentLevel === 1 ? 'Meadow' : currentLevel === 2 ? 'NYC' : currentLevel === 3 ? 'Rome' : 'Hawaii';
   document.getElementById('hudPizza').textContent = pizzaMaking.pizzaCount;
   document.getElementById('hudHotdog').textContent = hotdogCount;
   document.getElementById('hudGelato').textContent = gelatoCount;
   document.getElementById('hudHoney').textContent = honeyCount;
+  document.getElementById('hudTiki').textContent = tikiCount;
+  document.getElementById('hudCoconut').textContent = coconutCount;
 
   // Prompt
-  updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor);
+  updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf);
 }
 
 function getGroundLevel(x) {
@@ -1156,8 +1317,13 @@ function updatePizzaMinigame(dt) {
   document.getElementById('hudPizza').textContent = pizzaMaking.pizzaCount;
 }
 
-function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor) {
+function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf) {
   const el = document.getElementById('prompt');
+  if (surfing) {
+    el.textContent = 'Surfing the waves! Press S to get off';
+    el.style.display = 'block';
+    return;
+  }
   if (swimming) {
     el.textContent = 'Splashing in the fountain! Press S to get out';
     el.style.display = 'block';
@@ -1241,6 +1407,18 @@ function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, ne
   } else if (nearPantheonDoor) {
     el.textContent = 'Press Enter to enter the Pantheon';
     el.style.display = 'block';
+  } else if (nearFiat) {
+    el.textContent = 'Press Enter to take a Fiat to Hawaii!';
+    el.style.display = 'block';
+  } else if (nearTiki) {
+    el.textContent = 'Press T to light tiki torch! (+15 pts)';
+    el.style.display = 'block';
+  } else if (nearCoconut) {
+    el.textContent = 'Press C to collect coconut! (+10 pts)';
+    el.style.display = 'block';
+  } else if (nearSurf) {
+    el.textContent = 'Press S to go surfing!';
+    el.style.display = 'block';
   } else if (currentLevel === 1 && Math.abs(player.x - BRIDGE_PORTAL.x) < 60) {
     el.textContent = 'Press Enter to travel to NYC!';
     el.style.display = 'block';
@@ -1269,8 +1447,10 @@ function draw() {
     drawLevel1Sky(W, H, cycle, isNight, cam);
   } else if (currentLevel === 2) {
     drawLevel2Sky(W, H, cycle, isNight);
-  } else {
+  } else if (currentLevel === 3) {
     drawRomeSky(W, H, cycle, isNight);
+  } else {
+    drawHawaiiSky(W, H, cycle, isNight);
   }
 
   ctx.save();
@@ -1290,12 +1470,16 @@ function draw() {
     drawPantheonInterior(cam, W, H);
   } else if (swimming) {
     drawSwimmingScene(cam, W, H);
+  } else if (surfing) {
+    drawSurfingScene(cam, W, H);
   } else if (currentLevel === 1) {
     drawLevel1World(W, H, cam, cycle, isNight);
   } else if (currentLevel === 2) {
     drawLevel2World(W, H, cam, cycle, isNight);
-  } else {
+  } else if (currentLevel === 3) {
     drawRomeWorld(W, H, cam, cycle, isNight);
+  } else {
+    drawHawaiiWorld(W, H, cam, cycle, isNight);
   }
 
   ctx.restore();
@@ -3030,6 +3214,7 @@ function drawRomeScenes(cam, W) {
       case 'pasta_shop': drawPastaShop(s.x); break;
       case 'leaning_tower': drawLeaningTower(s.x); break;
       case 'piazza': drawPiazza(s.x); break;
+      case 'fiat': drawFiat(s.x); break;
     }
   }
 }
@@ -3312,6 +3497,373 @@ function drawSwimmingScene(cam, W, H) {
   ctx.fillText('Splashing in the fountain!', cx, cy - 80);
   ctx.font = '13px system-ui'; ctx.fillStyle = 'rgba(255,255,255,0.8)';
   ctx.fillText('Press S to get out', cx, cy + 80);
+}
+
+// ── Fiat (Rome portal to Hawaii) ──
+function drawFiat(x) {
+  const gy = GROUND_Y;
+  // Body
+  ctx.fillStyle = '#22d3ee';
+  ctx.beginPath(); ctx.roundRect(x - 22, gy - 24, 44, 18, 6); ctx.fill();
+  // Roof
+  ctx.fillStyle = '#06b6d4';
+  ctx.beginPath(); ctx.roundRect(x - 12, gy - 34, 28, 12, [6, 6, 0, 0]); ctx.fill();
+  // Windshield
+  ctx.fillStyle = '#bae6fd';
+  ctx.beginPath(); ctx.roundRect(x - 9, gy - 32, 10, 8, 2); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(x + 2, gy - 32, 10, 8, 2); ctx.fill();
+  // Wheels
+  ctx.fillStyle = '#1f2937';
+  ctx.beginPath(); ctx.arc(x - 14, gy - 4, 6, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 14, gy - 4, 6, 0, Math.PI * 2); ctx.fill();
+  // Hubcaps
+  ctx.fillStyle = '#9ca3af';
+  ctx.beginPath(); ctx.arc(x - 14, gy - 4, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 14, gy - 4, 3, 0, Math.PI * 2); ctx.fill();
+  // Headlights
+  ctx.fillStyle = '#fde68a';
+  ctx.beginPath(); ctx.arc(x + 22, gy - 18, 3, 0, Math.PI * 2); ctx.fill();
+  // FIAT label
+  ctx.fillStyle = '#1f2937'; ctx.font = 'bold 5px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText('FIAT', x, gy - 36);
+  // Arrow glow (portal indicator)
+  ctx.globalAlpha = 0.5 + Math.sin(gameTime / 300) * 0.3;
+  ctx.fillStyle = '#fbbf24'; ctx.font = 'bold 10px system-ui';
+  ctx.fillText('>>>', x + 32, gy - 20);
+  ctx.globalAlpha = 1;
+}
+
+// ── Hawaii Draw Functions ──
+function drawHawaiiSky(W, H, cycle, isNight) {
+  const dayTop = [80, 200, 255]; const nightTop = [10, 20, 45];
+  const dayBot = [255, 180, 120]; const nightBot = [30, 20, 50];
+  const skyTop = lerpColor(dayTop, nightTop, cycle);
+  const skyBot = lerpColor(dayBot, nightBot, cycle);
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, `rgb(${skyTop})`); grad.addColorStop(0.7, `rgb(${skyBot})`);
+  grad.addColorStop(1, '#38bdf8');
+  ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
+  if (isNight) drawStars(W, H, cycle);
+  if (isNight) drawRainbow(W, H, 0);
+  drawCelestial(W, H, cycle);
+}
+
+function drawHawaiiWorld(W, H, cam) {
+  const ww = getCurrentWorldW();
+  // Ocean below ground
+  ctx.fillStyle = '#0ea5e9';
+  ctx.fillRect(0, GROUND_Y, ww, H);
+  // Animated waves on the ocean
+  ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 2;
+  for (let wx = Math.floor((cam - 20) / 40) * 40; wx < cam + W + 40; wx += 40) {
+    const wy = GROUND_Y + 8 + Math.sin(gameTime / 400 + wx * 0.05) * 3;
+    ctx.beginPath(); ctx.moveTo(wx, wy); ctx.quadraticCurveTo(wx + 20, wy - 4, wx + 40, wy); ctx.stroke();
+  }
+  // Sandy beach strip
+  ctx.fillStyle = '#fde68a';
+  ctx.fillRect(0, GROUND_Y - 4, ww, 8);
+  // Beach details (shells, footprints)
+  ctx.fillStyle = '#d97706';
+  for (let sx = Math.floor((cam - 10) / 120) * 120; sx < cam + W + 10; sx += 120) {
+    ctx.beginPath(); ctx.arc(sx + 30, GROUND_Y, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(sx + 80, GROUND_Y + 1, 1.5, 0, Math.PI * 2); ctx.fill();
+  }
+  drawHawaiiScenes(cam, W);
+  drawHawaiiPlatforms();
+  drawHawaiiYarnBalls();
+  for (const npc of hawaiiNpcs) drawKitty(npc.x, npc.y, npc.color, npc.facing, npc.walkFrame, npc.accessory);
+  drawPlayerAndUI();
+}
+
+function drawHawaiiPlatforms() {
+  for (const p of level4.platforms) {
+    ctx.fillStyle = 'rgba(0,0,0,0.1)'; ctx.fillRect(p.x + 3, p.y + 3, p.w, 14);
+    const pGrad = ctx.createLinearGradient(p.x, p.y, p.x, p.y + 14);
+    pGrad.addColorStop(0, '#a3e635'); pGrad.addColorStop(1, '#65a30d');
+    ctx.fillStyle = pGrad; ctx.beginPath(); ctx.roundRect(p.x, p.y, p.w, 14, 4); ctx.fill();
+    // Grass tufts on platforms
+    ctx.strokeStyle = '#4ade80'; ctx.lineWidth = 1.5;
+    for (let i = 0; i < 3; i++) {
+      const gx = p.x + 10 + i * (p.w - 20) / 2;
+      ctx.beginPath(); ctx.moveTo(gx, p.y); ctx.lineTo(gx - 3, p.y - 6); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(gx, p.y); ctx.lineTo(gx + 3, p.y - 5); ctx.stroke();
+    }
+  }
+}
+
+function drawHawaiiYarnBalls() {
+  for (const yb of level4.yarnBalls) {
+    if (yb.collected) continue;
+    const bob = Math.sin(gameTime / 400 + yb.bobPhase) * 3;
+    const yx = yb.x, yy = yb.y + bob;
+    ctx.globalAlpha = 0.25; ctx.fillStyle = yb.color;
+    ctx.beginPath(); ctx.arc(yx, yy, 18, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+    ctx.fillStyle = yb.color; ctx.beginPath(); ctx.arc(yx, yy, 12, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(yx, yy, 10, 0.3, 1.8); ctx.stroke();
+    ctx.beginPath(); ctx.arc(yx, yy, 8, 2.0, 3.5); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.beginPath(); ctx.arc(yx - 3, yy - 4, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = yb.color; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(yx + 10, yy + 5);
+    ctx.quadraticCurveTo(yx + 16, yy + 12 + bob, yx + 12, yy + 18); ctx.stroke();
+  }
+}
+
+function drawHawaiiScenes(cam, W) {
+  for (const s of level4.scenes) {
+    if (s.x < cam - 250 || s.x > cam + W + 250) continue;
+    switch (s.type) {
+      case 'palm_tree': drawPalmTree(s.x); break;
+      case 'tiki_torch': drawTikiTorch(s.x); break;
+      case 'coconut_pile': drawCoconutPile(s.x); break;
+      case 'volcano': drawVolcano(s.x); break;
+      case 'beach_hut': drawBeachHut(s.x); break;
+      case 'surfboard': drawSurfboard(s.x); break;
+      case 'sea_turtle': drawSeaTurtle(s.x); break;
+      case 'flower_lei': drawFlowerLei(s.x); break;
+    }
+  }
+}
+
+function drawPalmTree(x) {
+  const gy = GROUND_Y;
+  // Trunk (curved)
+  ctx.strokeStyle = '#92400e'; ctx.lineWidth = 10; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x, gy);
+  ctx.quadraticCurveTo(x + 12, gy - 50, x + 5, gy - 90); ctx.stroke();
+  // Fronds
+  ctx.strokeStyle = '#22c55e'; ctx.lineWidth = 3;
+  for (let i = 0; i < 6; i++) {
+    const angle = (i / 6) * Math.PI * 2;
+    const fx = x + 5 + Math.cos(angle) * 35;
+    const fy = gy - 90 + Math.sin(angle) * 15 - 5;
+    const sway = Math.sin(gameTime / 800 + i) * 4;
+    ctx.beginPath(); ctx.moveTo(x + 5, gy - 88);
+    ctx.quadraticCurveTo(x + 5 + Math.cos(angle) * 20, gy - 95 + Math.sin(angle) * 8, fx + sway, fy); ctx.stroke();
+    // Leaf details
+    ctx.strokeStyle = '#16a34a'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x + 5, gy - 88);
+    ctx.quadraticCurveTo(x + 5 + Math.cos(angle) * 18, gy - 92 + Math.sin(angle) * 6, fx + sway - 3, fy + 3); ctx.stroke();
+    ctx.strokeStyle = '#22c55e'; ctx.lineWidth = 3;
+  }
+  // Coconuts
+  ctx.fillStyle = '#78350f';
+  ctx.beginPath(); ctx.arc(x + 3, gy - 85, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 9, gy - 83, 4, 0, Math.PI * 2); ctx.fill();
+}
+
+function drawTikiTorch(x) {
+  const gy = GROUND_Y;
+  // Pole
+  ctx.fillStyle = '#92400e'; ctx.fillRect(x - 3, gy - 55, 6, 55);
+  // Carved face
+  ctx.fillStyle = '#78350f';
+  ctx.fillRect(x - 5, gy - 45, 10, 15);
+  ctx.fillStyle = '#fde68a';
+  ctx.fillRect(x - 3, gy - 42, 3, 3); // left eye
+  ctx.fillRect(x + 1, gy - 42, 3, 3); // right eye
+  ctx.fillRect(x - 2, gy - 36, 5, 2); // mouth
+  // Flame
+  const flicker = Math.sin(gameTime / 100) * 3;
+  ctx.fillStyle = '#f97316';
+  ctx.beginPath(); ctx.moveTo(x - 6, gy - 55);
+  ctx.quadraticCurveTo(x, gy - 72 + flicker, x + 6, gy - 55); ctx.fill();
+  ctx.fillStyle = '#fbbf24';
+  ctx.beginPath(); ctx.moveTo(x - 3, gy - 55);
+  ctx.quadraticCurveTo(x, gy - 66 + flicker, x + 3, gy - 55); ctx.fill();
+  // Glow
+  ctx.globalAlpha = 0.15;
+  ctx.fillStyle = '#fbbf24';
+  ctx.beginPath(); ctx.arc(x, gy - 58, 20, 0, Math.PI * 2); ctx.fill();
+  ctx.globalAlpha = 1;
+}
+
+function drawCoconutPile(x) {
+  const gy = GROUND_Y;
+  ctx.fillStyle = '#78350f';
+  ctx.beginPath(); ctx.arc(x - 5, gy - 6, 6, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 5, gy - 6, 6, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x, gy - 14, 6, 0, Math.PI * 2); ctx.fill();
+  // Coconut detail lines
+  ctx.strokeStyle = '#5c2d0e'; ctx.lineWidth = 0.8;
+  for (const cx2 of [x - 5, x + 5, x]) {
+    const cy = cx2 === x ? gy - 14 : gy - 6;
+    ctx.beginPath(); ctx.arc(cx2, cy, 4, 0.5, 2.5); ctx.stroke();
+  }
+}
+
+function drawVolcano(x) {
+  const gy = GROUND_Y;
+  // Mountain
+  ctx.fillStyle = '#57534e';
+  ctx.beginPath(); ctx.moveTo(x - 100, gy); ctx.lineTo(x - 20, gy - 120);
+  ctx.lineTo(x + 20, gy - 120); ctx.lineTo(x + 100, gy); ctx.closePath(); ctx.fill();
+  // Crater
+  ctx.fillStyle = '#78350f';
+  ctx.beginPath(); ctx.ellipse(x, gy - 118, 22, 8, 0, 0, Math.PI * 2); ctx.fill();
+  // Lava glow
+  ctx.fillStyle = '#ef4444';
+  ctx.beginPath(); ctx.ellipse(x, gy - 118, 16, 5, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#f97316';
+  ctx.beginPath(); ctx.ellipse(x, gy - 118, 10, 3, 0, 0, Math.PI * 2); ctx.fill();
+  // Smoke
+  ctx.fillStyle = 'rgba(120,120,120,0.3)';
+  for (let i = 0; i < 3; i++) {
+    const sx = x - 5 + Math.sin(gameTime / 400 + i * 2) * 10;
+    const sy = gy - 130 - i * 18 - Math.sin(gameTime / 300 + i) * 5;
+    ctx.beginPath(); ctx.arc(sx, sy, 8 + i * 3, 0, Math.PI * 2); ctx.fill();
+  }
+  // Lava streams
+  ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(x - 8, gy - 115);
+  ctx.quadraticCurveTo(x - 40, gy - 60, x - 60, gy); ctx.stroke();
+  ctx.strokeStyle = '#f97316'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(x + 5, gy - 115);
+  ctx.quadraticCurveTo(x + 35, gy - 70, x + 50, gy); ctx.stroke();
+}
+
+function drawBeachHut(x) {
+  const gy = GROUND_Y;
+  // Stilts
+  ctx.fillStyle = '#92400e';
+  ctx.fillRect(x - 25, gy - 10, 5, 10);
+  ctx.fillRect(x + 20, gy - 10, 5, 10);
+  // Platform
+  ctx.fillRect(x - 30, gy - 14, 60, 5);
+  // Walls
+  ctx.fillStyle = '#fde68a';
+  ctx.fillRect(x - 25, gy - 45, 50, 32);
+  // Thatched roof
+  ctx.fillStyle = '#a16207';
+  ctx.beginPath(); ctx.moveTo(x - 35, gy - 45); ctx.lineTo(x, gy - 65);
+  ctx.lineTo(x + 35, gy - 45); ctx.closePath(); ctx.fill();
+  // Roof texture
+  ctx.strokeStyle = '#92400e'; ctx.lineWidth = 1;
+  for (let i = 0; i < 5; i++) {
+    ctx.beginPath();
+    ctx.moveTo(x - 30 + i * 12, gy - 47);
+    ctx.lineTo(x - 5 + i * 5, gy - 58);
+    ctx.stroke();
+  }
+  // Door
+  ctx.fillStyle = '#78350f';
+  ctx.beginPath(); ctx.roundRect(x - 7, gy - 35, 14, 22, [4, 4, 0, 0]); ctx.fill();
+  // Window
+  ctx.fillStyle = '#87ceeb';
+  ctx.fillRect(x + 10, gy - 38, 10, 8);
+  ctx.strokeStyle = '#92400e'; ctx.lineWidth = 1; ctx.strokeRect(x + 10, gy - 38, 10, 8);
+}
+
+function drawSurfboard(x) {
+  const gy = GROUND_Y;
+  // Board stuck in sand at angle
+  ctx.save(); ctx.translate(x, gy - 5); ctx.rotate(-0.3);
+  ctx.fillStyle = '#f472b6';
+  ctx.beginPath(); ctx.roundRect(-6, -45, 12, 45, [6, 6, 2, 2]); ctx.fill();
+  // Stripe
+  ctx.fillStyle = '#fbbf24';
+  ctx.fillRect(-4, -35, 8, 5);
+  ctx.fillStyle = '#22d3ee';
+  ctx.fillRect(-4, -25, 8, 5);
+  // Fin
+  ctx.fillStyle = '#f472b6';
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-4, 5); ctx.lineTo(4, 5); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+function drawSeaTurtle(x) {
+  const gy = GROUND_Y;
+  const bob = Math.sin(gameTime / 600 + x) * 2;
+  // Shell
+  ctx.fillStyle = '#65a30d';
+  ctx.beginPath(); ctx.ellipse(x, gy - 8 + bob, 14, 10, 0, Math.PI, 0); ctx.fill();
+  ctx.fillStyle = '#4d7c0f';
+  ctx.beginPath(); ctx.ellipse(x, gy - 6 + bob, 14, 5, 0, 0, Math.PI); ctx.fill();
+  // Shell pattern
+  ctx.strokeStyle = '#3f6212'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(x, gy - 10 + bob, 6, Math.PI, 0); ctx.stroke();
+  ctx.beginPath(); ctx.arc(x - 5, gy - 8 + bob, 4, Math.PI, 0); ctx.stroke();
+  ctx.beginPath(); ctx.arc(x + 5, gy - 8 + bob, 4, Math.PI, 0); ctx.stroke();
+  // Head
+  ctx.fillStyle = '#65a30d';
+  ctx.beginPath(); ctx.arc(x + 14, gy - 6 + bob, 5, 0, Math.PI * 2); ctx.fill();
+  // Eye
+  ctx.fillStyle = '#1f2937';
+  ctx.beginPath(); ctx.arc(x + 16, gy - 7 + bob, 1.5, 0, Math.PI * 2); ctx.fill();
+  // Flippers
+  ctx.fillStyle = '#65a30d';
+  ctx.beginPath(); ctx.ellipse(x - 8, gy - 2 + bob, 6, 3, -0.3, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x + 8, gy - 2 + bob, 6, 3, 0.3, 0, Math.PI * 2); ctx.fill();
+}
+
+function drawFlowerLei(x) {
+  const gy = GROUND_Y;
+  // Draped on ground
+  const colors = ['#f472b6','#fbbf24','#a78bfa','#fb923c','#34d399'];
+  for (let i = 0; i < 8; i++) {
+    const fx = x - 14 + i * 4;
+    const fy = gy - 4 + Math.sin(i * 0.8) * 2;
+    ctx.fillStyle = colors[i % colors.length];
+    ctx.beginPath(); ctx.arc(fx, fy, 3, 0, Math.PI * 2); ctx.fill();
+    // Center dot
+    ctx.fillStyle = '#fde68a';
+    ctx.beginPath(); ctx.arc(fx, fy, 1, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+function drawSurfingScene(cam, W, H) {
+  const cx = cam + W / 2;
+  const cy = GROUND_Y - 20;
+  // Sky
+  const grad = ctx.createLinearGradient(cam, 0, cam, cy - 60);
+  grad.addColorStop(0, '#38bdf8'); grad.addColorStop(1, '#7dd3fc');
+  ctx.fillStyle = grad; ctx.fillRect(cam, 0, W, cy - 60);
+  // Ocean
+  ctx.fillStyle = '#0284c7'; ctx.fillRect(cam, cy - 60, W, H);
+  // Animated waves
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 3;
+  for (let i = 0; i < 12; i++) {
+    const wx = cx - 250 + i * 45 + Math.sin(gameTime / 300 + i) * 15;
+    const wy = cy - 30 + Math.sin(gameTime / 350 + i * 0.7) * 8;
+    ctx.beginPath(); ctx.moveTo(wx, wy);
+    ctx.quadraticCurveTo(wx + 15, wy - 8, wx + 30, wy); ctx.stroke();
+  }
+  // Big wave behind kitty
+  ctx.fillStyle = '#0369a1';
+  ctx.beginPath(); ctx.moveTo(cx - 100, cy);
+  ctx.quadraticCurveTo(cx - 50, cy - 50, cx, cy - 40);
+  ctx.quadraticCurveTo(cx + 50, cy - 50, cx + 100, cy);
+  ctx.lineTo(cx + 100, cy + 40); ctx.lineTo(cx - 100, cy + 40); ctx.closePath(); ctx.fill();
+  // Wave foam
+  ctx.strokeStyle = '#bae6fd'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(cx - 100, cy);
+  ctx.quadraticCurveTo(cx - 50, cy - 50, cx, cy - 40);
+  ctx.quadraticCurveTo(cx + 50, cy - 50, cx + 100, cy); ctx.stroke();
+  // Surfboard under kitty
+  ctx.fillStyle = '#f472b6';
+  ctx.save(); ctx.translate(cx, cy - 15);
+  ctx.rotate(Math.sin(gameTime / 400) * 0.1);
+  ctx.beginPath(); ctx.roundRect(-20, -3, 40, 6, 3); ctx.fill();
+  ctx.fillStyle = '#fbbf24'; ctx.fillRect(-12, -2, 6, 4);
+  ctx.fillStyle = '#22d3ee'; ctx.fillRect(6, -2, 6, 4);
+  ctx.restore();
+  // Kitty on surfboard
+  const kittyBob = Math.sin(gameTime / 400) * 3;
+  drawKitty(cx, cy - 20 + kittyBob, player.color, 1, Math.floor(gameTime / 200) % 4, 'horn');
+  // Splash effects
+  ctx.fillStyle = '#bae6fd';
+  for (let i = 0; i < 8; i++) {
+    ctx.globalAlpha = 0.4 + Math.sin(gameTime / 200 + i * 1.2) * 0.3;
+    const sx = cx - 30 + Math.cos(gameTime / 250 + i * 0.9) * 50;
+    const sy = cy - 5 + Math.sin(gameTime / 200 + i * 1.5) * 10;
+    ctx.beginPath(); ctx.arc(sx, sy, 2.5, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 18px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText('Cowabunga!', cx, cy - 90);
+  ctx.font = '13px system-ui'; ctx.fillStyle = 'rgba(255,255,255,0.8)';
+  ctx.fillText('Press S to paddle back', cx, cy + 70);
 }
 
 function drawKitty(x, y, color, facing, walkFrame, accessory) {
