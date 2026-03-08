@@ -1616,7 +1616,7 @@ function update(dt) {
   }
 
   // Sledding interactions (level 2)
-  let nearLodge = false;
+  let nearTrain = false;
   if (currentLevel === 2) {
     // Auto-sled: push player right
     player.vx = Math.max(player.vx, SLED_SPEED);
@@ -1652,9 +1652,9 @@ function update(dt) {
       if (sm.hit && player.x - sm.x > 300) sm.hit = false;
     }
 
-    // Lodge at end
+    // Train at end
     if (player.x > SLED_WORLD_W - 200) {
-      nearLodge = true;
+      nearTrain = true;
       player.vx = 0;
       if (keys['Enter']) {
         keys['Enter'] = false;
@@ -1723,7 +1723,7 @@ function update(dt) {
   }
 
   // Prompt
-  updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf, nearAirport, nearChalet, nearLodge);
+  updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf, nearAirport, nearChalet, nearTrain);
 }
 
 function getGroundLevel(x) {
@@ -1792,7 +1792,7 @@ function updatePizzaMinigame(dt) {
   document.getElementById('hudPizza').textContent = pizzaMaking.pizzaCount;
 }
 
-function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf, nearAirport, nearChalet, nearLodge) {
+function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf, nearAirport, nearChalet, nearTrain) {
   const el = document.getElementById('prompt');
   if (insideChalet) {
     el.textContent = marshmallow.active ? 'Tossing...' : 'Press Space to toss a marshmallow! (Enter to leave)';
@@ -1905,10 +1905,10 @@ function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, ne
   } else if (nearChalet) {
     el.textContent = 'Press Enter to warm up in the chalet!';
     el.style.display = 'block';
-  } else if (nearLodge) {
-    el.textContent = 'Press Enter to warm up in the lodge and travel to NYC!';
+  } else if (nearTrain) {
+    el.textContent = 'Press Enter to take the train to NYC!';
     el.style.display = 'block';
-  } else if (currentLevel === 2 && !nearLodge) {
+  } else if (currentLevel === 2 && !nearTrain) {
     el.textContent = 'Sled downhill! Dodge snowmen, collect snowballs!';
     el.style.display = 'block';
   } else if (currentLevel === 6) {
@@ -4425,8 +4425,8 @@ function drawSleddingWorld(W, H, cam, cycle, isNight) {
   // Snowmen
   drawSnowmen(cam, W);
 
-  // Lodge at end
-  drawLodge(ww - 150);
+  // Train at end
+  drawTrain(ww - 150);
 
   // Falling snowflakes
   drawSnowflakes(cam, W, H);
@@ -4609,75 +4609,86 @@ function drawSnowmen(cam, W) {
   }
 }
 
-function drawLodge(x) {
+function drawTrain(x) {
   const gy = GROUND_Y;
-  // Main building
-  ctx.fillStyle = '#92400e';
-  ctx.fillRect(x - 40, gy - 60, 80, 60);
-  // Roof
+  // Railroad tracks
   ctx.fillStyle = '#78350f';
-  ctx.beginPath();
-  ctx.moveTo(x - 50, gy - 60);
-  ctx.lineTo(x, gy - 90);
-  ctx.lineTo(x + 50, gy - 60);
-  ctx.fill();
-  // Snow on roof
-  ctx.fillStyle = '#f0f4f8';
-  ctx.beginPath();
-  ctx.moveTo(x - 48, gy - 60);
-  ctx.lineTo(x, gy - 87);
-  ctx.lineTo(x + 48, gy - 60);
-  ctx.lineTo(x + 50, gy - 57);
-  ctx.lineTo(x, gy - 84);
-  ctx.lineTo(x - 50, gy - 57);
-  ctx.fill();
-  // Door
-  ctx.fillStyle = '#451a03';
-  ctx.beginPath();
-  ctx.roundRect(x - 8, gy - 30, 16, 30, [4, 4, 0, 0]);
-  ctx.fill();
-  // Windows
-  ctx.fillStyle = '#fde68a';
-  ctx.fillRect(x - 30, gy - 45, 14, 12);
-  ctx.fillRect(x + 16, gy - 45, 14, 12);
-  // Window panes
-  ctx.strokeStyle = '#78350f';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(x - 23, gy - 45);
-  ctx.lineTo(x - 23, gy - 33);
-  ctx.moveTo(x - 30, gy - 39);
-  ctx.lineTo(x - 16, gy - 39);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(x + 23, gy - 45);
-  ctx.lineTo(x + 23, gy - 33);
-  ctx.moveTo(x + 16, gy - 39);
-  ctx.lineTo(x + 30, gy - 39);
-  ctx.stroke();
-  // Chimney with smoke
-  ctx.fillStyle = '#6b7280';
-  ctx.fillRect(x + 20, gy - 85, 10, 20);
-  ctx.fillStyle = '#f0f4f8';
-  ctx.fillRect(x + 18, gy - 87, 14, 4);
-  // Smoke
-  ctx.globalAlpha = 0.3;
-  ctx.fillStyle = '#d4d4d4';
-  for (let i = 0; i < 3; i++) {
-    const smokeY = gy - 95 - i * 12 - Math.sin(gameTime / 400 + i) * 5;
-    const smokeX = x + 25 + Math.sin(gameTime / 600 + i * 2) * 6;
+  ctx.fillRect(x - 70, gy - 3, 140, 3);
+  ctx.fillRect(x - 70, gy + 2, 140, 3);
+  // Ties
+  ctx.fillStyle = '#92400e';
+  for (let i = -3; i <= 3; i++) {
+    ctx.fillRect(x + i * 18 - 4, gy - 5, 8, 12);
+  }
+  // Engine body
+  ctx.fillStyle = '#dc2626';
+  ctx.beginPath(); ctx.roundRect(x - 35, gy - 40, 70, 32, 5); ctx.fill();
+  // Cabin
+  ctx.fillStyle = '#b91c1c';
+  ctx.fillRect(x + 10, gy - 58, 25, 20);
+  // Cabin roof
+  ctx.fillStyle = '#7f1d1d';
+  ctx.fillRect(x + 7, gy - 62, 31, 5);
+  // Cabin window
+  ctx.fillStyle = '#bae6fd';
+  ctx.fillRect(x + 15, gy - 55, 14, 10);
+  // Front windows
+  ctx.fillStyle = '#bae6fd';
+  ctx.fillRect(x - 28, gy - 35, 12, 10);
+  ctx.fillRect(x - 10, gy - 35, 12, 10);
+  // Smokestack
+  ctx.fillStyle = '#374151';
+  ctx.fillRect(x - 22, gy - 55, 10, 16);
+  ctx.fillRect(x - 25, gy - 58, 16, 5);
+  // Steam puffs
+  ctx.globalAlpha = 0.35;
+  ctx.fillStyle = '#e5e7eb';
+  for (let i = 0; i < 4; i++) {
+    const sy = gy - 65 - i * 10 - Math.sin(gameTime / 350 + i) * 4;
+    const sx = x - 17 + Math.sin(gameTime / 500 + i * 1.5) * 6;
     ctx.beginPath();
-    ctx.arc(smokeX, smokeY, 5 + i * 2, 0, Math.PI * 2);
+    ctx.arc(sx, sy, 5 + i * 2.5, 0, Math.PI * 2);
     ctx.fill();
   }
   ctx.globalAlpha = 1;
-  // Sign
-  ctx.fillStyle = '#451a03';
-  ctx.beginPath(); ctx.roundRect(x - 25, gy - 70, 50, 12, 3); ctx.fill();
+  // Cowcatcher
+  ctx.fillStyle = '#4b5563';
+  ctx.beginPath();
+  ctx.moveTo(x - 35, gy - 8);
+  ctx.lineTo(x - 45, gy);
+  ctx.lineTo(x - 35, gy);
+  ctx.fill();
+  // Wheels
+  ctx.fillStyle = '#1f2937';
+  ctx.beginPath(); ctx.arc(x - 20, gy - 4, 7, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x, gy - 4, 7, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 20, gy - 4, 7, 0, Math.PI * 2); ctx.fill();
+  // Wheel hubs
+  ctx.fillStyle = '#6b7280';
+  ctx.beginPath(); ctx.arc(x - 20, gy - 4, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x, gy - 4, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 20, gy - 4, 3, 0, Math.PI * 2); ctx.fill();
+  // Connecting rod (animated)
+  const rodOffset = Math.sin(gameTime / 200) * 3;
+  ctx.strokeStyle = '#6b7280';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x - 20, gy - 4 + rodOffset);
+  ctx.lineTo(x + 20, gy - 4 - rodOffset);
+  ctx.stroke();
+  // Snow on top
+  ctx.fillStyle = '#f0f4f8';
+  ctx.beginPath();
+  ctx.ellipse(x - 10, gy - 40, 28, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(x + 22, gy - 58, 12, 3, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // NYC sign on side
   ctx.fillStyle = '#fde68a';
   ctx.font = 'bold 7px system-ui';
   ctx.textAlign = 'center';
-  ctx.fillText('LODGE', x, gy - 62);
+  ctx.fillText('NYC EXPRESS', x - 5, gy - 18);
 }
 
 function drawSnowflakes(cam, W, H) {
