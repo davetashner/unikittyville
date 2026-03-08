@@ -2,6 +2,33 @@
 
 This project uses **bd** (beads) for issue tracking. Run `bd onboard` to get started.
 
+## Deployment
+
+The game is deployed as part of **norahtashner.com** at `https://norahtashner.com/games/unikittyville/`.
+
+After merging changes to this repo, deploy by copying the built game files into the website repo:
+
+```bash
+# Copy game files to the website's public directory
+cp -rf ~/Development/unikittyville/index.html ~/Development/norahtashner.com/public/games/unikittyville/
+cp -rf ~/Development/unikittyville/assets/music/*.mp3 ~/Development/norahtashner.com/public/games/unikittyville/assets/music/
+cp -rf ~/Development/unikittyville/assets/sfx/*.mp3 ~/Development/norahtashner.com/public/games/unikittyville/assets/sfx/
+
+# Then in the website repo, build and deploy
+cd ~/Development/norahtashner.com
+npm run build
+git add public/games/unikittyville
+git commit -m "chore: update unikittyville game"
+git push
+```
+
+**What gets copied:**
+- `index.html` — the full game (single file)
+- `assets/music/*.mp3` — level music tracks
+- `assets/sfx/*.mp3` — sound effects
+
+**Do NOT copy** source WAV files (`assets/*/source/`) — only MP3s are needed for the web.
+
 ## Quick Reference
 
 ```bash
