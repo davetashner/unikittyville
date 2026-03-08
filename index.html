@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <title>Unikittyville</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -69,7 +70,34 @@
     transition: transform 0.15s, box-shadow 0.15s;
   }
   #startBtn:hover { transform: scale(1.05); box-shadow: 0 8px 25px rgba(124,58,237,0.4); }
-  canvas { border-radius: 12px; display: block; }
+  canvas { border-radius: 12px; display: block; margin: 0 auto; }
+  #orientationOverlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(26, 26, 46, 0.95);
+    z-index: 200;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: #fff;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    text-align: center;
+    padding: 2rem;
+  }
+  #orientationOverlay .rotate-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    animation: rotateHint 2s ease-in-out infinite;
+  }
+  #orientationOverlay p {
+    font-size: 1.3rem;
+    opacity: 0.9;
+  }
+  @keyframes rotateHint {
+    0%, 100% { transform: rotate(0deg); }
+    50% { transform: rotate(90deg); }
+  }
   #hud {
     position: fixed;
     top: 16px;
@@ -188,6 +216,10 @@
 </div>
 
 <canvas id="game"></canvas>
+<div id="orientationOverlay">
+  <div class="rotate-icon">&#x1F4F1;</div>
+  <p>Please rotate your device to landscape mode</p>
+</div>
 <div id="hud">
   <span id="hudLevel">Level 1</span>
   <span id="hudName"></span>
@@ -1145,11 +1177,44 @@ const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 
 function resize() {
-  canvas.width = Math.min(window.innerWidth - 20, 960);
-  canvas.height = Math.min(window.innerHeight - 20, 540);
+  const ASPECT = 16 / 9;
+  const MAX_W = 960;
+  const MAX_H = 540;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+
+  // Determine available space (minimal padding on mobile, more on desktop)
+  const isMobile = ('ontouchstart' in window) || vw <= 1024;
+  const pad = isMobile ? 0 : 20;
+  const availW = vw - pad;
+  const availH = vh - pad;
+
+  // Calculate largest 16:9 rectangle that fits
+  let w, h;
+  if (availW / availH > ASPECT) {
+    // Viewport is wider than 16:9 — height-constrained
+    h = Math.min(availH, MAX_H);
+    w = Math.round(h * ASPECT);
+  } else {
+    // Viewport is taller than 16:9 — width-constrained
+    w = Math.min(availW, MAX_W);
+    h = Math.round(w / ASPECT);
+  }
+
+  canvas.width = w;
+  canvas.height = h;
+
+  // Show orientation overlay on mobile portrait
+  const overlay = document.getElementById('orientationOverlay');
+  if (overlay) {
+    const isPortrait = vh > vw;
+    const isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+    overlay.style.display = (isTouchDevice && isPortrait) ? 'flex' : 'none';
+  }
 }
 resize();
 window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', () => { setTimeout(resize, 100); });
 
 // ── Input ──
 window.addEventListener('keydown', e => {
