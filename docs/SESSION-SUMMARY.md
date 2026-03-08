@@ -11,7 +11,7 @@ python3 -m http.server 8080
 ```
 
 ## Architecture
-- **Single file:** `index.html` (~3500 lines) contains all HTML, CSS, and JS
+- **Single file:** `index.html` (~4000 lines) contains all HTML, CSS, and JS
 - **Rendering:** HTML5 Canvas with `requestAnimationFrame` game loop
 - **No external assets for graphics** — all characters, scenes, and UI are drawn with Canvas API
 - **Audio:** MP3 files in `assets/` for music and sound effects (converted from WAV sources)
@@ -24,8 +24,10 @@ python3 -m http.server 8080
 | Enter | Enter/exit buildings, portals, take taxis |
 | F | Fish (in pond, Level 1) |
 | C | Cook bacon (at grill, Level 1) / Make pizza (in pizza shop, Level 2) / Buy hot dog (Level 2) |
-| S | Swim in fountain (Level 3) |
+| S | Swim in fountain (Level 3) / Surf (Level 4) |
 | G | Buy gelato (Level 3) |
+| T | Light tiki torch (Level 4) |
+| C | Collect coconut (Level 4) |
 
 ## Levels
 
@@ -53,10 +55,21 @@ python3 -m http.server 8080
   - Gelato carts — Press G for gelato (+5 pts)
   - Pantheon interior — Press Enter to explore (dome with oculus, sunbeam, coffers, statues)
   - Vespas, olive trees, pasta shops
-- **Portal:** NOT YET IMPLEMENTED — User requested Fiat → Hawaii level
+- **Portal:** Fiat car at far right (x=4500) — Press Enter to travel to Hawaii
+
+### Level 4: Hawaii
+- **World width:** 5200px
+- **Features:** Sandy beach with ocean, tropical sky gradient, green vine platforms with grass tufts
+- **Landmarks:** Volcano with lava streams and smoke, palm trees with swaying fronds, beach huts with thatched roofs
+- **Interactions:**
+  - Tiki torches — Press T to light (+15 pts)
+  - Coconut piles — Press C to collect (+10 pts)
+  - Surfboard — Press S for surfing minigame scene (ride waves)
+- **Scenery:** Sea turtles, flower leis, surfboards stuck in sand
+- **Portal:** None (final level)
 
 ## Game Mechanics
-- **Scoring:** Fish (+10), Bacon (+15), Yarn balls (+20), Pizza (+25), Gelato (+5), Hot dogs (-10 to buy)
+- **Scoring:** Fish (+10), Bacon (+15), Yarn balls (+20), Pizza (+25), Gelato (+5), Hot dogs (-10 to buy), Tiki (+15), Coconut (+10)
 - **Platforms:** Purple/metallic/stone floating platforms with yarn balls on higher ones
 - **NPCs:** 4 unicorn kitties per level with different colors and accessories (bow, scarf, glasses, flower)
 - **HUD:** Level name, player name, score, fish/bacon/yarn/pizza/hot dog/gelato counters
@@ -76,10 +89,11 @@ python3 -m http.server 8080
 - Interior scenes (Central Park, pizza shop) rendered off-screen in Level 2 — fixed by using `cam + W/2` for centering instead of `player.x`
 
 ## Pending Work (User Requested)
-1. **Fiat car in Rome → Hawaii level** — User wants to take a Fiat to Level 4
-2. **Hawaii level** — Drive a boat from island to island collecting tiki torches
+1. ~~**Fiat car in Rome → Hawaii level**~~ — DONE
+2. ~~**Hawaii level**~~ — DONE (tiki torches, coconuts, surfing, volcano, palm trees, beach huts)
 3. **Art asset generation** — Beads stories contain AI art prompts for generating real artwork (see `bd list` when beads server is running)
 4. **Character creation screen** — Future: LLM-integrated character designer (from original spec)
+5. **Hawaii music asset** — Need `assets/music/hawaii.mp3` (audio element exists but no file yet)
 
 ## Beads Backlog
 Epic: `unikittyville-ed0` — MVP: Unicorn Kitty Game
