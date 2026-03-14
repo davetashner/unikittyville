@@ -1,0 +1,453 @@
+function resize() {
+  const ASPECT = 16 / 9;
+  const MAX_W = 960;
+  const MAX_H = 540;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+
+  // Determine available space (minimal padding on mobile, more on desktop)
+  const isMobile = ('ontouchstart' in window) || vw <= 1024;
+  const pad = isMobile ? 0 : 20;
+  const availW = vw - pad;
+  const availH = vh - pad;
+
+  // Calculate largest 16:9 rectangle that fits
+  let w, h;
+  if (availW / availH > ASPECT) {
+    // Viewport is wider than 16:9 — height-constrained
+    h = Math.min(availH, MAX_H);
+    w = Math.round(h * ASPECT);
+  } else {
+    // Viewport is taller than 16:9 — width-constrained
+    w = Math.min(availW, MAX_W);
+    h = Math.round(w / ASPECT);
+  }
+
+  canvas.width = w;
+  canvas.height = h;
+
+  // Show orientation overlay on mobile portrait
+  const overlay = document.getElementById('orientationOverlay');
+  if (overlay) {
+    const isPortrait = vh > vw;
+    const isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+    overlay.style.display = (isTouchDevice && isPortrait) ? 'flex' : 'none';
+  }
+}
+resize();
+window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', () => { setTimeout(resize, 100); });
+
+// ── Input ──
+window.addEventListener('keydown', e => {
+  if (!e.repeat) keys[e.code] = true;
+  if (e.code === 'Space') e.preventDefault();
+});
+window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+// ── Touch Controls ──
+(function initTouchControls() {
+  function bindTouch(id, keyDown, keyUp) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('touchstart', function(e) {
+      e.preventDefault();
+      el.classList.add('active');
+      if (typeof keyDown === 'function') keyDown();
+      else keys[keyDown] = true;
+    }, { passive: false });
+    el.addEventListener('touchend', function(e) {
+      e.preventDefault();
+      el.classList.remove('active');
+      if (typeof keyUp === 'function') keyUp();
+      else keys[keyUp] = false;
+    }, { passive: false });
+    el.addEventListener('touchcancel', function(e) {
+      el.classList.remove('active');
+      if (typeof keyUp === 'function') keyUp();
+      else keys[keyUp] = false;
+    }, { passive: false });
+  }
+  bindTouch('touch-dpad-left', 'ArrowLeft', 'ArrowLeft');
+  bindTouch('touch-dpad-right', 'ArrowRight', 'ArrowRight');
+  bindTouch('touch-jump', 'Space', 'Space');
+  bindTouch('touch-action',
+    function() { if (currentActionKey) keys[currentActionKey] = true; },
+    function() { if (currentActionKey) keys[currentActionKey] = false; }
+  );
+})();
+
+// ── Mobile Fullscreen ──
+// Enter fullscreen when tapping the canvas on mobile; hide the control panel
+if (isMobile) {
+  canvas.addEventListener('touchstart', function requestFS() {
+    const el = document.documentElement;
+    const fs = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (fs && !document.fullscreenElement && !document.webkitFullscreenElement) {
+      fs.call(el).then(() => {
+        document.getElementById('controls').style.display = 'none';
+        setTimeout(resize, 150);
+      }).catch(() => {});
+    }
+  }, { passive: true });
+
+  // Re-layout when exiting fullscreen
+  document.addEventListener('fullscreenchange', () => setTimeout(resize, 150));
+  document.addEventListener('webkitfullscreenchange', () => setTimeout(resize, 150));
+}
+
+// ── Start ──
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('nameInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') startGame();
+});
+
+function startGame() {
+  const name = document.getElementById('nameInput').value.trim();
+  playerName = name || 'Sparkle';
+  document.getElementById('startScreen').style.display = 'none';
+  document.getElementById('hud').style.display = 'flex';
+  if (isMobile) {
+    document.getElementById('controls').style.display = 'none';
+    document.getElementById('touch-controls').style.display = 'block';
+    document.body.classList.add('touch-active');
+  } else {
+    document.getElementById('controls').style.display = 'flex';
+  }
+  document.getElementById('volumeControl').style.display = 'flex';
+  document.getElementById('hudName').textContent = playerName;
+  initMeows();
+  // Unlock audio on mobile: browsers require a user gesture before playing audio.
+  // The Play button click/tap is that gesture. We briefly play/pause SFX elements
+  // so subsequent play() calls succeed even outside a direct gesture context.
+  // (Music elements are unlocked by startLevelMusic below.)
+  for (const sfx of [...meowSounds, chaChingSound]) {
+    if (sfx) {
+      const p = sfx.play();
+      if (p) p.then(() => { sfx.pause(); sfx.currentTime = 0; }).catch(() => {});
+    }
+  }
+  // Start music (requires user gesture, which the click/enter provides)
+  startLevelMusic(1);
+  requestAnimationFrame(loop);
+}
+
+function setAction(key, label) {
+  currentActionKey = key;
+  currentActionLabel = label;
+  if (isMobile) {
+    const btn = document.getElementById('touch-action');
+    if (key) {
+      btn.textContent = label;
+      btn.style.display = 'flex';
+    } else {
+      btn.style.display = 'none';
+    }
+  }
+}
+
+function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf, nearAirport, nearChalet, nearTrain, nearNpc, nearStick, nearFirePit, nearHammock, nearBigfoot, nearDigSite, nearWaterPump, nearPool, nearCampCamper) {
+  const el = document.getElementById('prompt');
+  if (insideCampCamper) {
+    if (campCamperSleeping) {
+      el.textContent = 'Sleeping... zzz (Press N to wake up)';
+      setAction('KeyN', 'Wake');
+    } else if (campCamperShowering) {
+      const pct = Math.min(100, (campCamperShowerTimer / 3000) * 100);
+      el.textContent = `Showering... ${Math.round(pct)}%`;
+      setAction(null, '');
+    } else if (campCamperPasta.cooking) {
+      const pct = Math.min(100, (campCamperPasta.progress / 3000) * 100);
+      el.textContent = `Making pasta... ${Math.round(pct)}%`;
+      setAction(null, '');
+    } else if (campCamperPlayerX > 100 || campCamperPlayerX < -100) {
+      el.textContent = 'Press N to go to sleep!';
+      setAction('KeyN', 'Sleep');
+    } else if (Math.abs(campCamperPlayerX) < 30) {
+      el.textContent = 'Press C to get pasta from the fridge!';
+      setAction('KeyC', 'Pasta');
+    } else if (campCamperPlayerX < -50 && campCamperPlayerX > -100) {
+      el.textContent = 'Press S to take a shower!';
+      setAction('KeyS', 'Shower');
+    } else {
+      el.textContent = 'Walk around the camper! (Enter to leave)';
+      setAction('Enter', 'Exit');
+    }
+    el.style.display = 'block';
+    return;
+  }
+  if (swimmingInPool) {
+    el.textContent = 'Swimming in your pool! Q: Talk to Leprechaun | S: Get out';
+    el.style.display = 'block';
+    setAction('KeyQ', 'Talk');
+    return;
+  }
+  if (hammockNapping) {
+    el.textContent = 'Napping in the hammock... zzz';
+    el.style.display = 'block';
+    setAction(null, '');
+    return;
+  }
+  if (bigfootDrinking) {
+    el.textContent = 'Sharing chocolate milk with Bigfoot!';
+    el.style.display = 'block';
+    setAction(null, '');
+    return;
+  }
+  if (insideChalet) {
+    if (drinkingCocoa) {
+      el.textContent = 'Drinking hot chocolate... mmm!';
+    } else if (marshmallowScore >= 10 && !marshmallow.active) {
+      el.textContent = 'Press D to drink the hot chocolate! (Enter to leave)';
+      setAction('KeyD', 'Drink');
+    } else {
+      el.textContent = marshmallow.active ? 'Tossing...' : 'Up/Down to aim, Space to toss! (Enter to leave)';
+      setAction('Enter', 'Exit');
+    }
+    el.style.display = 'block';
+    return;
+  }
+  if (surfing) {
+    el.textContent = 'Surfing the waves! Press S to get off';
+    el.style.display = 'block';
+    setAction('KeyS', 'Stop');
+    return;
+  }
+  if (swimming) {
+    el.textContent = 'Splashing in the fountain! Press S to get out';
+    el.style.display = 'block';
+    setAction('KeyS', 'Exit');
+    return;
+  }
+  if (insidePantheon) {
+    el.textContent = 'Inside the Pantheon... Press Enter to leave';
+    el.style.display = 'block';
+    setAction('Enter', 'Exit');
+    return;
+  }
+  if (insideCamper) {
+    if (camperNapping) {
+      el.textContent = 'Napping... zzz';
+    } else if (camperPhone.answered) {
+      el.textContent = 'On the phone...';
+    } else if (camperPhone.ringing) {
+      el.textContent = 'Phone is ringing! Press P to answer!';
+      setAction('KeyP', 'Answer');
+    } else if (camperCooking.active) {
+      if (camperCooking.progress >= 2500 && camperCooking.progress < 4500) {
+        el.textContent = 'Fish is ready! Press C to take it off!';
+        setAction('KeyC', 'Take');
+      } else {
+        el.textContent = 'Cooking fish on the stove...';
+      }
+    } else if (camperPlayerX < -100 && fishCount > 0) {
+      el.textContent = 'Press C to cook fish on the stove!';
+      setAction('KeyC', 'Cook');
+    } else if (camperPlayerX > 80) {
+      el.textContent = 'Press N to take a nap!';
+      setAction('KeyN', 'Nap');
+    } else {
+      el.textContent = 'Walk around the camper! (Enter to leave)';
+      setAction('Enter', 'Exit');
+    }
+    el.style.display = 'block';
+    return;
+  }
+  if (insideWindmill) {
+    el.textContent = 'Inside the windmill... Press Enter to go outside';
+    el.style.display = 'block';
+    setAction('Enter', 'Exit');
+    return;
+  }
+  if (insidePark) {
+    el.textContent = 'Relaxing in Central Park... Press Enter to leave';
+    el.style.display = 'block';
+    setAction('Enter', 'Exit');
+    return;
+  }
+  if (insidePizza) {
+    if (pizzaMaking.stage === 'idle') {
+      el.textContent = 'Press C to make pizza! (Enter to leave)';
+      setAction('KeyC', 'Cook');
+    } else if (pizzaMaking.stage === 'dough') {
+      el.textContent = 'Kneading dough... Press C when ready!';
+      setAction('KeyC', 'Cook');
+    } else if (pizzaMaking.stage === 'toppings') {
+      el.textContent = 'Adding toppings... Press C to put in oven!';
+      setAction('KeyC', 'Cook');
+    } else if (pizzaMaking.stage === 'oven') {
+      el.style.display = 'none';
+      setAction('KeyC', 'Take out');
+      return;
+    }
+    el.style.display = 'block';
+  } else if (fishing.active) {
+    el.textContent = 'Fishing...';
+    el.style.display = 'block';
+    setAction(null, '');
+  } else if (cooking.active) {
+    const pct = Math.min(100, (cooking.progress / 3000) * 100);
+    el.textContent = `Cooking... ${Math.round(pct)}%`;
+    el.style.display = 'block';
+    setAction(null, '');
+  } else if (inPond && !fishing.active) {
+    el.textContent = 'Press F to fish';
+    el.style.display = 'block';
+    setAction('KeyF', 'Fish');
+  } else if (nearGrill && !cooking.active) {
+    el.textContent = 'Press C to cook bacon';
+    el.style.display = 'block';
+    setAction('KeyC', 'Cook');
+  } else if (nearHouse) {
+    el.textContent = 'Press Enter to go inside';
+    el.style.display = 'block';
+    setAction('Enter', 'Enter');
+  } else if (nearCamper) {
+    el.textContent = 'Press Enter to enter the camper';
+    el.style.display = 'block';
+    setAction('Enter', 'Enter');
+  } else if (nearWindmill) {
+    el.textContent = 'Press Enter to enter the windmill';
+    el.style.display = 'block';
+    setAction('Enter', 'Enter');
+  } else if (nearBeehive) {
+    el.textContent = 'Press H to collect honey';
+    el.style.display = 'block';
+    setAction('KeyH', 'Honey');
+  } else if (nearPizza) {
+    el.textContent = 'Press Enter to make pizza!';
+    el.style.display = 'block';
+    setAction('Enter', 'Pizza');
+  } else if (nearHotdog) {
+    el.textContent = score >= 10 ? 'Press C to buy a hot dog (-10 pts)' : 'Not enough points for a hot dog!';
+    el.style.display = 'block';
+    setAction(score >= 10 ? 'KeyC' : null, 'Buy');
+  } else if (nearPark) {
+    el.textContent = 'Press Enter to visit Central Park';
+    el.style.display = 'block';
+    setAction('Enter', 'Enter');
+  } else if (nearTaxi) {
+    el.textContent = 'Press Enter to take a taxi to Rome!';
+    el.style.display = 'block';
+    setAction('Enter', 'Taxi');
+  } else if (nearFountain) {
+    el.textContent = 'Press S to go swimming!';
+    el.style.display = 'block';
+    setAction('KeyS', 'Swim');
+  } else if (nearGelato) {
+    el.textContent = 'Press G for gelato! (+5 pts)';
+    el.style.display = 'block';
+    setAction('KeyG', 'Gelato');
+  } else if (nearPantheonDoor) {
+    el.textContent = 'Press Enter to enter the Pantheon';
+    el.style.display = 'block';
+    setAction('Enter', 'Enter');
+  } else if (nearFiat) {
+    el.textContent = 'Press Enter to take a Fiat to Hawaii!';
+    el.style.display = 'block';
+    setAction('Enter', 'Fiat');
+  } else if (nearTiki) {
+    el.textContent = 'Press T to light tiki torch! (+15 pts)';
+    el.style.display = 'block';
+    setAction('KeyT', 'Tiki');
+  } else if (nearCoconut) {
+    el.textContent = 'Press C to collect coconut! (+10 pts)';
+    el.style.display = 'block';
+    setAction('KeyC', 'Coconut');
+  } else if (nearSurf) {
+    el.textContent = 'Press S to go surfing!';
+    el.style.display = 'block';
+    setAction('KeyS', 'Surf');
+  } else if (nearAirport) {
+    el.textContent = 'Press Enter to fly to the Alps!';
+    el.style.display = 'block';
+    setAction('Enter', 'Fly');
+  } else if (nearChalet) {
+    el.textContent = 'Press Enter to warm up in the chalet!';
+    el.style.display = 'block';
+    setAction('Enter', 'Enter');
+  } else if (nearTrain) {
+    el.textContent = 'Press Enter to take the train to NYC!';
+    el.style.display = 'block';
+    setAction('Enter', 'Train');
+  } else if (roasting.active) {
+    const pct = Math.min(100, (roasting.progress / 2000) * 100);
+    if (roasting.progress >= 2000 && roasting.progress < 3500) {
+      el.textContent = "Marshmallow is golden! Press C to make a s'more!";
+      setAction('KeyC', "S'more");
+    } else {
+      el.textContent = `Roasting marshmallow... ${Math.round(pct)}%`;
+      setAction(null, '');
+    }
+    el.style.display = 'block';
+  } else if (campPool.digging) {
+    const pct = Math.min(100, (campPool.digProgress / 3000) * 100);
+    el.textContent = `Digging pool... ${Math.round(pct)}%`;
+    el.style.display = 'block';
+    setAction(null, '');
+  } else if (campPool.filling) {
+    const pct = Math.min(100, (campPool.fillProgress / 2500) * 100);
+    el.textContent = `Filling pool... ${Math.round(pct)}%`;
+    el.style.display = 'block';
+    setAction(null, '');
+  } else if (nearStick) {
+    el.textContent = 'Press C to collect sticks!';
+    el.style.display = 'block';
+    setAction('KeyC', 'Collect');
+  } else if (nearFirePit && !campfire.built && stickCount >= 5) {
+    el.textContent = 'Press B to build a campfire! (5 sticks)';
+    el.style.display = 'block';
+    setAction('KeyB', 'Build');
+  } else if (nearFirePit && !campfire.built && stickCount < 5) {
+    el.textContent = `Need ${5 - stickCount} more sticks to build a fire!`;
+    el.style.display = 'block';
+    setAction(null, '');
+  } else if (nearFirePit && campfire.lit) {
+    el.textContent = 'Press R to roast a marshmallow!';
+    el.style.display = 'block';
+    setAction('KeyR', 'Roast');
+  } else if (nearHammock) {
+    el.textContent = 'Press N to nap in the hammock!';
+    el.style.display = 'block';
+    setAction('KeyN', 'Nap');
+  } else if (nearBigfoot) {
+    el.textContent = 'Press M for chocolate milk with Bigfoot!';
+    el.style.display = 'block';
+    setAction('KeyM', 'Drink');
+  } else if (nearDigSite && !campPool.dug) {
+    el.textContent = 'Press D to dig a pool!';
+    el.style.display = 'block';
+    setAction('KeyD', 'Dig');
+  } else if (nearWaterPump && campPool.dug && !campPool.filled) {
+    el.textContent = 'Press W to fill the pool with water!';
+    el.style.display = 'block';
+    setAction('KeyW', 'Fill');
+  } else if (nearPool && campPool.filled) {
+    el.textContent = 'Press S to swim in your pool!';
+    el.style.display = 'block';
+    setAction('KeyS', 'Swim');
+  } else if (nearCampCamper) {
+    el.textContent = 'Press Enter to enter the camper!';
+    el.style.display = 'block';
+    setAction('Enter', 'Enter');
+  } else if (nearNpc) {
+    el.textContent = 'Press Q to talk!';
+    el.style.display = 'block';
+    setAction('KeyQ', 'Talk');
+  } else if (currentLevel === 2 && !nearTrain) {
+    el.textContent = 'Sled downhill! Dodge snowmen, collect snowballs!';
+    el.style.display = 'block';
+    setAction(null, '');
+  } else if (currentLevel === 6) {
+    el.textContent = 'Ski downhill! Dodge trees, jump cornices, collect diamonds!';
+    el.style.display = 'block';
+    setAction(null, '');
+  } else if (currentLevel === 1 && Math.abs(player.x - BRIDGE_PORTAL.x) < 60) {
+    el.textContent = 'Press Enter to go sledding!';
+    el.style.display = 'block';
+    setAction('Enter', 'Sled');
+  } else {
+    el.style.display = 'none';
+    setAction(null, '');
+  }
+}
