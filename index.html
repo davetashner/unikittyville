@@ -5139,9 +5139,9 @@ function drawParkInterior(cam, W, H) {
   const bfx = cx - 50 + Math.sin(gameTime / 500) * 40;
   const bfy = cy - 20 + Math.cos(gameTime / 400) * 15;
   ctx.fillStyle = '#e879f9';
-  const wing = Math.sin(gameTime / 100) * 4;
-  ctx.beginPath(); ctx.ellipse(bfx - 3, bfy, 3 + wing, 5, -0.3, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(bfx + 3, bfy, 3 + wing, 5, 0.3, 0, Math.PI * 2); ctx.fill();
+  const wing = Math.abs(Math.sin(gameTime / 100)) * 4;
+  ctx.beginPath(); ctx.ellipse(bfx - 3, bfy, 1 + wing, 5, -0.3, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(bfx + 3, bfy, 1 + wing, 5, 0.3, 0, Math.PI * 2); ctx.fill();
   // Title and instructions
   ctx.fillStyle = '#fff'; ctx.font = 'bold 18px system-ui'; ctx.textAlign = 'center';
   ctx.fillText('Central Park', cx, cy - 130);
