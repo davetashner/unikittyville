@@ -4937,22 +4937,23 @@ function drawPizzaInterior(cam, W, H) {
 
 function drawParkInterior(cam, W, H) {
   ctx.globalAlpha = 1;
-  const cx = player.x;
+  const cx = cam + W / 2;
   const cy = GROUND_Y - 80;
+  const hw = W / 2 + 20; // half-width with margin
 
   // Sky — cover full visible area
   ctx.fillStyle = '#87ceeb';
-  ctx.fillRect(cx - 300, 0, 600, cy);
+  ctx.fillRect(cam - 10, 0, W + 20, cy);
   // Grass ground
   ctx.fillStyle = '#4ade80';
-  ctx.fillRect(cx - 300, cy, 600, H);
+  ctx.fillRect(cam - 10, cy, W + 20, H);
   // Walking path
   ctx.fillStyle = '#d4a574';
   ctx.beginPath();
-  ctx.moveTo(cx - 250, cy + 60);
-  ctx.quadraticCurveTo(cx, cy + 40, cx + 250, cy + 70);
-  ctx.lineTo(cx + 250, cy + 80);
-  ctx.quadraticCurveTo(cx, cy + 60, cx - 250, cy + 70);
+  ctx.moveTo(cx - hw, cy + 60);
+  ctx.quadraticCurveTo(cx, cy + 40, cx + hw, cy + 70);
+  ctx.lineTo(cx + hw, cy + 80);
+  ctx.quadraticCurveTo(cx, cy + 60, cx - hw, cy + 70);
   ctx.fill();
   // Trees
   for (let i = -2; i <= 2; i++) {
