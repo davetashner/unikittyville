@@ -7741,7 +7741,7 @@ function drawCampCamper(x) {
   if (campCamperImg.complete && campCamperImg.naturalWidth > 0) {
     const imgW = 160;
     const imgH = imgW * (campCamperImg.naturalHeight / campCamperImg.naturalWidth);
-    ctx.drawImage(campCamperImg, x - imgW / 2, gy - imgH + 5, imgW, imgH);
+    ctx.drawImage(campCamperImg, x - imgW / 2, gy - imgH + 25, imgW, imgH);
   } else {
     // Fallback: simple rectangle camper
     ctx.fillStyle = '#e5e7eb';
