@@ -1297,6 +1297,13 @@ function completeTransition() {
   camperPhone = { ringing: false, answered: false, ringTimer: 0, callTimer: 0, dialogue: '' };
   drinkingCocoa = false;
   cocoaDrinkTimer = 0;
+  insideCampCamper = false;
+  campCamperPlayerX = 0;
+  campCamperSleeping = false;
+  campCamperSleepTimer = 0;
+  campCamperPasta = { cooking: false, progress: 0, eaten: 0 };
+  campCamperShowering = false;
+  campCamperShowerTimer = 0;
 }
 
 function getCurrentPlatforms() {
@@ -1590,6 +1597,15 @@ let campPool = { dug: false, filled: false, digging: false, digProgress: 0, fill
 let swimmingInPool = false;
 let leprechaunGold = 0;
 let leprechaunSpeech = { text: '', timer: 0 };
+// Camp camper (end of campground level)
+let insideCampCamper = false;
+let campCamperPlayerX = 0;
+let campCamperSleeping = false;
+let campCamperSleepTimer = 0;
+let campCamperPasta = { cooking: false, progress: 0, eaten: 0 };
+let campCamperShowering = false;
+let campCamperShowerTimer = 0;
+const CAMP_CAMPER_POS = { x: 4700 };
 
 const CAMP_WORLD_W = 5000;
 const FIRE_PIT_POS = { x: 1200 };
@@ -1663,6 +1679,8 @@ for (let i = 0; i < 4; i++) {
 // ── Canvas Setup ──
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
+const campCamperImg = new Image();
+campCamperImg.src = 'assets/images/camper.png';
 
 function resize() {
   const ASPECT = 16 / 9;
@@ -1819,6 +1837,82 @@ function update(dt) {
     levelTransition.timer += dt;
     if (levelTransition.timer > 1500) {
       completeTransition();
+    }
+    return;
+  }
+
+  if (insideCampCamper) {
+    // Sleeping in bed
+    if (campCamperSleeping) {
+      campCamperSleepTimer += dt;
+      if (keys['KeyN']) {
+        keys['KeyN'] = false;
+        campCamperSleeping = false;
+        const napSec = Math.floor(campCamperSleepTimer / 1000);
+        const bonus = Math.min(50, napSec * 5);
+        score += bonus;
+        addPopup(player.x, player.y - 40, `+${bonus} Good sleep!`, '#a78bfa');
+        playChaChing();
+        campCamperSleepTimer = 0;
+      }
+      return;
+    }
+    // Showering
+    if (campCamperShowering) {
+      campCamperShowerTimer += dt;
+      if (campCamperShowerTimer >= 3000) {
+        campCamperShowering = false;
+        campCamperShowerTimer = 0;
+        score += 20;
+        addPopup(player.x, player.y - 40, '+20 So fresh!', '#38bdf8');
+        playChaChing();
+      }
+      return;
+    }
+    // Walk around inside
+    if (keys['ArrowLeft']) { campCamperPlayerX = Math.max(-160, campCamperPlayerX - 3); player.facing = -1; }
+    if (keys['ArrowRight']) { campCamperPlayerX = Math.min(160, campCamperPlayerX + 3); player.facing = 1; }
+    if (keys['ArrowLeft'] || keys['ArrowRight']) {
+      player.walkTimer += dt;
+      if (player.walkTimer > 120) { player.walkTimer = 0; player.walkFrame = (player.walkFrame + 1) % 4; }
+    } else { player.walkFrame = 0; }
+    // Sleep in bed (right side: x > 100, left side: x < -100)
+    if ((campCamperPlayerX > 100 || campCamperPlayerX < -100) && keys['KeyN']) {
+      keys['KeyN'] = false;
+      campCamperSleeping = true;
+      campCamperSleepTimer = 0;
+    }
+    // Fridge — get pasta (near center)
+    if (Math.abs(campCamperPlayerX) < 30 && keys['KeyC'] && !campCamperPasta.cooking) {
+      keys['KeyC'] = false;
+      campCamperPasta.cooking = true;
+      campCamperPasta.progress = 0;
+    }
+    if (campCamperPasta.cooking) {
+      campCamperPasta.progress += dt;
+      if (campCamperPasta.progress >= 3000) {
+        campCamperPasta.cooking = false;
+        campCamperPasta.progress = 0;
+        campCamperPasta.eaten++;
+        score += 25;
+        addPopup(player.x, player.y - 40, '+25 Delicious pasta!', '#fbbf24');
+        playChaChing();
+      }
+    }
+    // Bathroom — shower (left of center, around -60 to -90)
+    if (campCamperPlayerX < -50 && campCamperPlayerX > -100 && keys['KeyS']) {
+      keys['KeyS'] = false;
+      campCamperShowering = true;
+      campCamperShowerTimer = 0;
+    }
+    // Exit
+    if (keys['Enter'] && !campCamperPasta.cooking) {
+      keys['Enter'] = false;
+      insideCampCamper = false;
+      campCamperPlayerX = 0;
+      player.y = GROUND_Y;
+      player.vy = 0;
+      player.onGround = true;
     }
     return;
   }
@@ -2463,6 +2557,7 @@ function update(dt) {
   let nearDigSite = false;
   let nearWaterPump = false;
   let nearPool = false;
+  let nearCampCamper = false;
   if (currentLevel === 7) {
     // Stick collection
     for (let i = 0; i < STICK_POSITIONS.length; i++) {
@@ -2611,6 +2706,15 @@ function update(dt) {
       keys['KeyS'] = false;
       swimmingInPool = false;
     }
+    // Camp camper entry
+    if (Math.abs(player.x - CAMP_CAMPER_POS.x) < 55) {
+      nearCampCamper = true;
+      if (keys['Enter'] && !insideCampCamper) {
+        keys['Enter'] = false;
+        insideCampCamper = true;
+        campCamperPlayerX = 0;
+      }
+    }
     // Leprechaun interaction while swimming — press Q to ask for gold
     if (swimmingInPool && keys['KeyQ']) {
       keys['KeyQ'] = false;
@@ -2721,7 +2825,7 @@ function update(dt) {
 
   // NPC talk — Q key to chat with nearby NPCs
   let nearNpc = false;
-  if (!insideChalet && !insideHouse && !insideCamper && !insideWindmill && !insidePizza && !insidePark && !insidePantheon && !swimming && !surfing && !swimmingInPool) {
+  if (!insideChalet && !insideHouse && !insideCamper && !insideWindmill && !insidePizza && !insidePark && !insidePantheon && !swimming && !surfing && !swimmingInPool && !insideCampCamper) {
     for (const npc of activeNpcs) {
       if (Math.abs(player.x - npc.x) < NPC_TALK_RANGE) {
         nearNpc = true;
@@ -2806,13 +2910,13 @@ function update(dt) {
   }
 
   // Hide controls during interior/mini-game scenes (always hidden on mobile)
-  const inScene = insideHouse || insideCamper || insideWindmill || insidePizza || insidePark || insidePantheon || swimming || surfing || insideChalet || swimmingInPool;
+  const inScene = insideHouse || insideCamper || insideWindmill || insidePizza || insidePark || insidePantheon || swimming || surfing || insideChalet || swimmingInPool || insideCampCamper;
   if (!isMobile) {
     document.getElementById('controls').style.display = inScene ? 'none' : 'flex';
   }
 
   // Prompt
-  updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf, nearAirport, nearChalet, nearTrain, nearNpc, nearStick, nearFirePit, nearHammock, nearBigfoot, nearDigSite, nearWaterPump, nearPool);
+  updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf, nearAirport, nearChalet, nearTrain, nearNpc, nearStick, nearFirePit, nearHammock, nearBigfoot, nearDigSite, nearWaterPump, nearPool, nearCampCamper);
 }
 
 function getGroundLevel(x) {
@@ -2895,8 +2999,36 @@ function setAction(key, label) {
   }
 }
 
-function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf, nearAirport, nearChalet, nearTrain, nearNpc, nearStick, nearFirePit, nearHammock, nearBigfoot, nearDigSite, nearWaterPump, nearPool) {
+function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf, nearAirport, nearChalet, nearTrain, nearNpc, nearStick, nearFirePit, nearHammock, nearBigfoot, nearDigSite, nearWaterPump, nearPool, nearCampCamper) {
   const el = document.getElementById('prompt');
+  if (insideCampCamper) {
+    if (campCamperSleeping) {
+      el.textContent = 'Sleeping... zzz (Press N to wake up)';
+      setAction('KeyN', 'Wake');
+    } else if (campCamperShowering) {
+      const pct = Math.min(100, (campCamperShowerTimer / 3000) * 100);
+      el.textContent = `Showering... ${Math.round(pct)}%`;
+      setAction(null, '');
+    } else if (campCamperPasta.cooking) {
+      const pct = Math.min(100, (campCamperPasta.progress / 3000) * 100);
+      el.textContent = `Making pasta... ${Math.round(pct)}%`;
+      setAction(null, '');
+    } else if (campCamperPlayerX > 100 || campCamperPlayerX < -100) {
+      el.textContent = 'Press N to go to sleep!';
+      setAction('KeyN', 'Sleep');
+    } else if (Math.abs(campCamperPlayerX) < 30) {
+      el.textContent = 'Press C to get pasta from the fridge!';
+      setAction('KeyC', 'Pasta');
+    } else if (campCamperPlayerX < -50 && campCamperPlayerX > -100) {
+      el.textContent = 'Press S to take a shower!';
+      setAction('KeyS', 'Shower');
+    } else {
+      el.textContent = 'Walk around the camper! (Enter to leave)';
+      setAction('Enter', 'Exit');
+    }
+    el.style.display = 'block';
+    return;
+  }
   if (swimmingInPool) {
     el.textContent = 'Swimming in your pool! Q: Talk to Leprechaun | S: Get out';
     el.style.display = 'block';
@@ -3147,6 +3279,10 @@ function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, ne
     el.textContent = 'Press S to swim in your pool!';
     el.style.display = 'block';
     setAction('KeyS', 'Swim');
+  } else if (nearCampCamper) {
+    el.textContent = 'Press Enter to enter the camper!';
+    el.style.display = 'block';
+    setAction('Enter', 'Enter');
   } else if (nearNpc) {
     el.textContent = 'Press Q to talk!';
     el.style.display = 'block';
@@ -3224,6 +3360,8 @@ function draw() {
     drawChaletInterior(cam, W, H);
   } else if (swimmingInPool) {
     drawPoolSwimmingScene(cam, W, H);
+  } else if (insideCampCamper) {
+    drawCampCamperInterior(cam, W, H);
   } else if (currentLevel === 1) {
     drawLevel1World(W, H, cam, cycle, isNight);
   } else if (currentLevel === 2) {
@@ -7025,6 +7163,11 @@ function drawCampgroundScenes(cam, W) {
   if (WATER_PUMP_POS.x > cam - 60 && WATER_PUMP_POS.x < cam + W + 60) {
     drawWaterPump(WATER_PUMP_POS.x);
   }
+
+  // Camp camper (drawn from image)
+  if (CAMP_CAMPER_POS.x > cam - 200 && CAMP_CAMPER_POS.x < cam + W + 100) {
+    drawCampCamper(CAMP_CAMPER_POS.x);
+  }
 }
 
 function drawCampPineTree(x) {
@@ -7474,6 +7617,184 @@ function drawPoolSwimmingScene(cam, W, H) {
     ctx.fillStyle = '#fbbf24'; ctx.font = 'bold 13px system-ui'; ctx.textAlign = 'left';
     ctx.fillText('Gold: ' + leprechaunGold, cam + 15, 25);
   }
+  ctx.textAlign = 'left';
+}
+
+function drawCampCamper(x) {
+  const gy = GROUND_Y;
+  // Draw the camper image
+  if (campCamperImg.complete && campCamperImg.naturalWidth > 0) {
+    const imgW = 160;
+    const imgH = imgW * (campCamperImg.naturalHeight / campCamperImg.naturalWidth);
+    ctx.drawImage(campCamperImg, x - imgW / 2, gy - imgH + 5, imgW, imgH);
+  } else {
+    // Fallback: simple rectangle camper
+    ctx.fillStyle = '#e5e7eb';
+    ctx.beginPath(); ctx.roundRect(x - 60, gy - 60, 120, 60, 8); ctx.fill();
+    ctx.fillStyle = '#6b7280';
+    ctx.fillRect(x - 55, gy - 50, 30, 20);
+    ctx.fillRect(x + 15, gy - 50, 30, 20);
+    ctx.fillStyle = '#1f2937';
+    ctx.beginPath(); ctx.arc(x - 30, gy, 10, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x + 30, gy, 10, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+function drawCampCamperInterior(cam, W, H) {
+  const cx = cam + W / 2;
+  const cy = GROUND_Y - 80;
+  const kittyX = cx + campCamperPlayerX;
+
+  // Camper walls — warm wood interior
+  ctx.fillStyle = '#d4a574';
+  ctx.fillRect(cam, 0, W, H);
+  // Back wall (lighter)
+  ctx.fillStyle = '#fef3c7';
+  ctx.fillRect(cam, cy - 100, W, 180);
+  // Floor
+  ctx.fillStyle = '#8B7355';
+  ctx.fillRect(cam, cy + 80, W, H);
+  // Wood floor planks
+  ctx.strokeStyle = '#6B5440'; ctx.lineWidth = 0.5;
+  for (let fx = Math.floor(cam / 40) * 40; fx < cam + W; fx += 40) {
+    ctx.beginPath(); ctx.moveTo(fx, cy + 80); ctx.lineTo(fx, cy + 160); ctx.stroke();
+  }
+
+  // ── Left bed (x < -100) ──
+  const lbx = cx - 140;
+  const lby = cy + 30;
+  // Bed frame
+  ctx.fillStyle = '#5c3a1e';
+  ctx.fillRect(lbx - 30, lby, 60, 35);
+  // Mattress
+  ctx.fillStyle = '#e9d5ff';
+  ctx.fillRect(lbx - 28, lby + 2, 56, 16);
+  // Pillow
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.ellipse(lbx - 15, lby + 8, 10, 5, 0, 0, Math.PI * 2); ctx.fill();
+  // Blanket
+  ctx.fillStyle = '#7c3aed';
+  ctx.fillRect(lbx - 10, lby + 10, 38, 10);
+  // Label
+  ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '9px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText('Bed', lbx, lby + 50);
+
+  // ── Right bed (x > 100) ──
+  const rbx = cx + 140;
+  const rby = cy + 30;
+  ctx.fillStyle = '#5c3a1e';
+  ctx.fillRect(rbx - 30, rby, 60, 35);
+  ctx.fillStyle = '#fda4af';
+  ctx.fillRect(rbx - 28, rby + 2, 56, 16);
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.ellipse(rbx + 15, rby + 8, 10, 5, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#f472b6';
+  ctx.fillRect(rbx - 28, rby + 10, 38, 10);
+  ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '9px system-ui';
+  ctx.fillText('Bed', rbx, rby + 50);
+
+  // ── Fridge (center) ──
+  const fridgeX = cx;
+  const fridgeY = cy - 50;
+  ctx.fillStyle = '#d1d5db';
+  ctx.beginPath(); ctx.roundRect(fridgeX - 20, fridgeY, 40, 70, 4); ctx.fill();
+  // Fridge door line
+  ctx.strokeStyle = '#9ca3af'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(fridgeX - 18, fridgeY + 30); ctx.lineTo(fridgeX + 18, fridgeY + 30); ctx.stroke();
+  // Handle
+  ctx.fillStyle = '#6b7280';
+  ctx.fillRect(fridgeX + 14, fridgeY + 10, 3, 12);
+  ctx.fillRect(fridgeX + 14, fridgeY + 38, 3, 12);
+  // Label
+  ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '9px system-ui';
+  ctx.fillText('Fridge', fridgeX, fridgeY + 82);
+
+  // ── Bathroom (left of fridge, -50 to -100) ──
+  const bathX = cx - 75;
+  const bathY = cy - 40;
+  // Shower stall
+  ctx.fillStyle = '#bfdbfe';
+  ctx.beginPath(); ctx.roundRect(bathX - 20, bathY, 40, 60, 4); ctx.fill();
+  // Shower curtain
+  ctx.fillStyle = '#93c5fd';
+  ctx.fillRect(bathX - 18, bathY + 2, 36, 8);
+  // Shower head
+  ctx.fillStyle = '#6b7280';
+  ctx.beginPath(); ctx.arc(bathX, bathY + 8, 5, 0, Math.PI * 2); ctx.fill();
+  // Water drops (if showering)
+  if (campCamperShowering) {
+    ctx.fillStyle = '#60a5fa';
+    for (let i = 0; i < 8; i++) {
+      const dx = bathX - 8 + Math.random() * 16;
+      const dy = bathY + 15 + Math.random() * 35;
+      ctx.beginPath(); ctx.ellipse(dx, dy, 1.5, 3, 0, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  // Label
+  ctx.fillStyle = 'rgba(255,255,255,0.5)'; ctx.font = '9px system-ui';
+  ctx.fillText('Shower', bathX, bathY + 72);
+
+  // ── Door (far right edge) ──
+  ctx.fillStyle = '#92400e';
+  ctx.fillRect(cam + W - 40, cy - 20, 30, 80);
+  ctx.fillStyle = '#fbbf24';
+  ctx.beginPath(); ctx.arc(cam + W - 16, cy + 20, 3, 0, Math.PI * 2); ctx.fill();
+
+  // ── Sleeping animation ──
+  if (campCamperSleeping) {
+    const bedX = campCamperPlayerX > 0 ? rbx : lbx;
+    const bedY = campCamperPlayerX > 0 ? rby : lby;
+    const blanketColor = campCamperPlayerX > 0 ? '#f472b6' : '#7c3aed';
+    // Blanket over kitty
+    ctx.fillStyle = blanketColor;
+    ctx.beginPath(); ctx.roundRect(bedX - 25, bedY + 2, 50, 18, 4); ctx.fill();
+    // Kitty head peeking
+    drawKitty(bedX - 10, bedY - 5, player.color || '#c4b5fd', 1, 0, 'horn');
+    // Zzz
+    ctx.fillStyle = '#c4b5fd'; ctx.font = 'bold 14px system-ui'; ctx.textAlign = 'center';
+    const zFloat = (gameTime / 600) % 1;
+    for (let i = 0; i < 3; i++) {
+      ctx.globalAlpha = Math.sin(gameTime / 300 + i * 1.5) * 0.3 + 0.7;
+      ctx.fillText(i === 2 ? 'Z' : 'z', bedX + 20 + i * 10, bedY - 15 - i * 14 - zFloat * 6);
+    }
+    ctx.globalAlpha = 1;
+  } else if (campCamperShowering) {
+    // Kitty in shower (just head visible)
+    drawKitty(bathX, bathY + 35, player.color || '#c4b5fd', 1, 0, 'horn');
+    // Steam
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    for (let i = 0; i < 5; i++) {
+      const sx = bathX - 10 + Math.sin(gameTime / 300 + i) * 8;
+      const sy = bathY - 5 - (gameTime / 200 + i * 10) % 20;
+      ctx.beginPath(); ctx.arc(sx, sy, 3 + Math.random() * 2, 0, Math.PI * 2); ctx.fill();
+    }
+  } else {
+    // Kitty walking around
+    drawKitty(kittyX, cy + 60, player.color || '#c4b5fd', player.facing, player.walkFrame, 'horn');
+  }
+
+  // Pasta on counter if cooking
+  if (campCamperPasta.cooking) {
+    const potX = cx + 5;
+    const potY = cy - 15;
+    ctx.fillStyle = '#6b7280';
+    ctx.beginPath(); ctx.roundRect(potX - 10, potY, 20, 15, 2); ctx.fill();
+    // Steam from pot
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    for (let i = 0; i < 3; i++) {
+      const sx = potX - 5 + i * 5;
+      const sy = potY - 5 - (gameTime / 200 + i * 8) % 12;
+      ctx.beginPath(); ctx.arc(sx, sy, 2, 0, Math.PI * 2); ctx.fill();
+    }
+    // Progress bar
+    const pct = campCamperPasta.progress / 3000;
+    ctx.fillStyle = '#1f2937'; ctx.fillRect(cx - 40, cy + 100, 80, 8);
+    ctx.fillStyle = '#fbbf24'; ctx.fillRect(cx - 40, cy + 100, 80 * pct, 8);
+  }
+
+  // Title
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 16px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText('Camp Camper', cx, cy - 110);
   ctx.textAlign = 'left';
 }
 </script>
