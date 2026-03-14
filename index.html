@@ -1705,15 +1705,18 @@ function update(dt) {
   }
 
   if (insideCamper) {
-    // Nap in bed
+    // Nap in bed — stay tucked in until N is pressed again
     if (camperNapping) {
       camperNapTimer += dt;
-      if (camperNapTimer >= CAMPER_NAP_DURATION) {
+      if (keys['KeyN']) {
+        keys['KeyN'] = false;
         camperNapping = false;
-        camperNapTimer = 0;
-        score += 10;
-        addPopup(player.x, player.y - 40, '+10 Refreshed!', '#a78bfa');
+        const napSeconds = Math.floor(camperNapTimer / 1000);
+        const bonus = Math.min(50, napSeconds * 5);
+        score += bonus;
+        addPopup(player.x, player.y - 40, `+${bonus} Refreshed!`, '#a78bfa');
         playChaChing();
+        camperNapTimer = 0;
       }
       return;
     }
@@ -2795,7 +2798,8 @@ function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, ne
   }
   if (insideCamper) {
     if (camperNapping) {
-      el.textContent = 'Napping... zzz';
+      el.textContent = 'Tucked in... zzz (Press N to wake up)';
+      setAction('KeyN', 'Wake');
     } else if (camperPhone.answered) {
       el.textContent = 'On the phone...';
     } else if (camperPhone.ringing) {
@@ -4653,24 +4657,35 @@ function drawCamperInterior(cam, W, H) {
     ctx.fillText(line.trim(), cx, lineY);
   }
 
-  // Napping animation
+  // Napping animation — tucked into bed
   if (camperNapping) {
-    // Kitty in bed
+    // Blanket over kitty (drawn before kitty head peeking out)
+    ctx.fillStyle = '#7c3aed';
+    ctx.beginPath(); ctx.roundRect(cx + 105, cy - 30, 70, 40, 6); ctx.fill();
+    // Blanket pattern — subtle stripes
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 1;
+    for (let i = 0; i < 4; i++) {
+      ctx.beginPath(); ctx.moveTo(cx + 110, cy - 22 + i * 10);
+      ctx.lineTo(cx + 170, cy - 22 + i * 10); ctx.stroke();
+    }
+    // Kitty head peeking out from blanket
     drawKitty(cx + 140, cy - 40, player.color, 1, 0, 'horn');
-    // Zzz
-    const napPhase = camperNapTimer / CAMPER_NAP_DURATION;
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 14px system-ui'; ctx.textAlign = 'center';
+    // Pillow
+    ctx.fillStyle = '#e9d5ff';
+    ctx.beginPath(); ctx.ellipse(cx + 155, cy - 42, 18, 8, 0.1, 0, Math.PI * 2); ctx.fill();
+    // Zzz floating up
+    ctx.fillStyle = '#c4b5fd'; ctx.font = 'bold 14px system-ui'; ctx.textAlign = 'center';
+    const zFloat = (gameTime / 600) % 1;
     for (let i = 0; i < 3; i++) {
       const zAlpha = Math.sin(gameTime / 300 + i * 1.5) * 0.3 + 0.7;
+      const zy = cy - 60 - i * 18 - zFloat * 8;
       ctx.globalAlpha = zAlpha;
-      ctx.fillText('z', cx + 160 + i * 12, cy - 60 - i * 15);
+      ctx.fillText(i === 2 ? 'Z' : 'z', cx + 160 + i * 12, zy);
     }
     ctx.globalAlpha = 1;
-    // Progress bar
-    ctx.fillStyle = '#1f2937'; ctx.fillRect(cx - 40, cy + 100, 80, 8);
-    ctx.fillStyle = '#a78bfa'; ctx.fillRect(cx - 40, cy + 100, 80 * napPhase, 8);
-    ctx.fillStyle = '#fff'; ctx.font = '13px system-ui';
-    ctx.fillText('Napping...', cx, cy + 125);
+    // Hint text
+    ctx.fillStyle = 'rgba(255,255,255,0.6)'; ctx.font = '13px system-ui';
+    ctx.fillText('Press N to wake up', cx, cy + 115);
   } else {
     // Draw player walking around
     drawKitty(kittyX, cy + 60, player.color, player.facing, player.walkFrame, 'horn');
