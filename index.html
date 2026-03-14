@@ -352,6 +352,7 @@
 <audio id="musicAlps" src="assets/music/alps.mp3" loop preload="auto"></audio>
 <audio id="musicSledding" src="assets/music/sledding.mp3" loop preload="auto"></audio>
 <audio id="musicChalet" src="assets/music/chalet.mp3" loop preload="auto"></audio>
+<audio id="musicCampground" src="assets/music/theme.mp3" loop preload="auto"></audio>
 <audio id="meow1" src="assets/sfx/kitty-meow-01.mp3" preload="auto"></audio>
 <audio id="meow2" src="assets/sfx/kitty-meow-02.mp3" preload="auto"></audio>
 <audio id="chaChing" src="assets/sfx/cha-ching.mp3" preload="auto"></audio>
@@ -376,7 +377,7 @@
   <span>Score: <b id="hudScore">0</b></span>
   <span class="hud-item" data-levels="1">Fish: <b id="hudFish">0</b></span>
   <span class="hud-item" data-levels="1">Bacon: <b id="hudBacon">0</b></span>
-  <span class="hud-item" data-levels="1,3,4,5">Yarn: <b id="hudYarn">0</b></span>
+  <span class="hud-item" data-levels="1,3,4,5,7">Yarn: <b id="hudYarn">0</b></span>
   <span class="hud-item" data-levels="3">Pizza: <b id="hudPizza">0</b></span>
   <span class="hud-item" data-levels="3">Hot Dogs: <b id="hudHotdog">0</b></span>
   <span class="hud-item" data-levels="4">Gelato: <b id="hudGelato">0</b></span>
@@ -385,6 +386,8 @@
   <span class="hud-item" data-levels="5">Coconuts: <b id="hudCoconut">0</b></span>
   <span class="hud-item" data-levels="6">Diamonds: <b id="hudDiamond">0</b></span>
   <span class="hud-item" data-levels="2">Snowballs: <b id="hudSnowball">0</b></span>
+  <span class="hud-item" data-levels="7">Sticks: <b id="hudStick">0</b></span>
+  <span class="hud-item" data-levels="7">S'mores: <b id="hudSmore">0</b></span>
 </div>
 <div id="controls">
   <span>Arrow Keys: Move</span>
@@ -425,6 +428,7 @@ const HOUSE = { x: 1600, w: 160, h: 160 };
 // ── State ──
 let playerName = 'Sparkle';
 let score = 0, fishCount = 0, baconCount = 0, yarnCount = 0;
+let yarnBonusAwarded = {}; // tracks which levels have had the all-yarn bonus awarded
 let gameTime = 0;
 let insideHouse = false;
 let insidePizza = false;
@@ -566,6 +570,20 @@ const npcDialogs = {
     "The snow up here sparkles almost as much as me!",
     "Watch out for the trees! They jump out at you!",
     "Hot chocolate after skiing is the best thing ever invented!",
+  ],
+  7: [ // Campground
+    "Nothing beats the smell of a campfire!",
+    "I saw Bigfoot over there... he seems friendly!",
+    "S'mores are the best invention since yarn balls!",
+    "This hammock is SO cozy! I could nap all day!",
+    "Did you bring enough sticks? The fire pit needs fuel!",
+    "I tried digging a pool with my paws. Bad idea!",
+    "Bigfoot's chocolate milk recipe is top secret!",
+    "The stars out here are amazing... almost as sparkly as me!",
+    "I heard an owl last night. We had a great conversation!",
+    "Camping tip: always keep your marshmallows safe from raccoons!",
+    "Who needs a tent when you have a hammock and the stars?",
+    "Bigfoot said I'm the first unicorn cat he's ever met!",
   ],
 };
 const SLED_WORLD_W = 5000;
@@ -714,7 +732,7 @@ function applyVolume() {
 
 // ── Music system with crossfade ──
 const FADE_DURATION = 1200; // ms
-const levelMusic = { 1: 'musicMeadow', 2: 'musicSledding', 3: 'musicNYC', 4: 'musicRome', 5: 'musicHawaii', 6: 'musicAlps', 7: 'musicChalet' };
+const levelMusic = { 1: 'musicMeadow', 2: 'musicSledding', 3: 'musicNYC', 4: 'musicRome', 5: 'musicHawaii', 6: 'musicAlps', 7: 'musicChalet', 8: 'musicCampground' };
 let currentMusicId = null;
 let musicFade = null; // { out: AudioElement, in: AudioElement, timer: 0 }
 
@@ -1129,6 +1147,12 @@ function completeTransition() {
   skiing = false;
   sledding = false;
   insideChalet = false;
+  swimmingInPool = false;
+  hammockNapping = false;
+  hammockNapTimer = 0;
+  bigfootDrinking = false;
+  bigfootDrinkTimer = 0;
+  roasting = { active: false, progress: 0, done: false };
   activeSpeechBubbles = [];
   pizzaMaking.stage = 'idle';
   pizzaMaking.progress = 0;
@@ -1142,15 +1166,15 @@ function completeTransition() {
 }
 
 function getCurrentPlatforms() {
-  return currentLevel === 1 ? platforms : currentLevel === 2 ? level2Sled.platforms : currentLevel === 3 ? level2.platforms : currentLevel === 4 ? level3.platforms : currentLevel === 5 ? level4.platforms : level5.platforms;
+  return currentLevel === 1 ? platforms : currentLevel === 2 ? level2Sled.platforms : currentLevel === 3 ? level2.platforms : currentLevel === 4 ? level3.platforms : currentLevel === 5 ? level4.platforms : currentLevel === 7 ? level6.platforms : level5.platforms;
 }
 
 function getCurrentYarnBalls() {
-  return currentLevel === 1 ? yarnBalls : currentLevel === 2 ? level2Sled.yarnBalls : currentLevel === 3 ? level2.yarnBalls : currentLevel === 4 ? level3.yarnBalls : currentLevel === 5 ? level4.yarnBalls : level5.yarnBalls;
+  return currentLevel === 1 ? yarnBalls : currentLevel === 2 ? level2Sled.yarnBalls : currentLevel === 3 ? level2.yarnBalls : currentLevel === 4 ? level3.yarnBalls : currentLevel === 5 ? level4.yarnBalls : currentLevel === 7 ? level6.yarnBalls : level5.yarnBalls;
 }
 
 function getCurrentWorldW() {
-  return currentLevel === 1 ? WORLD_W : currentLevel === 2 ? level2Sled.worldW : currentLevel === 3 ? level2.worldW : currentLevel === 4 ? level3.worldW : currentLevel === 5 ? level4.worldW : level5.worldW;
+  return currentLevel === 1 ? WORLD_W : currentLevel === 2 ? level2Sled.worldW : currentLevel === 3 ? level2.worldW : currentLevel === 4 ? level3.worldW : currentLevel === 5 ? level4.worldW : currentLevel === 7 ? level6.worldW : level5.worldW;
 }
 
 // ── Level 3: Rome ──
@@ -1417,6 +1441,89 @@ for (let i = 0; i < 4; i++) {
   });
 }
 
+// ── Level 7: Campground ──
+let stickCount = 0;
+let smoreCount = 0;
+let campfire = { built: false, lit: false };
+let roasting = { active: false, progress: 0, done: false };
+let hammockNapping = false;
+let hammockNapTimer = 0;
+const HAMMOCK_NAP_DURATION = 3000;
+let bigfootDrinking = false;
+let bigfootDrinkTimer = 0;
+const BIGFOOT_DRINK_DURATION = 3000;
+let campPool = { dug: false, filled: false, digging: false, digProgress: 0, filling: false, fillProgress: 0 };
+let swimmingInPool = false;
+
+const CAMP_WORLD_W = 5000;
+const FIRE_PIT_POS = { x: 1200 };
+const STICK_POSITIONS = [400, 900, 1600, 2200, 2800, 3400, 4000, 4500];
+const HAMMOCK_POS = { x: 2000 };
+const BIGFOOT_POS = { x: 3000 };
+const DIG_SITE_POS = { x: 3800 };
+const WATER_PUMP_POS = { x: 4100 };
+
+const level6 = {
+  worldW: CAMP_WORLD_W,
+  platforms: [
+    { x: 200, y: 340, w: 90 },
+    { x: 450, y: 280, w: 80 },
+    { x: 700, y: 220, w: 90 },
+    { x: 950, y: 340, w: 100 },
+    { x: 1250, y: 270, w: 80 },
+    { x: 1500, y: 210, w: 90 },
+    { x: 1750, y: 330, w: 80 },
+    { x: 2050, y: 260, w: 90 },
+    { x: 2300, y: 340, w: 100 },
+    { x: 2550, y: 280, w: 80 },
+    { x: 2800, y: 220, w: 90 },
+    { x: 3100, y: 340, w: 80 },
+    { x: 3350, y: 270, w: 90 },
+    { x: 3600, y: 210, w: 80 },
+    { x: 3900, y: 330, w: 100 },
+    { x: 4150, y: 260, w: 80 },
+    { x: 4400, y: 340, w: 90 },
+    { x: 4700, y: 280, w: 80 },
+  ],
+  yarnBalls: [],
+  sticksCollected: [], // track which stick piles have been collected
+};
+
+// Init campground yarn balls on higher platforms
+for (const p of level6.platforms) {
+  if (p.y < 300) {
+    level6.yarnBalls.push({
+      x: p.x + p.w / 2,
+      y: p.y - 14,
+      color: yarnColors[level6.yarnBalls.length % yarnColors.length],
+      collected: false,
+      bobPhase: Math.random() * Math.PI * 2
+    });
+  }
+}
+
+// Init stick collection tracking
+for (let i = 0; i < STICK_POSITIONS.length; i++) {
+  level6.sticksCollected.push(false);
+}
+
+// Campground NPCs
+const campNpcs = [];
+const campNpcColors = ['#86efac','#fda4af','#c4b5fd','#fde68a'];
+const campNpcAccessories = ['scarf','bow','flower','glasses'];
+for (let i = 0; i < 4; i++) {
+  campNpcs.push({
+    x: 600 + i * 1000 + Math.random() * 200,
+    y: GROUND_Y,
+    color: campNpcColors[i],
+    accessory: campNpcAccessories[i],
+    vx: (Math.random() - 0.5) * 1.0,
+    walkFrame: 0, walkTimer: 0,
+    facing: 1,
+    idleTimer: Math.random() * 200
+  });
+}
+
 // ── Canvas Setup ──
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
@@ -1499,6 +1606,25 @@ window.addEventListener('keyup', e => { keys[e.code] = false; });
     function() { if (currentActionKey) keys[currentActionKey] = false; }
   );
 })();
+
+// ── Mobile Fullscreen ──
+// Enter fullscreen when tapping the canvas on mobile; hide the control panel
+if (isMobile) {
+  canvas.addEventListener('touchstart', function requestFS() {
+    const el = document.documentElement;
+    const fs = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (fs && !document.fullscreenElement && !document.webkitFullscreenElement) {
+      fs.call(el).then(() => {
+        document.getElementById('controls').style.display = 'none';
+        setTimeout(resize, 150);
+      }).catch(() => {});
+    }
+  }, { passive: true });
+
+  // Re-layout when exiting fullscreen
+  document.addEventListener('fullscreenchange', () => setTimeout(resize, 150));
+  document.addEventListener('webkitfullscreenchange', () => setTimeout(resize, 150));
+}
 
 // ── Start ──
 document.getElementById('startBtn').addEventListener('click', startGame);
@@ -1677,12 +1803,24 @@ function update(dt) {
     return;
   }
   if (insidePark) {
-    if (keys['Enter']) { keys['Enter'] = false; insidePark = false; }
+    if (keys['Enter']) {
+      keys['Enter'] = false;
+      insidePark = false;
+      player.y = GROUND_Y;
+      player.vy = 0;
+      player.onGround = true;
+    }
     return;
   }
 
   if (insidePantheon) {
-    if (keys['Enter']) { keys['Enter'] = false; insidePantheon = false; }
+    if (keys['Enter']) {
+      keys['Enter'] = false;
+      insidePantheon = false;
+      player.y = GROUND_Y;
+      player.vy = 0;
+      player.onGround = true;
+    }
     return;
   }
 
@@ -1770,7 +1908,7 @@ function update(dt) {
       keys['Enter'] = false;
       insideChalet = false;
       drinkingCocoa = false;
-      crossfadeToLevel(6); // back to alps music
+      switchToLevel(7); // onward to the campground!
     }
     return;
   }
@@ -1830,6 +1968,30 @@ function update(dt) {
       score += 20;
       addPopup(yb.x, yb.y - 20, '+20 Yarn!', yb.color);
       playChaChing();
+    }
+  }
+
+  // Yarn bonus — award 100 points when all yarn in a level is collected
+  const curYarn = getCurrentYarnBalls();
+  if (curYarn.length > 0 && !yarnBonusAwarded[currentLevel] && curYarn.every(y => y.collected)) {
+    yarnBonusAwarded[currentLevel] = true;
+    score += 100;
+    addPopup(player.x, player.y - 60, '+100 ALL YARN BONUS!', '#fbbf24');
+    playChaChing();
+    // Big glitter celebration from the horn
+    const colors = ['#f472b6', '#a78bfa', '#38bdf8', '#fbbf24', '#4ade80', '#fb923c', '#e879f9'];
+    for (let i = 0; i < 40; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 2 + Math.random() * 4;
+      glitterParticles.push({
+        x: player.x + player.facing * 8,
+        y: player.y - 48,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 3,
+        life: 1200 + Math.random() * 800,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        size: 3 + Math.random() * 4
+      });
     }
   }
 
@@ -2157,6 +2319,164 @@ function update(dt) {
     }
   }
 
+  // Campground interactions (level 7)
+  let nearStick = false;
+  let nearFirePit = false;
+  let nearHammock = false;
+  let nearBigfoot = false;
+  let nearDigSite = false;
+  let nearWaterPump = false;
+  let nearPool = false;
+  if (currentLevel === 7) {
+    // Stick collection
+    for (let i = 0; i < STICK_POSITIONS.length; i++) {
+      if (level6.sticksCollected[i]) continue;
+      if (Math.abs(player.x - STICK_POSITIONS[i]) < 40) {
+        nearStick = true;
+        if (keys['KeyC']) {
+          keys['KeyC'] = false;
+          level6.sticksCollected[i] = true;
+          stickCount++;
+          score += 5;
+          addPopup(STICK_POSITIONS[i], player.y - 40, '+5 Stick!', '#92400e');
+          playChaChing();
+        }
+      }
+    }
+    // Fire pit — build campfire (need 5 sticks)
+    if (Math.abs(player.x - FIRE_PIT_POS.x) < 50) {
+      nearFirePit = true;
+      if (!campfire.built && stickCount >= 5 && keys['KeyB']) {
+        keys['KeyB'] = false;
+        campfire.built = true;
+        campfire.lit = true;
+        stickCount -= 5;
+        score += 25;
+        addPopup(FIRE_PIT_POS.x, player.y - 40, '+25 Campfire built!', '#f97316');
+        playChaChing();
+      }
+      // Roast marshmallow near lit campfire
+      if (campfire.lit && !roasting.active && !roasting.done && keys['KeyR']) {
+        keys['KeyR'] = false;
+        roasting.active = true;
+        roasting.progress = 0;
+        roasting.done = false;
+      }
+    }
+    // Roasting progress
+    if (roasting.active) {
+      roasting.progress += dt;
+      // Perfect window: 2000-3500ms
+      if (roasting.progress >= 2000 && roasting.progress < 3500) {
+        // Press C to make s'more
+        if (keys['KeyC']) {
+          keys['KeyC'] = false;
+          roasting.active = false;
+          roasting.done = true;
+          smoreCount++;
+          score += 30;
+          addPopup(FIRE_PIT_POS.x, player.y - 40, "+30 S'more!", '#fbbf24');
+          playChaChing();
+          setTimeout(() => { roasting.done = false; }, 500);
+        }
+      }
+      if (roasting.progress >= 5000) {
+        // Burnt!
+        roasting.active = false;
+        addPopup(FIRE_PIT_POS.x, player.y - 40, 'Burnt marshmallow!', '#ef4444');
+        setTimeout(() => { roasting.done = false; }, 500);
+      }
+    }
+    // Hammock nap
+    if (Math.abs(player.x - HAMMOCK_POS.x) < 50) {
+      nearHammock = true;
+      if (!hammockNapping && keys['KeyN']) {
+        keys['KeyN'] = false;
+        hammockNapping = true;
+        hammockNapTimer = 0;
+      }
+    }
+    if (hammockNapping) {
+      hammockNapTimer += dt;
+      if (hammockNapTimer >= HAMMOCK_NAP_DURATION) {
+        hammockNapping = false;
+        hammockNapTimer = 0;
+        score += 20;
+        addPopup(player.x, player.y - 40, '+20 Great nap!', '#86efac');
+        playChaChing();
+      }
+    }
+    // Bigfoot — chocolate milk
+    if (Math.abs(player.x - BIGFOOT_POS.x) < 60) {
+      nearBigfoot = true;
+      if (!bigfootDrinking && keys['KeyM']) {
+        keys['KeyM'] = false;
+        bigfootDrinking = true;
+        bigfootDrinkTimer = 0;
+      }
+    }
+    if (bigfootDrinking) {
+      bigfootDrinkTimer += dt;
+      if (bigfootDrinkTimer >= BIGFOOT_DRINK_DURATION) {
+        bigfootDrinking = false;
+        bigfootDrinkTimer = 0;
+        score += 40;
+        addPopup(BIGFOOT_POS.x, player.y - 40, '+40 Chocolate milk with Bigfoot!', '#92400e');
+        playChaChing();
+      }
+    }
+    // Dig site — dig a pool
+    if (Math.abs(player.x - DIG_SITE_POS.x) < 50) {
+      nearDigSite = true;
+      if (!campPool.dug && !campPool.digging && keys['KeyD']) {
+        keys['KeyD'] = false;
+        campPool.digging = true;
+        campPool.digProgress = 0;
+      }
+    }
+    if (campPool.digging) {
+      campPool.digProgress += dt;
+      if (campPool.digProgress >= 3000) {
+        campPool.digging = false;
+        campPool.dug = true;
+        score += 15;
+        addPopup(DIG_SITE_POS.x, player.y - 40, '+15 Pool dug!', '#92400e');
+        playChaChing();
+      }
+    }
+    // Water pump — fill pool
+    if (Math.abs(player.x - WATER_PUMP_POS.x) < 50) {
+      nearWaterPump = true;
+      if (campPool.dug && !campPool.filled && !campPool.filling && keys['KeyW']) {
+        keys['KeyW'] = false;
+        campPool.filling = true;
+        campPool.fillProgress = 0;
+      }
+    }
+    if (campPool.filling) {
+      campPool.fillProgress += dt;
+      if (campPool.fillProgress >= 2500) {
+        campPool.filling = false;
+        campPool.filled = true;
+        score += 15;
+        addPopup(WATER_PUMP_POS.x, player.y - 40, '+15 Pool filled!', '#38bdf8');
+        playChaChing();
+      }
+    }
+    // Swim in pool
+    if (campPool.filled && Math.abs(player.x - DIG_SITE_POS.x) < 50) {
+      nearPool = true;
+      if (!swimmingInPool && keys['KeyS']) {
+        keys['KeyS'] = false;
+        swimmingInPool = true;
+      }
+    }
+    if (swimmingInPool && keys['KeyS']) {
+      keys['KeyS'] = false;
+      swimmingInPool = false;
+    }
+  }
+
   // Rainbow bridge portal (level 1 → level 2 sledding)
   if (currentLevel === 1) {
     const dx = player.x - BRIDGE_PORTAL.x;
@@ -2227,7 +2547,7 @@ function update(dt) {
   }
 
   // NPC AI
-  const activeNpcs = currentLevel === 1 ? npcs : currentLevel === 2 ? sledNpcs : currentLevel === 3 ? nycNpcs : currentLevel === 4 ? romeNpcs : currentLevel === 5 ? hawaiiNpcs : alpsNpcs;
+  const activeNpcs = currentLevel === 1 ? npcs : currentLevel === 2 ? sledNpcs : currentLevel === 3 ? nycNpcs : currentLevel === 4 ? romeNpcs : currentLevel === 5 ? hawaiiNpcs : currentLevel === 7 ? campNpcs : alpsNpcs;
   const worldW = getCurrentWorldW();
   for (const npc of activeNpcs) {
     npc.idleTimer -= dt / 16;
@@ -2248,7 +2568,7 @@ function update(dt) {
 
   // NPC talk — Q key to chat with nearby NPCs
   let nearNpc = false;
-  if (!insideChalet && !insideHouse && !insideCamper && !insideWindmill && !insidePizza && !insidePark && !insidePantheon && !swimming && !surfing) {
+  if (!insideChalet && !insideHouse && !insideCamper && !insideWindmill && !insidePizza && !insidePark && !insidePantheon && !swimming && !surfing && !swimmingInPool) {
     for (const npc of activeNpcs) {
       if (Math.abs(player.x - npc.x) < NPC_TALK_RANGE) {
         nearNpc = true;
@@ -2314,7 +2634,7 @@ function update(dt) {
   document.getElementById('hudFish').textContent = fishCount;
   document.getElementById('hudBacon').textContent = baconCount;
   document.getElementById('hudYarn').textContent = yarnCount;
-  document.getElementById('hudLevel').textContent = currentLevel === 1 ? 'Meadow' : currentLevel === 2 ? 'Sledding' : currentLevel === 3 ? 'NYC' : currentLevel === 4 ? 'Rome' : currentLevel === 5 ? 'Hawaii' : 'Alps';
+  document.getElementById('hudLevel').textContent = currentLevel === 1 ? 'Meadow' : currentLevel === 2 ? 'Sledding' : currentLevel === 3 ? 'NYC' : currentLevel === 4 ? 'Rome' : currentLevel === 5 ? 'Hawaii' : currentLevel === 7 ? 'Campground' : 'Alps';
   document.getElementById('hudPizza').textContent = pizzaMaking.pizzaCount;
   document.getElementById('hudHotdog').textContent = hotdogCount;
   document.getElementById('hudGelato').textContent = gelatoCount;
@@ -2323,6 +2643,8 @@ function update(dt) {
   document.getElementById('hudCoconut').textContent = coconutCount;
   document.getElementById('hudDiamond').textContent = diamondCount;
   document.getElementById('hudSnowball').textContent = snowballCount;
+  document.getElementById('hudStick').textContent = stickCount;
+  document.getElementById('hudSmore').textContent = smoreCount;
 
   // Show/hide HUD items based on current level
   for (const el of document.querySelectorAll('.hud-item')) {
@@ -2330,12 +2652,14 @@ function update(dt) {
     el.style.display = levels.includes(String(currentLevel)) ? '' : 'none';
   }
 
-  // Hide controls during interior/mini-game scenes
-  const inScene = insideHouse || insideCamper || insideWindmill || insidePizza || insidePark || insidePantheon || swimming || surfing || insideChalet;
-  document.getElementById('controls').style.display = inScene ? 'none' : 'flex';
+  // Hide controls during interior/mini-game scenes (always hidden on mobile)
+  const inScene = insideHouse || insideCamper || insideWindmill || insidePizza || insidePark || insidePantheon || swimming || surfing || insideChalet || swimmingInPool;
+  if (!isMobile) {
+    document.getElementById('controls').style.display = inScene ? 'none' : 'flex';
+  }
 
   // Prompt
-  updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf, nearAirport, nearChalet, nearTrain, nearNpc);
+  updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf, nearAirport, nearChalet, nearTrain, nearNpc, nearStick, nearFirePit, nearHammock, nearBigfoot, nearDigSite, nearWaterPump, nearPool);
 }
 
 function getGroundLevel(x) {
@@ -2418,8 +2742,26 @@ function setAction(key, label) {
   }
 }
 
-function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf, nearAirport, nearChalet, nearTrain, nearNpc) {
+function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf, nearAirport, nearChalet, nearTrain, nearNpc, nearStick, nearFirePit, nearHammock, nearBigfoot, nearDigSite, nearWaterPump, nearPool) {
   const el = document.getElementById('prompt');
+  if (swimmingInPool) {
+    el.textContent = 'Swimming in your pool! Press S to get out';
+    el.style.display = 'block';
+    setAction('KeyS', 'Exit');
+    return;
+  }
+  if (hammockNapping) {
+    el.textContent = 'Napping in the hammock... zzz';
+    el.style.display = 'block';
+    setAction(null, '');
+    return;
+  }
+  if (bigfootDrinking) {
+    el.textContent = 'Sharing chocolate milk with Bigfoot!';
+    el.style.display = 'block';
+    setAction(null, '');
+    return;
+  }
   if (insideChalet) {
     if (drinkingCocoa) {
       el.textContent = 'Drinking hot chocolate... mmm!';
@@ -2596,6 +2938,62 @@ function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, ne
     el.textContent = 'Press Enter to take the train to NYC!';
     el.style.display = 'block';
     setAction('Enter', 'Train');
+  } else if (roasting.active) {
+    const pct = Math.min(100, (roasting.progress / 2000) * 100);
+    if (roasting.progress >= 2000 && roasting.progress < 3500) {
+      el.textContent = "Marshmallow is golden! Press C to make a s'more!";
+      setAction('KeyC', "S'more");
+    } else {
+      el.textContent = `Roasting marshmallow... ${Math.round(pct)}%`;
+      setAction(null, '');
+    }
+    el.style.display = 'block';
+  } else if (campPool.digging) {
+    const pct = Math.min(100, (campPool.digProgress / 3000) * 100);
+    el.textContent = `Digging pool... ${Math.round(pct)}%`;
+    el.style.display = 'block';
+    setAction(null, '');
+  } else if (campPool.filling) {
+    const pct = Math.min(100, (campPool.fillProgress / 2500) * 100);
+    el.textContent = `Filling pool... ${Math.round(pct)}%`;
+    el.style.display = 'block';
+    setAction(null, '');
+  } else if (nearStick) {
+    el.textContent = 'Press C to collect sticks!';
+    el.style.display = 'block';
+    setAction('KeyC', 'Collect');
+  } else if (nearFirePit && !campfire.built && stickCount >= 5) {
+    el.textContent = 'Press B to build a campfire! (5 sticks)';
+    el.style.display = 'block';
+    setAction('KeyB', 'Build');
+  } else if (nearFirePit && !campfire.built && stickCount < 5) {
+    el.textContent = `Need ${5 - stickCount} more sticks to build a fire!`;
+    el.style.display = 'block';
+    setAction(null, '');
+  } else if (nearFirePit && campfire.lit) {
+    el.textContent = 'Press R to roast a marshmallow!';
+    el.style.display = 'block';
+    setAction('KeyR', 'Roast');
+  } else if (nearHammock) {
+    el.textContent = 'Press N to nap in the hammock!';
+    el.style.display = 'block';
+    setAction('KeyN', 'Nap');
+  } else if (nearBigfoot) {
+    el.textContent = 'Press M for chocolate milk with Bigfoot!';
+    el.style.display = 'block';
+    setAction('KeyM', 'Drink');
+  } else if (nearDigSite && !campPool.dug) {
+    el.textContent = 'Press D to dig a pool!';
+    el.style.display = 'block';
+    setAction('KeyD', 'Dig');
+  } else if (nearWaterPump && campPool.dug && !campPool.filled) {
+    el.textContent = 'Press W to fill the pool with water!';
+    el.style.display = 'block';
+    setAction('KeyW', 'Fill');
+  } else if (nearPool && campPool.filled) {
+    el.textContent = 'Press S to swim in your pool!';
+    el.style.display = 'block';
+    setAction('KeyS', 'Swim');
   } else if (nearNpc) {
     el.textContent = 'Press Q to talk!';
     el.style.display = 'block';
@@ -2644,6 +3042,8 @@ function draw() {
     drawRomeSky(W, H, cycle, isNight);
   } else if (currentLevel === 5) {
     drawHawaiiSky(W, H, cycle, isNight);
+  } else if (currentLevel === 7) {
+    drawCampgroundSky(W, H, cycle, isNight);
   } else {
     drawAlpsSky(W, H, cycle, isNight);
   }
@@ -2669,6 +3069,8 @@ function draw() {
     drawSurfingScene(cam, W, H);
   } else if (insideChalet) {
     drawChaletInterior(cam, W, H);
+  } else if (swimmingInPool) {
+    drawPoolSwimmingScene(cam, W, H);
   } else if (currentLevel === 1) {
     drawLevel1World(W, H, cam, cycle, isNight);
   } else if (currentLevel === 2) {
@@ -2679,6 +3081,8 @@ function draw() {
     drawRomeWorld(W, H, cam, cycle, isNight);
   } else if (currentLevel === 5) {
     drawHawaiiWorld(W, H, cam, cycle, isNight);
+  } else if (currentLevel === 7) {
+    drawCampgroundWorld(W, H, cam, cycle, isNight);
   } else {
     drawAlpsWorld(W, H, cam, cycle, isNight);
   }
@@ -2928,8 +3332,8 @@ function drawLevelTransition(W, H) {
     ctx.textBaseline = 'middle';
     const textAlpha = Math.min(1, (t - 0.4) / 0.3);
     ctx.globalAlpha = textAlpha;
-    const levelNames = { 1: 'Back to the Meadow!', 2: 'Time to Sled!', 3: 'Welcome to NYC!', 4: 'Benvenuto a Roma!', 5: 'Aloha Hawaii!', 6: 'Welcome to the Alps!' };
-    const levelSubtitles = { 1: playerName + ' returns home!', 2: playerName + ' hits the snowy hills!', 3: playerName + ' arrives in the big city!', 4: playerName + ' explores the Eternal City!', 5: playerName + ' hits the beach!', 6: playerName + ' hits the slopes!' };
+    const levelNames = { 1: 'Back to the Meadow!', 2: 'Time to Sled!', 3: 'Welcome to NYC!', 4: 'Benvenuto a Roma!', 5: 'Aloha Hawaii!', 6: 'Welcome to the Alps!', 7: 'Welcome to Camp!' };
+    const levelSubtitles = { 1: playerName + ' returns home!', 2: playerName + ' hits the snowy hills!', 3: playerName + ' arrives in the big city!', 4: playerName + ' explores the Eternal City!', 5: playerName + ' hits the beach!', 6: playerName + ' hits the slopes!', 7: playerName + ' goes camping!' };
     ctx.fillText(levelNames[levelTransition.toLevel] || 'New Level!', W / 2, H / 2 - 20);
     ctx.font = '20px system-ui';
     ctx.fillText(levelSubtitles[levelTransition.toLevel] || '', W / 2, H / 2 + 20);
@@ -6342,6 +6746,458 @@ function drawKitty(x, y, color, facing, walkFrame, accessory) {
   }
 
   ctx.restore();
+}
+
+// ── Campground Drawing Functions ──
+
+function drawCampgroundSky(W, H, cycle, isNight) {
+  const dayTop = [50, 120, 60]; const nightTop = [10, 20, 35];
+  const dayBot = [140, 200, 100]; const nightBot = [20, 30, 45];
+  const skyTop = lerpColor(dayTop, nightTop, cycle);
+  const skyBot = lerpColor(dayBot, nightBot, cycle);
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, `rgb(${skyTop})`); grad.addColorStop(0.7, `rgb(${skyBot})`);
+  grad.addColorStop(1, '#4a7c3f');
+  ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
+  if (isNight) drawStars(W, H, cycle);
+  if (isNight) drawRainbow(W, H, 0);
+  drawCelestial(W, H, cycle);
+}
+
+function drawCampgroundWorld(W, H, cam) {
+  const ww = getCurrentWorldW();
+  // Forest floor
+  ctx.fillStyle = '#4a7c3f';
+  ctx.fillRect(0, GROUND_Y, ww, H);
+  // Dirt path
+  ctx.fillStyle = '#8B7355';
+  ctx.fillRect(0, GROUND_Y - 2, ww, 6);
+  // Grass details
+  ctx.fillStyle = '#5c9c4a';
+  for (let gx = Math.floor((cam - 10) / 60) * 60; gx < cam + W + 10; gx += 60) {
+    ctx.beginPath(); ctx.arc(gx + 15, GROUND_Y + 2, 3, Math.PI, 0); ctx.fill();
+    ctx.beginPath(); ctx.arc(gx + 40, GROUND_Y + 1, 2.5, Math.PI, 0); ctx.fill();
+  }
+
+  // Background pine trees (far back, parallax)
+  ctx.fillStyle = '#2d5a27';
+  for (let tx = Math.floor((cam * 0.3) / 100) * 100 - 100; tx < cam * 0.3 + W + 100; tx += 100) {
+    const px = tx / 0.3;
+    const th = 80 + Math.sin(tx * 0.7) * 20;
+    ctx.beginPath();
+    ctx.moveTo(px - 20, GROUND_Y);
+    ctx.lineTo(px, GROUND_Y - th);
+    ctx.lineTo(px + 20, GROUND_Y);
+    ctx.fill();
+  }
+
+  drawCampgroundScenes(cam, W);
+  drawCampgroundPlatforms();
+  drawCampgroundYarnBalls();
+  for (const npc of campNpcs) drawKitty(npc.x, npc.y, npc.color, npc.facing, npc.walkFrame, npc.accessory);
+  drawPlayerAndUI();
+}
+
+function drawCampgroundPlatforms() {
+  for (const p of level6.platforms) {
+    ctx.fillStyle = 'rgba(0,0,0,0.1)'; ctx.fillRect(p.x + 3, p.y + 3, p.w, 14);
+    const pGrad = ctx.createLinearGradient(p.x, p.y, p.x, p.y + 14);
+    pGrad.addColorStop(0, '#8B7355'); pGrad.addColorStop(1, '#6B5440');
+    ctx.fillStyle = pGrad; ctx.beginPath(); ctx.roundRect(p.x, p.y, p.w, 14, 4); ctx.fill();
+    // Moss on platforms
+    ctx.fillStyle = '#5c9c4a';
+    for (let i = 0; i < 2; i++) {
+      const mx = p.x + 8 + i * (p.w - 16);
+      ctx.beginPath(); ctx.arc(mx, p.y + 2, 3, Math.PI, 0); ctx.fill();
+    }
+  }
+}
+
+function drawCampgroundYarnBalls() {
+  for (const yb of level6.yarnBalls) {
+    if (yb.collected) continue;
+    const bob = Math.sin(gameTime / 400 + yb.bobPhase) * 3;
+    const yx = yb.x, yy = yb.y + bob;
+    ctx.globalAlpha = 0.25; ctx.fillStyle = yb.color;
+    ctx.beginPath(); ctx.arc(yx, yy, 18, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+    ctx.fillStyle = yb.color; ctx.beginPath(); ctx.arc(yx, yy, 12, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(yx, yy, 10, 0.3, 1.8); ctx.stroke();
+    ctx.beginPath(); ctx.arc(yx, yy, 8, 2.0, 3.5); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.beginPath(); ctx.arc(yx - 3, yy - 4, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = yb.color; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(yx + 10, yy + 5);
+    ctx.quadraticCurveTo(yx + 16, yy + 12 + bob, yx + 12, yy + 18); ctx.stroke();
+  }
+}
+
+function drawCampgroundScenes(cam, W) {
+  // Pine trees scattered throughout
+  const treePosns = [300, 600, 1000, 1500, 1800, 2400, 2700, 3200, 3600, 4200, 4600];
+  for (const tx of treePosns) {
+    if (tx < cam - 100 || tx > cam + W + 100) continue;
+    drawCampPineTree(tx);
+  }
+
+  // Stick piles
+  for (let i = 0; i < STICK_POSITIONS.length; i++) {
+    const sx = STICK_POSITIONS[i];
+    if (sx < cam - 50 || sx > cam + W + 50) continue;
+    if (!level6.sticksCollected[i]) drawStickPile(sx);
+  }
+
+  // Fire pit
+  if (FIRE_PIT_POS.x > cam - 100 && FIRE_PIT_POS.x < cam + W + 100) {
+    drawFirePit(FIRE_PIT_POS.x);
+  }
+
+  // Hammock
+  if (HAMMOCK_POS.x > cam - 120 && HAMMOCK_POS.x < cam + W + 120) {
+    drawHammock(HAMMOCK_POS.x);
+  }
+
+  // Bigfoot
+  if (BIGFOOT_POS.x > cam - 80 && BIGFOOT_POS.x < cam + W + 80) {
+    drawBigfoot(BIGFOOT_POS.x);
+  }
+
+  // Dig site / pool
+  if (DIG_SITE_POS.x > cam - 100 && DIG_SITE_POS.x < cam + W + 100) {
+    drawDigSite(DIG_SITE_POS.x);
+  }
+
+  // Water pump
+  if (WATER_PUMP_POS.x > cam - 60 && WATER_PUMP_POS.x < cam + W + 60) {
+    drawWaterPump(WATER_PUMP_POS.x);
+  }
+}
+
+function drawCampPineTree(x) {
+  const gy = GROUND_Y;
+  // Trunk
+  ctx.fillStyle = '#5c3a1e';
+  ctx.fillRect(x - 5, gy - 70, 10, 70);
+  // Layers of branches
+  const greens = ['#1a5c1a', '#228B22', '#2d8b2d'];
+  for (let i = 0; i < 3; i++) {
+    const ly = gy - 40 - i * 25;
+    const lw = 35 - i * 8;
+    ctx.fillStyle = greens[i];
+    ctx.beginPath();
+    ctx.moveTo(x - lw, ly);
+    ctx.lineTo(x, ly - 30);
+    ctx.lineTo(x + lw, ly);
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+function drawStickPile(x) {
+  const gy = GROUND_Y;
+  ctx.strokeStyle = '#8B6914'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  // Scattered sticks
+  ctx.beginPath(); ctx.moveTo(x - 12, gy - 2); ctx.lineTo(x + 8, gy - 10); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x + 5, gy - 1); ctx.lineTo(x - 10, gy - 14); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x - 5, gy - 3); ctx.lineTo(x + 15, gy - 8); ctx.stroke();
+  ctx.strokeStyle = '#6B5210'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(x - 8, gy - 5); ctx.lineTo(x + 12, gy - 16); ctx.stroke();
+}
+
+function drawFirePit(x) {
+  const gy = GROUND_Y;
+  // Stone ring
+  ctx.fillStyle = '#6b7280';
+  for (let i = 0; i < 8; i++) {
+    const angle = (i / 8) * Math.PI * 2;
+    const sx = x + Math.cos(angle) * 22;
+    const sy = gy - 5 + Math.sin(angle) * 8;
+    ctx.beginPath(); ctx.ellipse(sx, sy, 6, 4, 0, 0, Math.PI * 2); ctx.fill();
+  }
+  // Inner dirt
+  ctx.fillStyle = '#4a3728';
+  ctx.beginPath(); ctx.ellipse(x, gy - 5, 18, 7, 0, 0, Math.PI * 2); ctx.fill();
+
+  if (campfire.lit) {
+    // Logs
+    ctx.fillStyle = '#5c3a1e';
+    ctx.save(); ctx.translate(x, gy - 8);
+    ctx.rotate(-0.3); ctx.fillRect(-15, -3, 30, 6); ctx.restore();
+    ctx.save(); ctx.translate(x, gy - 8);
+    ctx.rotate(0.3); ctx.fillRect(-15, -3, 30, 6); ctx.restore();
+    // Fire flames
+    const flicker = Math.sin(gameTime / 100) * 3;
+    const flicker2 = Math.cos(gameTime / 130) * 2;
+    // Outer fire glow
+    ctx.globalAlpha = 0.15 + Math.sin(gameTime / 200) * 0.05;
+    ctx.fillStyle = '#f97316';
+    ctx.beginPath(); ctx.ellipse(x, gy - 15, 35, 25, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+    // Orange flames
+    ctx.fillStyle = '#f97316';
+    ctx.beginPath();
+    ctx.moveTo(x - 12, gy - 8);
+    ctx.quadraticCurveTo(x - 8, gy - 35 + flicker, x, gy - 45 + flicker2);
+    ctx.quadraticCurveTo(x + 8, gy - 35 - flicker2, x + 12, gy - 8);
+    ctx.fill();
+    // Yellow inner flames
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath();
+    ctx.moveTo(x - 6, gy - 10);
+    ctx.quadraticCurveTo(x - 3, gy - 30 - flicker, x, gy - 35 + flicker2);
+    ctx.quadraticCurveTo(x + 3, gy - 28 + flicker, x + 6, gy - 10);
+    ctx.fill();
+    // White-hot center
+    ctx.fillStyle = '#fef3c7';
+    ctx.beginPath();
+    ctx.moveTo(x - 3, gy - 12);
+    ctx.quadraticCurveTo(x, gy - 22 - flicker2, x + 3, gy - 12);
+    ctx.fill();
+    // Embers / sparks
+    for (let i = 0; i < 4; i++) {
+      const ex = x + Math.sin(gameTime / 200 + i * 1.5) * 10;
+      const ey = gy - 40 - (gameTime / 80 + i * 50) % 30;
+      const ea = Math.max(0, 1 - ((gameTime / 80 + i * 50) % 30) / 30);
+      ctx.globalAlpha = ea * 0.7;
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath(); ctx.arc(ex, ey, 1.5, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // Roasting marshmallow on a stick
+    if (roasting.active) {
+      const stickAngle = -0.4;
+      ctx.save(); ctx.translate(x - 25, gy - 15);
+      ctx.rotate(stickAngle);
+      ctx.strokeStyle = '#8B6914'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(40, 0); ctx.stroke();
+      // Marshmallow
+      const roastPct = Math.min(1, roasting.progress / 3500);
+      const mColor = roastPct < 0.57 ? '#fff5e6' : roastPct < 1 ? '#d4a76a' : '#5c3a1e';
+      ctx.fillStyle = mColor;
+      ctx.beginPath(); ctx.roundRect(38, -5, 10, 10, 3); ctx.fill();
+      ctx.restore();
+    }
+  }
+}
+
+function drawHammock(x) {
+  const gy = GROUND_Y;
+  // Two trees
+  ctx.fillStyle = '#5c3a1e';
+  ctx.fillRect(x - 50 - 5, gy - 80, 10, 80);
+  ctx.fillRect(x + 50 - 5, gy - 80, 10, 80);
+  // Tree tops
+  ctx.fillStyle = '#228B22';
+  ctx.beginPath(); ctx.arc(x - 50, gy - 90, 20, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 50, gy - 90, 20, 0, Math.PI * 2); ctx.fill();
+  // Hammock ropes
+  ctx.strokeStyle = '#d4a76a'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(x - 45, gy - 50); ctx.lineTo(x - 35, gy - 35); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x + 45, gy - 50); ctx.lineTo(x + 35, gy - 35); ctx.stroke();
+  // Hammock fabric (catenary curve)
+  const sway = hammockNapping ? Math.sin(gameTime / 500) * 3 : 0;
+  ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 3;
+  ctx.fillStyle = 'rgba(231,76,60,0.3)';
+  ctx.beginPath();
+  ctx.moveTo(x - 35, gy - 35);
+  ctx.quadraticCurveTo(x, gy - 15 + sway, x + 35, gy - 35);
+  ctx.stroke();
+  ctx.lineTo(x + 35, gy - 33);
+  ctx.quadraticCurveTo(x, gy - 10 + sway, x - 35, gy - 33);
+  ctx.closePath();
+  ctx.fill();
+
+  if (hammockNapping) {
+    // Sleeping kitty in hammock
+    ctx.fillStyle = '#c4b5fd';
+    ctx.beginPath(); ctx.ellipse(x, gy - 23 + sway, 12, 8, 0, 0, Math.PI * 2); ctx.fill();
+    // Zzz
+    ctx.fillStyle = '#a78bfa'; ctx.font = 'bold 14px system-ui';
+    const zOff = Math.sin(gameTime / 600) * 5;
+    ctx.fillText('z', x + 15, gy - 40 + zOff);
+    ctx.fillText('Z', x + 22, gy - 52 + zOff);
+    ctx.fillText('Z', x + 28, gy - 65 + zOff);
+  }
+}
+
+function drawBigfoot(x) {
+  const gy = GROUND_Y;
+  const bounce = Math.sin(gameTime / 600) * 2;
+  // Bigfoot body (large, brown, furry)
+  ctx.fillStyle = '#5c3a1e';
+  // Feet
+  ctx.beginPath(); ctx.ellipse(x - 12, gy - 5, 12, 6, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x + 12, gy - 5, 12, 6, 0, 0, Math.PI * 2); ctx.fill();
+  // Body
+  ctx.beginPath(); ctx.ellipse(x, gy - 45 + bounce, 25, 40, 0, 0, Math.PI * 2); ctx.fill();
+  // Head
+  ctx.beginPath(); ctx.arc(x, gy - 90 + bounce, 20, 0, Math.PI * 2); ctx.fill();
+  // Face
+  ctx.fillStyle = '#8B6914';
+  ctx.beginPath(); ctx.ellipse(x, gy - 82 + bounce, 12, 8, 0, 0, Math.PI * 2); ctx.fill();
+  // Eyes
+  ctx.fillStyle = '#1a1a2e';
+  ctx.beginPath(); ctx.arc(x - 7, gy - 92 + bounce, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 7, gy - 92 + bounce, 3, 0, Math.PI * 2); ctx.fill();
+  // Eye highlights
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(x - 6, gy - 93 + bounce, 1, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 8, gy - 93 + bounce, 1, 0, Math.PI * 2); ctx.fill();
+  // Friendly smile
+  ctx.strokeStyle = '#1a1a2e'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(x, gy - 85 + bounce, 6, 0.2, Math.PI - 0.2); ctx.stroke();
+  // Arms
+  ctx.strokeStyle = '#5c3a1e'; ctx.lineWidth = 8; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x - 22, gy - 50 + bounce); ctx.lineTo(x - 35, gy - 35 + bounce); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x + 22, gy - 50 + bounce); ctx.lineTo(x + 35, gy - 35 + bounce); ctx.stroke();
+
+  // Chocolate milk (always present — Bigfoot holds one, spare on ground)
+  // Glass on ground
+  ctx.fillStyle = '#92400e';
+  ctx.beginPath(); ctx.roundRect(x + 30, gy - 20, 14, 20, 2); ctx.fill();
+  ctx.fillStyle = '#5c2d0e';
+  ctx.beginPath(); ctx.ellipse(x + 37, gy - 18, 6, 3, 0, 0, Math.PI * 2); ctx.fill();
+  // Glass in Bigfoot's hand
+  ctx.fillStyle = '#92400e';
+  ctx.beginPath(); ctx.roundRect(x - 42, gy - 42 + bounce, 12, 18, 2); ctx.fill();
+  ctx.fillStyle = '#5c2d0e';
+  ctx.beginPath(); ctx.ellipse(x - 36, gy - 40 + bounce, 5, 2.5, 0, 0, Math.PI * 2); ctx.fill();
+
+  if (bigfootDrinking) {
+    // Hearts floating up
+    ctx.fillStyle = '#f472b6';
+    for (let i = 0; i < 3; i++) {
+      const hy = gy - 110 + bounce - (bigfootDrinkTimer / 100 + i * 15) % 40;
+      const hx = x + Math.sin(gameTime / 300 + i) * 8;
+      ctx.font = '12px system-ui';
+      ctx.fillText('\u2665', hx, hy);
+    }
+  }
+
+  // "Bigfoot" label
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 10px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText('Bigfoot', x, gy - 115 + bounce);
+  ctx.textAlign = 'left';
+}
+
+function drawDigSite(x) {
+  const gy = GROUND_Y;
+  if (campPool.filled) {
+    // Filled pool
+    ctx.fillStyle = '#6b7280';
+    ctx.beginPath(); ctx.roundRect(x - 40, gy - 8, 80, 30, 5); ctx.fill();
+    ctx.fillStyle = '#38bdf8';
+    ctx.beginPath(); ctx.roundRect(x - 36, gy - 5, 72, 24, 3); ctx.fill();
+    // Water ripples
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1;
+    for (let i = 0; i < 3; i++) {
+      const rx = x - 20 + i * 20;
+      const ry = gy + 5 + Math.sin(gameTime / 400 + i) * 2;
+      ctx.beginPath(); ctx.moveTo(rx - 8, ry); ctx.quadraticCurveTo(rx, ry - 3, rx + 8, ry); ctx.stroke();
+    }
+  } else if (campPool.dug) {
+    // Dug hole (empty)
+    ctx.fillStyle = '#4a3728';
+    ctx.beginPath(); ctx.roundRect(x - 40, gy - 8, 80, 30, 5); ctx.fill();
+    ctx.fillStyle = '#3a2a1a';
+    ctx.beginPath(); ctx.roundRect(x - 36, gy - 5, 72, 24, 3); ctx.fill();
+  } else if (campPool.digging) {
+    // Partially dug
+    const pct = campPool.digProgress / 3000;
+    ctx.fillStyle = '#4a3728';
+    ctx.beginPath(); ctx.roundRect(x - 40 * pct, gy - 8 * pct, 80 * pct, 30 * pct, 5); ctx.fill();
+    // Dirt flying up
+    ctx.fillStyle = '#8B7355';
+    for (let i = 0; i < 3; i++) {
+      const dx = x + Math.sin(gameTime / 100 + i * 2) * 20;
+      const dy = gy - 15 - Math.random() * 15;
+      ctx.beginPath(); ctx.arc(dx, dy, 2, 0, Math.PI * 2); ctx.fill();
+    }
+  } else {
+    // Unmarked dig site — just a shovel
+    ctx.strokeStyle = '#8B6914'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(x, gy); ctx.lineTo(x, gy - 30); ctx.stroke();
+    ctx.fillStyle = '#6b7280';
+    ctx.beginPath();
+    ctx.moveTo(x - 8, gy);
+    ctx.quadraticCurveTo(x, gy + 10, x + 8, gy);
+    ctx.lineTo(x + 3, gy - 5);
+    ctx.lineTo(x - 3, gy - 5);
+    ctx.closePath();
+    ctx.fill();
+    // "Dig here" sign
+    ctx.fillStyle = '#8B6914';
+    ctx.fillRect(x + 15, gy - 25, 2, 25);
+    ctx.fillStyle = '#d4a76a';
+    ctx.beginPath(); ctx.roundRect(x + 8, gy - 35, 22, 12, 2); ctx.fill();
+    ctx.fillStyle = '#5c3a1e'; ctx.font = '7px system-ui'; ctx.textAlign = 'center';
+    ctx.fillText('DIG', x + 19, gy - 26);
+    ctx.textAlign = 'left';
+  }
+}
+
+function drawWaterPump(x) {
+  const gy = GROUND_Y;
+  // Pump base
+  ctx.fillStyle = '#6b7280';
+  ctx.fillRect(x - 8, gy - 35, 16, 35);
+  // Pump head
+  ctx.fillStyle = '#4b5563';
+  ctx.beginPath(); ctx.roundRect(x - 12, gy - 45, 24, 14, 3); ctx.fill();
+  // Handle
+  ctx.strokeStyle = '#374151'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x + 10, gy - 40); ctx.lineTo(x + 25, gy - 50); ctx.stroke();
+  ctx.beginPath(); ctx.arc(x + 25, gy - 50, 4, 0, Math.PI * 2);
+  ctx.fillStyle = '#ef4444'; ctx.fill();
+  // Spout
+  ctx.fillStyle = '#6b7280';
+  ctx.fillRect(x - 14, gy - 38, 6, 3);
+  // Drip
+  if (campPool.filling) {
+    const dripY = gy - 35 + (gameTime / 100 % 20);
+    ctx.fillStyle = '#38bdf8';
+    ctx.beginPath(); ctx.ellipse(x - 11, dripY, 2, 3, 0, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+function drawPoolSwimmingScene(cam, W, H) {
+  const cx = cam + W / 2;
+  const cy = GROUND_Y - 60;
+  // Background — forest clearing
+  ctx.fillStyle = '#2d5a27';
+  ctx.fillRect(cam, 0, W, H);
+  // Sky peek
+  const grad = ctx.createLinearGradient(cam, 0, cam, H * 0.3);
+  grad.addColorStop(0, '#87CEEB'); grad.addColorStop(1, '#2d5a27');
+  ctx.fillStyle = grad; ctx.fillRect(cam, 0, W, H * 0.4);
+  // Ground
+  ctx.fillStyle = '#4a7c3f';
+  ctx.fillRect(cam, cy + 80, W, H);
+  // Pool
+  ctx.fillStyle = '#6b7280';
+  ctx.beginPath(); ctx.roundRect(cx - 60, cy + 20, 120, 60, 8); ctx.fill();
+  ctx.fillStyle = '#38bdf8';
+  ctx.beginPath(); ctx.roundRect(cx - 55, cy + 24, 110, 52, 5); ctx.fill();
+  // Water ripples
+  ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 1;
+  for (let i = 0; i < 5; i++) {
+    const rx = cx - 40 + i * 20;
+    const ry = cy + 45 + Math.sin(gameTime / 300 + i) * 3;
+    ctx.beginPath(); ctx.moveTo(rx - 10, ry); ctx.quadraticCurveTo(rx, ry - 4, rx + 10, ry); ctx.stroke();
+  }
+  // Splash particles
+  ctx.fillStyle = '#93c5fd';
+  for (let i = 0; i < 6; i++) {
+    const sx = cx + Math.sin(gameTime / 200 + i * 1.2) * 30;
+    const sy = cy + 30 + Math.cos(gameTime / 250 + i) * 8;
+    ctx.globalAlpha = 0.5 + Math.sin(gameTime / 300 + i) * 0.3;
+    ctx.beginPath(); ctx.arc(sx, sy, 2 + Math.random(), 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  // Kitty bobbing in pool
+  const bobY = Math.sin(gameTime / 400) * 4;
+  drawKitty(cx, cy + 42 + bobY, player.color || '#c4b5fd', 1, 0, 'horn');
 }
 </script>
 </body>
