@@ -5597,26 +5597,140 @@ function drawPantheonInterior(cam, W, H) {
 function drawSwimmingScene(cam, W, H) {
   const cx = cam + W / 2;
   const cy = GROUND_Y - 40;
-  // Sky
-  ctx.fillStyle = '#87ceeb';
-  ctx.fillRect(cam, 0, W, cy - 40);
-  // Fountain basin
+
+  // ── Warm Italian sky ──
+  const skyGrad = ctx.createLinearGradient(cam, 0, cam, cy - 20);
+  skyGrad.addColorStop(0, '#fcd34d');
+  skyGrad.addColorStop(0.4, '#fbbf24');
+  skyGrad.addColorStop(1, '#87ceeb');
+  ctx.fillStyle = skyGrad; ctx.fillRect(cam, 0, W, cy - 20);
+
+  // ── Cobblestone ground ──
+  ctx.fillStyle = '#a8a29e';
+  ctx.fillRect(cam, cy - 20, W, H);
+  ctx.strokeStyle = '#78716c'; ctx.lineWidth = 0.5;
+  for (let rx = Math.floor(cam / 20) * 20; rx < cam + W; rx += 20) {
+    for (let ry = 0; ry < 4; ry++) {
+      const offset = ry % 2 === 0 ? 0 : 10;
+      ctx.beginPath(); ctx.roundRect(rx + offset, cy - 18 + ry * 10, 16, 8, 2); ctx.stroke();
+    }
+  }
+
+  // ── Italian cypress trees (tall, narrow) ──
+  const cypressPositions = [cam + 40, cam + W - 40, cam + 100, cam + W - 100];
+  for (const tx of cypressPositions) {
+    // Trunk
+    ctx.fillStyle = '#5c3a1e';
+    ctx.fillRect(tx - 3, cy - 90, 6, 70);
+    // Cypress canopy — tall narrow cone
+    ctx.fillStyle = '#1a5c1a';
+    ctx.beginPath();
+    ctx.moveTo(tx - 10, cy - 25);
+    ctx.quadraticCurveTo(tx - 12, cy - 70, tx, cy - 120);
+    ctx.quadraticCurveTo(tx + 12, cy - 70, tx + 10, cy - 25);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#228B22';
+    ctx.beginPath();
+    ctx.moveTo(tx - 7, cy - 30);
+    ctx.quadraticCurveTo(tx - 9, cy - 75, tx, cy - 115);
+    ctx.quadraticCurveTo(tx + 9, cy - 75, tx + 7, cy - 30);
+    ctx.closePath(); ctx.fill();
+  }
+
+  // ── Olive trees (shorter, rounder) ──
+  const olivePositions = [cam + W * 0.25, cam + W * 0.75];
+  for (const ox of olivePositions) {
+    // Twisted trunk
+    ctx.strokeStyle = '#6B5210'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(ox, cy - 20);
+    ctx.quadraticCurveTo(ox + 5, cy - 40, ox - 3, cy - 55); ctx.stroke();
+    // Silvery-green canopy
+    ctx.fillStyle = '#7c9a5e';
+    ctx.beginPath(); ctx.arc(ox - 3, cy - 70, 22, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#9ab87a';
+    ctx.beginPath(); ctx.arc(ox + 8, cy - 75, 16, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(ox - 12, cy - 65, 14, 0, Math.PI * 2); ctx.fill();
+    // Olives
+    ctx.fillStyle = '#4a7c3f';
+    for (let i = 0; i < 5; i++) {
+      const olx = ox - 15 + Math.sin(i * 2.3) * 18;
+      const oly = cy - 60 + Math.cos(i * 1.7) * 12;
+      ctx.beginPath(); ctx.arc(olx, oly, 2.5, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  // ── Roman statue (left of fountain) ──
+  const stX = cx - 160;
+  const stY = cy - 20;
+  // Pedestal
+  ctx.fillStyle = '#d6d3d1';
+  ctx.fillRect(stX - 15, stY - 10, 30, 12);
+  ctx.fillRect(stX - 12, stY - 12, 24, 4);
+  // Statue body (marble white figure)
+  ctx.fillStyle = '#e5e7eb';
+  // Torso
+  ctx.beginPath(); ctx.roundRect(stX - 8, stY - 55, 16, 30, 3); ctx.fill();
+  // Head
+  ctx.beginPath(); ctx.arc(stX, stY - 62, 8, 0, Math.PI * 2); ctx.fill();
+  // Raised arm
+  ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(stX + 6, stY - 48); ctx.lineTo(stX + 18, stY - 70); ctx.stroke();
+  // Other arm
+  ctx.beginPath(); ctx.moveTo(stX - 6, stY - 45); ctx.lineTo(stX - 14, stY - 35); ctx.stroke();
+  // Legs
+  ctx.beginPath(); ctx.moveTo(stX - 4, stY - 25); ctx.lineTo(stX - 6, stY - 12); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(stX + 4, stY - 25); ctx.lineTo(stX + 6, stY - 12); ctx.stroke();
+
+  // ── Second statue (right of fountain) ──
+  const st2X = cx + 160;
+  ctx.fillStyle = '#d6d3d1';
+  ctx.fillRect(st2X - 15, stY - 10, 30, 12);
+  ctx.fillRect(st2X - 12, stY - 12, 24, 4);
+  ctx.fillStyle = '#e5e7eb';
+  ctx.beginPath(); ctx.roundRect(st2X - 8, stY - 55, 16, 30, 3); ctx.fill();
+  ctx.beginPath(); ctx.arc(st2X, stY - 62, 8, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#e5e7eb'; ctx.lineWidth = 4;
+  // Pointing arm
+  ctx.beginPath(); ctx.moveTo(st2X - 6, stY - 48); ctx.lineTo(st2X - 22, stY - 55); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(st2X + 6, stY - 45); ctx.lineTo(st2X + 12, stY - 35); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(st2X - 4, stY - 25); ctx.lineTo(st2X - 6, stY - 12); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(st2X + 4, stY - 25); ctx.lineTo(st2X + 6, stY - 12); ctx.stroke();
+
+  // ── Distant buildings silhouette ──
+  ctx.fillStyle = 'rgba(180,160,140,0.4)';
+  const bldgs = [
+    { x: cam + 20, w: 40, h: 60 },
+    { x: cam + 70, w: 30, h: 45 },
+    { x: cam + W - 60, w: 35, h: 55 },
+    { x: cam + W - 110, w: 45, h: 40 },
+  ];
+  for (const b of bldgs) {
+    ctx.fillRect(b.x, cy - 20 - b.h, b.w, b.h);
+  }
+  // Dome silhouette (like St. Peter's)
+  ctx.beginPath(); ctx.arc(cam + W / 2 + 80, cy - 80, 30, Math.PI, 0); ctx.fill();
+
+  // ── Fountain ──
+  // Fountain basin (ornate)
   ctx.fillStyle = '#d6d3d1';
   ctx.beginPath(); ctx.ellipse(cx, cy + 10, 200, 50, 0, 0, Math.PI * 2); ctx.fill();
+  // Basin rim detail
+  ctx.strokeStyle = '#a8a29e'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.ellipse(cx, cy + 10, 200, 50, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.strokeStyle = '#c4b5a0'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.ellipse(cx, cy + 10, 195, 47, 0, 0, Math.PI * 2); ctx.stroke();
   // Water
   ctx.fillStyle = '#38bdf8';
   ctx.beginPath(); ctx.ellipse(cx, cy + 8, 190, 45, 0, 0, Math.PI * 2); ctx.fill();
   // Animated waves
-  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 2;
   for (let i = 0; i < 8; i++) {
     const wx = cx - 150 + i * 40 + Math.sin(gameTime / 300 + i) * 10;
     const wy = cy + Math.sin(gameTime / 400 + i * 0.8) * 5;
     ctx.beginPath(); ctx.moveTo(wx, wy); ctx.lineTo(wx + 20, wy); ctx.stroke();
   }
   // Water jets
-  ctx.strokeStyle = '#93c5fd';
-  ctx.lineWidth = 3;
+  ctx.strokeStyle = '#93c5fd'; ctx.lineWidth = 3;
   const jt = Math.sin(gameTime / 200) * 4;
   ctx.beginPath(); ctx.moveTo(cx, cy - 10);
   ctx.quadraticCurveTo(cx, cy - 60 + jt, cx, cy - 50); ctx.stroke();
@@ -5633,14 +5747,15 @@ function drawSwimmingScene(cam, W, H) {
     ctx.beginPath(); ctx.arc(sx, sy, 3, 0, Math.PI * 2); ctx.fill();
   }
   ctx.globalAlpha = 1;
-  // Draw kitty bobbing in the water
+  // Kitty bobbing in the water
   const kittyBob = Math.sin(gameTime / 300) * 4;
   drawKitty(cx, cy + kittyBob, player.color, 1, Math.floor(gameTime / 200) % 4, 'horn');
   // Water overlay (kitty partially submerged)
   ctx.fillStyle = 'rgba(56, 189, 248, 0.4)';
   ctx.beginPath(); ctx.ellipse(cx, cy + 8, 190, 45, 0, 0, Math.PI * 2); ctx.fill();
+  // Title
   ctx.fillStyle = '#fff'; ctx.font = 'bold 18px system-ui'; ctx.textAlign = 'center';
-  ctx.fillText('Splashing in the fountain!', cx, cy - 80);
+  ctx.fillText('Splashing in the fountain!', cx, cy - 130);
   ctx.font = '13px system-ui'; ctx.fillStyle = 'rgba(255,255,255,0.8)';
   ctx.fillText('Press S to get out', cx, cy + 80);
 }
