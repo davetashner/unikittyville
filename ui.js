@@ -325,6 +325,30 @@ window.addEventListener('keydown', e => {
       }
     }
   }
+  // Scroll transcription typing in Pantheon
+  if (scrollActive && !scrollComplete && !e.repeat) {
+    if (e.key.length === 1 && scrollTyped < scrollText.length) {
+      e.preventDefault();
+      const expected = scrollText[scrollTyped];
+      if (e.key === expected) {
+        scrollTyped++;
+        if (scrollTyped >= scrollText.length) {
+          // Scroll complete!
+          scrollComplete = true;
+          scrollShowFact = true;
+          scrollFactTimer = 0;
+          const accuracy = Math.max(0, Math.round(((scrollText.length - scrollErrors) / scrollText.length) * 100));
+          score += POINTS.SCROLL;
+          addPopup(player.x, player.y - 40, '+' + POINTS.SCROLL + ' Scroll ' + (scrollRound + 1) + '/5!', '#fbbf24');
+          playChaChing();
+        }
+      } else {
+        scrollErrors++;
+        scrollTotalErrors++;
+        scrollFlashRed = 300; // flash for 300ms
+      }
+    }
+  }
 });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 
@@ -589,9 +613,20 @@ function updatePrompt(near) {
     return;
   }
   if (currentScene === Scene.PANTHEON) {
-    el.textContent = 'Inside the Pantheon... Press Enter to leave';
+    if (scrollActive && !scrollComplete) {
+      el.textContent = 'Type the scroll text! Esc to cancel';
+      setAction('Escape', 'Cancel');
+    } else if (scrollActive && scrollComplete) {
+      el.textContent = 'Scroll complete! Press Enter to continue';
+      setAction('Enter', 'Next');
+    } else if (scrollAllDone) {
+      el.textContent = 'All scrolls transcribed! Press Enter to leave';
+      setAction('Enter', 'Exit');
+    } else {
+      el.textContent = 'Inside the Pantheon... Press T to transcribe scrolls, Enter to leave';
+      setAction('KeyT', 'Scroll', 'Enter', 'Exit');
+    }
     el.style.display = 'block';
-    setAction('Enter', 'Exit');
     return;
   }
   if (currentScene === Scene.CAMPER) {

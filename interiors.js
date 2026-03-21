@@ -651,9 +651,140 @@ function drawPantheonInterior(cam, W, H) {
   }
   ctx.fillStyle = '#fff'; ctx.font = 'bold 18px system-ui'; ctx.textAlign = 'center';
   ctx.fillText('The Pantheon', cx, cy - 130);
-  ctx.font = '13px system-ui'; ctx.fillStyle = 'rgba(100,100,100,0.8)';
-  ctx.fillText('Press Enter to leave', cx, cy + 145);
+  if (!scrollActive) {
+    ctx.font = '13px system-ui'; ctx.fillStyle = 'rgba(100,100,100,0.8)';
+    if (scrollAllDone) {
+      ctx.fillText('All scrolls transcribed! Press Enter to leave', cx, cy + 145);
+    } else {
+      ctx.fillText('Press T to transcribe scrolls | Enter to leave', cx, cy + 145);
+    }
+  }
   drawKitty(cx, cy + 60, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
+
+  // ── Scroll transcription overlay ──
+  if (scrollActive) {
+    const sw = Math.min(W * 0.8, 500); // scroll width
+    const sh = 200;
+    const sx = cx - sw / 2;
+    const sy = cy - 80;
+
+    // Parchment background with aged edges
+    ctx.save();
+    // Outer darker edge (aged look)
+    ctx.fillStyle = '#c4a96a';
+    ctx.beginPath();
+    ctx.roundRect(sx - 4, sy - 4, sw + 8, sh + 8, 8);
+    ctx.fill();
+    // Inner parchment
+    const parchGrad = ctx.createRadialGradient(cx, sy + sh / 2, 20, cx, sy + sh / 2, sw * 0.6);
+    parchGrad.addColorStop(0, '#fdf6e3'); // cream center
+    parchGrad.addColorStop(1, '#f0e4c8'); // slightly darker edges
+    ctx.fillStyle = parchGrad;
+    ctx.beginPath();
+    ctx.roundRect(sx, sy, sw, sh, 6);
+    ctx.fill();
+    // Subtle border
+    ctx.strokeStyle = '#a08050';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(sx, sy, sw, sh, 6);
+    ctx.stroke();
+
+    // Scroll roll decorations (top and bottom)
+    ctx.fillStyle = '#b8944a';
+    ctx.fillRect(sx - 6, sy - 2, sw + 12, 8);
+    ctx.fillRect(sx - 6, sy + sh - 6, sw + 12, 8);
+    // Roll end circles
+    ctx.fillStyle = '#a08040';
+    ctx.beginPath(); ctx.arc(sx - 6, sy + 2, 6, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(sx + sw + 6, sy + 2, 6, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(sx - 6, sy + sh - 2, 6, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(sx + sw + 6, sy + sh - 2, 6, 0, Math.PI * 2); ctx.fill();
+
+    // Header: scroll number
+    ctx.fillStyle = '#5c3a1e';
+    ctx.font = 'bold 14px Georgia, "Times New Roman", serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Scroll ' + (scrollRound + 1) + ' of 5', cx, sy + 28);
+
+    if (!scrollComplete) {
+      // Draw the scroll text character by character
+      ctx.font = '20px Georgia, "Times New Roman", serif';
+      ctx.textAlign = 'left';
+      const textY = sy + 70;
+      // Measure to center the text
+      const fullWidth = ctx.measureText(scrollText).width;
+      let textX = cx - fullWidth / 2;
+
+      for (let i = 0; i < scrollText.length; i++) {
+        const ch = scrollText[i];
+        const charW = ctx.measureText(ch).width;
+        if (i < scrollTyped) {
+          // Already typed — green
+          ctx.fillStyle = '#16a34a';
+        } else if (i === scrollTyped) {
+          // Current cursor position — show blinking cursor
+          if (scrollFlashRed > 0) {
+            ctx.fillStyle = '#dc2626'; // red flash on error
+          } else {
+            ctx.fillStyle = '#1e293b'; // dark for current
+          }
+          // Blinking underline cursor
+          if (Math.floor(Date.now() / 400) % 2 === 0) {
+            ctx.fillRect(textX, textY + 4, charW, 2);
+          }
+        } else {
+          // Not yet typed — gray
+          ctx.fillStyle = '#9ca3af';
+        }
+        ctx.fillText(ch, textX, textY);
+        textX += charW;
+      }
+
+      // Accuracy display
+      const totalTyped = scrollTyped + scrollErrors;
+      const accuracy = totalTyped > 0 ? Math.round((scrollTyped / totalTyped) * 100) : 100;
+      ctx.font = '12px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#78716c';
+      ctx.fillText('Accuracy: ' + accuracy + '%  |  Errors: ' + scrollErrors, cx, sy + sh - 20);
+
+      // Hint
+      ctx.font = '11px system-ui';
+      ctx.fillStyle = '#a08050';
+      ctx.fillText('Type each character to transcribe the scroll', cx, sy + sh - 6);
+    } else {
+      // Completed — show the text in green and the fun fact
+      ctx.font = '20px Georgia, "Times New Roman", serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#16a34a';
+      ctx.fillText(scrollText, cx, sy + 65);
+
+      // Checkmark
+      ctx.font = 'bold 24px system-ui';
+      ctx.fillText('\u2713', cx, sy + 95);
+
+      // Accuracy
+      const totalTyped = scrollText.length + scrollErrors;
+      const accuracy = totalTyped > 0 ? Math.round((scrollText.length / totalTyped) * 100) : 100;
+      ctx.font = '13px system-ui';
+      ctx.fillStyle = '#5c3a1e';
+      ctx.fillText('Accuracy: ' + accuracy + '% | +' + POINTS.SCROLL + ' points', cx, sy + 115);
+
+      // Fun fact
+      ctx.font = 'italic 13px Georgia, "Times New Roman", serif';
+      ctx.fillStyle = '#78716c';
+      const fact = SCROLL_TEXTS[scrollRound].fact;
+      ctx.fillText(fact, cx, sy + 140);
+
+      // Continue prompt
+      ctx.font = '11px system-ui';
+      ctx.fillStyle = '#a08050';
+      const continueText = scrollRound < SCROLL_TEXTS.length - 1 ? 'Next scroll coming...' : 'Final scroll complete!';
+      ctx.fillText(continueText, cx, sy + sh - 10);
+    }
+    ctx.restore();
+  }
 }
 
 function drawSwimmingScene(cam, W, H) {

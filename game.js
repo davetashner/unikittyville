@@ -21,6 +21,7 @@ const POINTS = {
   SAFARI_PHOTO: 30, SAFARI_PHOTO_DUP: 5, SAFARI_COLLECTION: 100,
   CHEETAH_RIDE: 50, GIRAFFE_LIFT: 10,
   TELEGRAM_BASE: 30,
+  SCROLL: 35, SCROLL_BONUS: 100,
 };
 
 // ── Timing durations (ms) ──
@@ -244,6 +245,27 @@ const FOUNTAIN_POS = { x: 1500 };
 const GELATO_POSITIONS = [1000, 2800];
 const PANTHEON_POS = { x: 2600 };
 const FIAT_POS = { x: 4500 };
+// Scroll transcription minigame (Pantheon)
+const SCROLL_TEXTS = [
+  { text: 'All roads lead to Rome', fact: 'The Roman road network stretched over 250,000 miles!' },
+  { text: 'Veni Vidi Vici', fact: '"I came, I saw, I conquered" — Julius Caesar, 47 BC' },
+  { text: 'When in Rome do as the Romans do', fact: 'This proverb dates back to Saint Augustine in 390 AD!' },
+  { text: 'Rome was not built in a day', fact: 'It took over 1,000 years to build the Roman Empire!' },
+  { text: 'The Roman Empire lasted over 1000 years', fact: 'From 27 BC to 476 AD in the West — and even longer in the East!' },
+];
+let scrollActive = false;
+let scrollRound = 0; // 0-4
+let scrollText = '';
+let scrollTyped = 0; // index into scrollText
+let scrollErrors = 0;
+let scrollStartTime = 0;
+let scrollComplete = false; // current scroll complete
+let scrollAllDone = false; // all 5 scrolls done
+let scrollShowFact = false; // showing fact after completion
+let scrollFactTimer = 0;
+let scrollFlashRed = 0; // timer for red flash on wrong key
+let scrollTotalErrors = 0; // total errors across all scrolls
+let scrollBonusAwarded = false; // all-5 bonus
 // Hawaii interactions
 let tikiCount = 0;
 let coconutCount = 0;
@@ -723,6 +745,9 @@ function completeTransition() {
   campCamperShowerTimer = 0;
   ridingCheetah = false;
   safariPhotography = { active: false, timer: 0, targetAnimal: '' };
+  scrollActive = false;
+  scrollComplete = false;
+  scrollShowFact = false;
   cheetahSpeech = { text: '', timer: 0 };
   dustParticles = [];
   // Keep space suit on for levels 11-13 (Cape → Space → Moon)
@@ -1673,12 +1698,67 @@ function update(dt) {
   }
 
   if (currentScene === Scene.PANTHEON) {
-    if (keys['Enter']) {
-      keys['Enter'] = false;
-      currentScene = null;
-      player.y = GROUND_Y;
-      player.vy = 0;
-      player.onGround = true;
+    // Scroll transcription minigame
+    if (scrollActive) {
+      if (scrollFlashRed > 0) scrollFlashRed -= dt;
+      if (scrollComplete) {
+        scrollFactTimer += dt;
+        if (scrollFactTimer > 3000) {
+          // Move to next scroll or finish
+          scrollRound++;
+          if (scrollRound >= SCROLL_TEXTS.length) {
+            scrollAllDone = true;
+            scrollActive = false;
+            if (!scrollBonusAwarded) {
+              scrollBonusAwarded = true;
+              score += POINTS.SCROLL_BONUS;
+              addPopup(player.x, player.y - 40, '+' + POINTS.SCROLL_BONUS + ' All scrolls complete!', '#fbbf24');
+              playChaChing();
+            }
+          } else {
+            scrollText = SCROLL_TEXTS[scrollRound].text;
+            scrollTyped = 0;
+            scrollErrors = 0;
+            scrollComplete = false;
+            scrollShowFact = false;
+            scrollFactTimer = 0;
+          }
+        }
+      }
+      // Enter during fact display skips wait
+      if (scrollComplete && keys['Enter']) {
+        keys['Enter'] = false;
+        scrollFactTimer = 3001;
+      }
+      // Escape to cancel scroll mode
+      if (keys['Escape']) {
+        keys['Escape'] = false;
+        scrollActive = false;
+      }
+    } else {
+      // T starts scroll transcription (if not all done)
+      if (keys['KeyT'] && !scrollAllDone) {
+        keys['KeyT'] = false;
+        scrollActive = true;
+        scrollRound = 0;
+        scrollText = SCROLL_TEXTS[0].text;
+        scrollTyped = 0;
+        scrollErrors = 0;
+        scrollComplete = false;
+        scrollShowFact = false;
+        scrollFactTimer = 0;
+        scrollFlashRed = 0;
+        scrollTotalErrors = 0;
+        scrollBonusAwarded = false;
+        scrollStartTime = Date.now();
+      }
+      if (keys['Enter']) {
+        keys['Enter'] = false;
+        currentScene = null;
+        player.y = GROUND_Y;
+        player.vy = 0;
+        player.onGround = true;
+      }
     }
     return;
   }
