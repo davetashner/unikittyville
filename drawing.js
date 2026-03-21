@@ -66,6 +66,16 @@ function draw() {
   if (notebookOpen) {
     drawNotebook(W, H);
   }
+
+  // Achievement screen overlay
+  if (achievementScreenOpen) {
+    drawAchievements(W, H);
+  }
+
+  // Achievement unlock popup banner
+  if (achievementPopup) {
+    drawAchievementPopup(W, H);
+  }
 }
 
 function drawPhotoGallery(W, H) {
@@ -346,6 +356,191 @@ function drawNotebook(W, H) {
   ctx.textAlign = 'right';
   ctx.fillText('N / Enter to close  |  \u2190\u2192 categories  |  \u2191\u2193 scroll', nbX + nbW - 15, footerY);
   ctx.textAlign = 'left';
+}
+
+function drawAchievements(W, H) {
+  // Semi-transparent backdrop
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.82)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Title
+  ctx.fillStyle = '#fbbf24';
+  ctx.font = 'bold ' + Math.round(H * 0.07) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Achievement Badges', W / 2, H * 0.1);
+
+  ctx.font = Math.round(H * 0.03) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.fillStyle = '#94a3b8';
+  ctx.fillText('Press B to close', W / 2, H * 0.16);
+
+  // Grid layout: 4 columns x 2 rows
+  const cols = 4;
+  const rows = 2;
+  const cardW = Math.round(W * 0.19);
+  const cardH = Math.round(H * 0.3);
+  const gapX = Math.round(W * 0.03);
+  const gapY = Math.round(H * 0.04);
+  const totalW = cols * cardW + (cols - 1) * gapX;
+  const startX = (W - totalW) / 2;
+  const startY = H * 0.22;
+
+  for (let i = 0; i < achievements.length; i++) {
+    const a = achievements[i];
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const cx = startX + col * (cardW + gapX);
+    const cy = startY + row * (cardH + gapY);
+
+    // Card background
+    if (a.earned) {
+      // Colorful earned card
+      const grad = ctx.createLinearGradient(cx, cy, cx + cardW, cy + cardH);
+      grad.addColorStop(0, 'rgba(124, 58, 237, 0.5)');
+      grad.addColorStop(1, 'rgba(251, 191, 36, 0.4)');
+      ctx.fillStyle = grad;
+    } else {
+      ctx.fillStyle = 'rgba(55, 65, 81, 0.6)';
+    }
+    // Rounded rect
+    const r = 10;
+    ctx.beginPath();
+    ctx.moveTo(cx + r, cy);
+    ctx.lineTo(cx + cardW - r, cy);
+    ctx.quadraticCurveTo(cx + cardW, cy, cx + cardW, cy + r);
+    ctx.lineTo(cx + cardW, cy + cardH - r);
+    ctx.quadraticCurveTo(cx + cardW, cy + cardH, cx + cardW - r, cy + cardH);
+    ctx.lineTo(cx + r, cy + cardH);
+    ctx.quadraticCurveTo(cx, cy + cardH, cx, cy + cardH - r);
+    ctx.lineTo(cx, cy + r);
+    ctx.quadraticCurveTo(cx, cy, cx + r, cy);
+    ctx.closePath();
+    ctx.fill();
+
+    // Border
+    ctx.strokeStyle = a.earned ? 'rgba(251, 191, 36, 0.7)' : 'rgba(107, 114, 128, 0.4)';
+    ctx.lineWidth = a.earned ? 2 : 1;
+    ctx.stroke();
+
+    const centerX = cx + cardW / 2;
+
+    // Icon or lock
+    const iconSize = Math.round(cardH * 0.3);
+    ctx.font = iconSize + 'px sans-serif';
+    ctx.textAlign = 'center';
+    if (a.earned) {
+      ctx.fillText(a.icon, centerX, cy + cardH * 0.35);
+    } else {
+      ctx.fillStyle = '#6b7280';
+      ctx.fillText('???', centerX, cy + cardH * 0.35);
+    }
+
+    // Name
+    const nameSize = Math.round(cardH * 0.1);
+    ctx.font = 'bold ' + nameSize + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.fillStyle = a.earned ? '#fef08a' : '#9ca3af';
+    ctx.textAlign = 'center';
+    ctx.fillText(a.name, centerX, cy + cardH * 0.55);
+
+    // Description or hint
+    const descSize = Math.round(cardH * 0.075);
+    ctx.font = descSize + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.fillStyle = a.earned ? '#e2e8f0' : '#6b7280';
+    const descText = a.earned ? a.description : a.hint;
+    // Simple word wrap for long text
+    const words = descText.split(' ');
+    let line = '';
+    let lineY = cy + cardH * 0.65;
+    const maxLineW = cardW - 16;
+    for (const word of words) {
+      const test = line + (line ? ' ' : '') + word;
+      if (ctx.measureText(test).width > maxLineW && line) {
+        ctx.fillText(line, centerX, lineY);
+        line = word;
+        lineY += descSize + 2;
+      } else {
+        line = test;
+      }
+    }
+    if (line) ctx.fillText(line, centerX, lineY);
+
+    // Earned checkmark
+    if (a.earned) {
+      ctx.fillStyle = '#4ade80';
+      ctx.font = 'bold ' + Math.round(cardH * 0.12) + 'px sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText('\u2713', cx + cardW - 6, cy + 18);
+    }
+  }
+
+  // Progress summary
+  const earned = achievements.filter(a => a.earned).length;
+  ctx.fillStyle = earned === achievements.length ? '#4ade80' : '#e2e8f0';
+  ctx.font = 'bold ' + Math.round(H * 0.035) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(earned + '/' + achievements.length + ' badges earned' + (earned === achievements.length ? ' \u2014 All complete!' : ''), W / 2, H * 0.94);
+}
+
+function drawAchievementPopup(W, H) {
+  if (!achievementPopup) return;
+  const progress = achievementPopup.timer / ACHIEVEMENT_POPUP_DURATION;
+  // Slide in from top, stay, slide out
+  let yOffset;
+  if (progress > 0.85) {
+    // Sliding in
+    yOffset = (1 - (progress - 0.85) / 0.15) * 1;
+  } else if (progress < 0.15) {
+    // Sliding out
+    yOffset = (1 - progress / 0.15) * 1;
+  } else {
+    yOffset = 1;
+  }
+
+  const bannerH = Math.round(H * 0.12);
+  const bannerW = Math.round(W * 0.55);
+  const bx = (W - bannerW) / 2;
+  const by = H * 0.05 * yOffset - bannerH * (1 - yOffset);
+
+  // Banner background
+  const grad = ctx.createLinearGradient(bx, by, bx + bannerW, by + bannerH);
+  grad.addColorStop(0, 'rgba(124, 58, 237, 0.92)');
+  grad.addColorStop(0.5, 'rgba(168, 85, 247, 0.92)');
+  grad.addColorStop(1, 'rgba(251, 191, 36, 0.92)');
+  ctx.fillStyle = grad;
+  // Rounded banner
+  const r = 12;
+  ctx.beginPath();
+  ctx.moveTo(bx + r, by);
+  ctx.lineTo(bx + bannerW - r, by);
+  ctx.quadraticCurveTo(bx + bannerW, by, bx + bannerW, by + r);
+  ctx.lineTo(bx + bannerW, by + bannerH - r);
+  ctx.quadraticCurveTo(bx + bannerW, by + bannerH, bx + bannerW - r, by + bannerH);
+  ctx.lineTo(bx + r, by + bannerH);
+  ctx.quadraticCurveTo(bx, by + bannerH, bx, by + bannerH - r);
+  ctx.lineTo(bx, by + r);
+  ctx.quadraticCurveTo(bx, by, bx + r, by);
+  ctx.closePath();
+  ctx.fill();
+
+  // Border
+  ctx.strokeStyle = 'rgba(253, 224, 71, 0.8)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Icon
+  const iconSize = Math.round(bannerH * 0.5);
+  ctx.font = iconSize + 'px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(achievementPopup.icon, bx + 16, by + bannerH * 0.65);
+
+  // Text
+  ctx.fillStyle = '#fef08a';
+  ctx.font = 'bold ' + Math.round(bannerH * 0.22) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('Achievement Unlocked!', bx + iconSize + 28, by + bannerH * 0.4);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold ' + Math.round(bannerH * 0.26) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.fillText(achievementPopup.name, bx + iconSize + 28, by + bannerH * 0.72);
 }
 
 function drawSpeechBubbles() {
