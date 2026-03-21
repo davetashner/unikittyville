@@ -433,6 +433,7 @@ function startGameAtLevel(lvl) {
   document.getElementById('volumeControl').style.display = 'flex';
   document.getElementById('hudName').textContent = playerName;
   initMeows();
+  loadAchievements();
   for (const sfx of [...meowSounds, chaChingSound]) {
     if (sfx) {
       const p = sfx.play();
@@ -473,6 +474,7 @@ function startGame() {
   document.getElementById('volumeControl').style.display = 'flex';
   document.getElementById('hudName').textContent = playerName;
   initMeows();
+  loadAchievements();
   // Unlock audio on mobile: browsers require a user gesture before playing audio.
   // The Play button click/tap is that gesture. We briefly play/pause SFX elements
   // so subsequent play() calls succeed even outside a direct gesture context.

@@ -385,6 +385,89 @@ let golfCharging = false;
 
 // Space flight alien collection — persists to Moon level (defined in level 12 section)
 
+// ── Achievement Badges ──
+const ACHIEVEMENT_BONUS = 200;
+const achievements = [
+  { id: 'junior_geographer', name: 'Junior Geographer', description: 'Visit 5 different levels', icon: '\u{1F30D}', earned: false, hint: 'Explore more levels!' },
+  { id: 'marine_biologist', name: 'Marine Biologist', description: 'Complete the scuba diving level', icon: '\u{1F420}', earned: false, hint: 'Dive deep in the Oriental level' },
+  { id: 'chefs_kiss', name: "Chef's Kiss", description: 'Make 3 pizzas, 3 s\'mores, and 3 smoothies', icon: '\u{1F468}\u200D\u{1F373}', earned: false, hint: 'Cook in NYC, Campground & Moon' },
+  { id: 'shutterfly', name: 'Shutterfly', description: 'Take 5 safari photos', icon: '\u{1F4F8}', earned: false, hint: 'Photograph animals on safari' },
+  { id: 'astronaut', name: 'Astronaut', description: 'Reach the Moon', icon: '\u{1F680}', earned: false, hint: 'Blast off from Cape Canaveral' },
+  { id: 'world_traveler', name: 'World Traveler', description: 'Visit all 13 levels', icon: '\u2708\uFE0F', earned: false, hint: 'See every destination' },
+  { id: 'kits_best_friend', name: "Kit's Best Friend", description: 'Complete the hospital delivery and picnic', icon: '\u{1F37C}', earned: false, hint: 'Deliver Kit and visit the park' },
+  { id: 'high_scorer', name: 'High Scorer', description: 'Reach 10,000 points', icon: '\u2B50', earned: false, hint: 'Keep collecting and exploring!' },
+];
+let levelsVisited = new Set();
+let achievementScreenOpen = false;
+let achievementCheckCounter = 0;
+let achievementPopup = null; // { name, icon, timer }
+const ACHIEVEMENT_POPUP_DURATION = 3000;
+
+// Load earned achievements from localStorage
+function loadAchievements() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('unikittyville_achievements') || '{}');
+    for (const a of achievements) {
+      if (saved[a.id]) a.earned = true;
+    }
+    const savedLevels = JSON.parse(localStorage.getItem('unikittyville_levels_visited') || '[]');
+    for (const lv of savedLevels) levelsVisited.add(lv);
+  } catch (e) { /* ignore corrupt data */ }
+}
+
+function saveAchievements() {
+  try {
+    const data = {};
+    for (const a of achievements) { if (a.earned) data[a.id] = true; }
+    localStorage.setItem('unikittyville_achievements', JSON.stringify(data));
+    localStorage.setItem('unikittyville_levels_visited', JSON.stringify([...levelsVisited]));
+  } catch (e) { /* storage full or unavailable */ }
+}
+
+function awardAchievement(id) {
+  const a = achievements.find(b => b.id === id);
+  if (!a || a.earned) return;
+  a.earned = true;
+  score += ACHIEVEMENT_BONUS;
+  addPopup(player.x, player.y - 60, '+' + ACHIEVEMENT_BONUS + ' Achievement!', '#fbbf24');
+  achievementPopup = { name: a.name, icon: a.icon, timer: ACHIEVEMENT_POPUP_DURATION };
+  playChaChing();
+  saveAchievements();
+}
+
+function checkAchievements() {
+  // Track current level visit
+  levelsVisited.add(currentLevel);
+
+  // Junior Geographer — visit 5 different levels
+  if (levelsVisited.size >= 5) awardAchievement('junior_geographer');
+
+  // World Traveler — visit all 13 levels
+  if (levelsVisited.size >= 13) awardAchievement('world_traveler');
+
+  // Astronaut — reach the Moon (level 13)
+  if (currentLevel === 13) awardAchievement('astronaut');
+
+  // High Scorer — reach 10,000 points
+  if (score >= 10000) awardAchievement('high_scorer');
+
+  // Chef's Kiss — 3 pizzas, 3 s'mores, 3 smoothies
+  if (pizzaMaking.pizzaCount >= 3 && smoreCount >= 3 && smoothieCount >= 3) {
+    awardAchievement('chefs_kiss');
+  }
+
+  // Shutterfly — take 5+ safari photos (4 unique species + any duplicates, or just total count)
+  if (safariPhotoCount >= 4) awardAchievement('shutterfly');
+
+  // Kit's Best Friend — hospital delivery and picnic
+  if (hospitalDelivered && kitParkBonus) awardAchievement('kits_best_friend');
+
+  // Marine Biologist — checked when exiting scuba (set a flag)
+  // (awarded inline when exiting scuba scene)
+
+  saveAchievements();
+}
+
 let popups = []; // floating score popups
 let keys = {};
 const isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
@@ -1141,6 +1224,7 @@ function update(dt) {
       score += POINTS.SCUBA_COMPLETE;
       addPopup(player.x, player.y - 40, '+' + POINTS.SCUBA_COMPLETE + ' Great dive!', '#38bdf8');
       playChaChing();
+      awardAchievement('marine_biologist');
     }
     // HUD updates during scuba
     hud.score.textContent = score;
@@ -3419,6 +3503,26 @@ function update(dt) {
     p.vy += 0.05; // light gravity
     p.life -= dt;
     if (p.life <= 0) glitterParticles.splice(i, 1);
+  }
+
+  // Achievement check (every 60 frames ~ once per second)
+  achievementCheckCounter++;
+  if (achievementCheckCounter >= 60) {
+    achievementCheckCounter = 0;
+    checkAchievements();
+  }
+
+  // Achievement popup countdown
+  if (achievementPopup) {
+    achievementPopup.timer -= dt;
+    if (achievementPopup.timer <= 0) achievementPopup = null;
+  }
+
+  // Toggle achievement screen with B (only when not in a scene and not in Alps equipment choice)
+  // B key may have been consumed earlier by level-specific handlers (campfire, smoothie blend)
+  if (keys['KeyB'] && currentScene === null && !alpsChoosing) {
+    keys['KeyB'] = false;
+    achievementScreenOpen = !achievementScreenOpen;
   }
 
   // HUD update
