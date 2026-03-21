@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Unikittyville Tests</title>
+<style>
+  body { font-family: monospace; background: #1a1a2e; color: #fff; padding: 20px; }
+  .pass { color: #4ade80; }
+  .fail { color: #ef4444; font-weight: bold; }
+  .section { color: #38bdf8; font-weight: bold; margin-top: 16px; font-size: 1.1em; }
+  .summary { margin-top: 24px; font-size: 1.2em; padding: 12px; border-radius: 8px; }
+  .summary.all-pass { background: rgba(74, 222, 128, 0.15); border: 1px solid #4ade80; }
+  .summary.has-fail { background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; }
+</style>
+</head>
+<body>
+<h1>Unikittyville Test Suite</h1>
+<div id="results"></div>
+
+<!--
+  Stub DOM elements that game scripts expect on load.
+  These are hidden and exist only so the scripts don't crash.
+-->
+<canvas id="game" style="display:none" width="960" height="540"></canvas>
+
+<!-- Audio stubs (no src needed, just elements with correct IDs) -->
+<audio id="musicMeadow"></audio>
+<audio id="musicNYC"></audio>
+<audio id="musicRome"></audio>
+<audio id="musicHawaii"></audio>
+<audio id="musicAlps"></audio>
+<audio id="musicSledding"></audio>
+<audio id="musicChalet"></audio>
+<audio id="musicOriental"></audio>
+<audio id="musicCampground"></audio>
+<audio id="musicSafari"></audio>
+<audio id="musicScuba"></audio>
+<audio id="musicFlight"></audio>
+<audio id="meow1"></audio>
+<audio id="meow2"></audio>
+<audio id="chaChing"></audio>
+<!-- Oriental / Sailing SFX -->
+<audio id="sfxSailWind"></audio>
+<audio id="sfxWaterLapping"></audio>
+<audio id="sfxDockFootsteps"></audio>
+<audio id="sfxSeagullCall"></audio>
+<!-- Scuba SFX -->
+<audio id="sfxBubblesSwim"></audio>
+<audio id="sfxDiveSplash"></audio>
+<audio id="sfxPearlPickup"></audio>
+<audio id="sfxShipwreckCreak"></audio>
+<audio id="sfxMercatPurr"></audio>
+<audio id="sfxMercatChirp"></audio>
+<!-- Flying SFX -->
+<audio id="sfxFlightWind"></audio>
+<audio id="sfxSeagullSwoosh"></audio>
+<audio id="sfxSeagullBonk"></audio>
+<!-- Safari SFX -->
+<audio id="sfxElephantTrumpet"></audio>
+<audio id="sfxElephantSpray"></audio>
+<audio id="sfxRhinoSnort"></audio>
+<audio id="sfxRhinoCharge"></audio>
+<audio id="sfxCheetahChirp"></audio>
+<audio id="sfxCheetahPurr"></audio>
+<audio id="sfxCheetahSprint"></audio>
+<audio id="sfxGiraffeHum"></audio>
+<audio id="sfxGiraffeLift"></audio>
+<audio id="sfxAntelopeGallop"></audio>
+<audio id="sfxAntelopeHop"></audio>
+<audio id="sfxCameraShutter"></audio>
+<audio id="sfxPhotoSuccess"></audio>
+<audio id="sfxPhotoFail"></audio>
+<audio id="sfxGrassRustle"></audio>
+<audio id="sfxSafariJeep"></audio>
+<audio id="sfxBaobabPluck"></audio>
+<audio id="sfxSavannaWind"></audio>
+
+<!-- Start screen stubs -->
+<div id="startScreen" style="display:none">
+  <input type="text" id="nameInput" value="TestKitty">
+  <button id="startBtn">Play!</button>
+  <button id="levelSelectBtn">Level Select</button>
+</div>
+
+<!-- Level select screen stubs -->
+<div id="levelSelectScreen" style="display:none">
+  <div id="levelGrid"></div>
+  <button id="levelSelectBack">Back</button>
+</div>
+
+<!-- Orientation overlay stub -->
+<div id="orientationOverlay" style="display:none"></div>
+
+<!-- HUD stubs -->
+<div id="hud" style="display:none">
+  <span id="hudLevel">Level 1</span>
+  <span id="hudName"></span>
+  <span>Score: <b id="hudScore">0</b></span>
+  <span class="hud-item" data-levels="1">Fish: <b id="hudFish">0</b></span>
+  <span class="hud-item" data-levels="1">Bacon: <b id="hudBacon">0</b></span>
+  <span class="hud-item" data-levels="1,3,4,5,6,8,9">Yarn: <b id="hudYarn">0</b></span>
+  <span class="hud-item" data-levels="3">Pizza: <b id="hudPizza">0</b></span>
+  <span class="hud-item" data-levels="3">Hot Dogs: <b id="hudHotdog">0</b></span>
+  <span class="hud-item" data-levels="4">Gelato: <b id="hudGelato">0</b></span>
+  <span class="hud-item" data-levels="1">Honey: <b id="hudHoney">0</b></span>
+  <span class="hud-item" data-levels="5">Tiki: <b id="hudTiki">0</b></span>
+  <span class="hud-item" data-levels="5">Coconuts: <b id="hudCoconut">0</b></span>
+  <span class="hud-item" data-levels="7">Diamonds: <b id="hudDiamond">0</b></span>
+  <span class="hud-item" data-levels="2">Snowballs: <b id="hudSnowball">0</b></span>
+  <span class="hud-item" data-levels="8">Sticks: <b id="hudStick">0</b></span>
+  <span class="hud-item" data-levels="8">S'mores: <b id="hudSmore">0</b></span>
+  <span class="hud-item" data-levels="6">Shells: <b id="hudShell">0</b></span>
+  <span class="hud-item" data-levels="9">Fruit: <b id="hudFruit">0</b></span>
+  <span class="hud-item" data-levels="9">Photos: <b id="hudPhoto">0</b></span>
+  <span class="hud-item" data-levels="9">Cheetah: <b id="hudCheetahYarn">0/5</b></span>
+</div>
+
+<!-- Controls stub -->
+<div id="controls" style="display:none">
+  <span>Arrow Keys: Move</span>
+</div>
+
+<!-- Prompt stub -->
+<div id="prompt" style="display:none"></div>
+
+<!-- Touch controls stubs -->
+<div id="touch-controls" style="display:none">
+  <div id="touch-dpad-left" class="touch-btn"></div>
+  <div id="touch-dpad-right" class="touch-btn"></div>
+  <div id="touch-jump" class="touch-btn"></div>
+  <div id="touch-action" class="touch-btn" style="display:none;"></div>
+</div>
+
+<!-- Volume control stubs -->
+<div id="volumeControl" style="display:none">
+  <button id="volumeBtn">V</button>
+  <div id="volumeSliderWrap"><input type="range" id="volumeSlider" min="0" max="100" value="40"></div>
+</div>
+
+<!-- Load game files in the same order as index.html -->
+<script src="game.js"></script>
+<script src="levels.js"></script>
+<script src="drawing.js"></script>
+<script src="interiors.js"></script>
+<script src="ui.js"></script>
+<!-- Test runner -->
+<script src="tests.js"></script>
+</body>
+</html>
