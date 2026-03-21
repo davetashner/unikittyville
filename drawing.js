@@ -5478,6 +5478,8 @@ function drawCapeWorld(W, H, cam, cycle, isNight) {
     ctx.fillText('Press Enter to Board Rocket!', ROCKET_POS.x - cam, GROUND_Y - 235);
     ctx.textAlign = 'left';
   }
+
+  drawPlayerAndUI();
 }
 
 // Cape Canaveral Launch Scene (interior)
@@ -6042,6 +6044,8 @@ function drawMoonWorld(W, H, cam, cycle, isNight) {
     ctx.fillText('Press Enter to complete your adventure!', W / 2, 55);
     ctx.textAlign = 'left';
   }
+
+  drawPlayerAndUI();
 }
 
 // Smoothie Shop Interior
