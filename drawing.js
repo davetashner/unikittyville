@@ -35,6 +35,7 @@ function draw() {
       [Scene.WATERING_HOLE]: () => drawWateringHoleScene(cam, W, H),
       [Scene.SCUBA_DIVING]: () => drawScubaDivingScene(cam, W, H),
       [Scene.SAILING]: () => drawSailingScene(cam, W, H),
+      [Scene.CAPE_LAUNCH]: () => drawCapeLaunchScene(cam, W, H),
     };
     if (sceneDrawMap[currentScene]) sceneDrawMap[currentScene]();
   } else {
@@ -4816,6 +4817,356 @@ function drawFlightWorld(W, H, cam, cycle, isNight) {
   // NPCs are not visible during flight — they're decorative for data integrity
 }
 
+// ── Level 11: Cape Canaveral Drawing ──
+
+function drawCapeSky(W, H, cycle, isNight, cam) {
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  if (isNight) {
+    grad.addColorStop(0, '#0f172a');
+    grad.addColorStop(0.5, '#1e293b');
+    grad.addColorStop(1, '#334155');
+  } else {
+    grad.addColorStop(0, '#38bdf8');
+    grad.addColorStop(0.5, '#7dd3fc');
+    grad.addColorStop(1, '#bae6fd');
+  }
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Clouds
+  ctx.fillStyle = isNight ? 'rgba(148,163,184,0.3)' : 'rgba(255,255,255,0.7)';
+  const cloudPositions = [200, 600, 1100, 1600, 2200, 3000, 3500, 4200, 4800];
+  for (const cp of cloudPositions) {
+    const x = cp - cam * 0.3;
+    if (x < -80 || x > W + 80) continue;
+    ctx.beginPath();
+    ctx.ellipse(x, 60 + (cp % 50), 40, 15, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(x + 20, 55 + (cp % 50), 30, 12, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Sun/Moon
+  if (!isNight) {
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath();
+    ctx.arc(W - 100, 70, 30, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawCapeWorld(W, H, cam, cycle, isNight) {
+  const ww = level11Cape.worldW;
+  const t = gameTime;
+
+  // Ocean in background (far right and left edges)
+  ctx.fillStyle = '#2563eb';
+  ctx.fillRect(0, GROUND_Y + 10, W, H - GROUND_Y);
+
+  // Sandy ground
+  ctx.fillStyle = '#fbbf24';
+  ctx.fillRect(-cam, GROUND_Y, ww, 20);
+  ctx.fillStyle = '#d97706';
+  ctx.fillRect(-cam, GROUND_Y + 20, ww, H);
+
+  // Concrete launch area (near rocket)
+  const concreteX = ROCKET_POS.x - 200 - cam;
+  ctx.fillStyle = '#9ca3af';
+  ctx.fillRect(concreteX, GROUND_Y, 400, 20);
+
+  // NASA Building
+  const nbx = NASA_BUILDING_POS.x - cam;
+  if (nbx > -200 && nbx < W + 200) {
+    // Main building
+    ctx.fillStyle = '#e2e8f0';
+    ctx.fillRect(nbx, GROUND_Y - 120, NASA_BUILDING_POS.w, 120);
+    // Roof
+    ctx.fillStyle = '#475569';
+    ctx.fillRect(nbx - 10, GROUND_Y - 130, NASA_BUILDING_POS.w + 20, 15);
+    // NASA logo area
+    ctx.fillStyle = '#1e40af';
+    ctx.beginPath();
+    ctx.arc(nbx + NASA_BUILDING_POS.w / 2, GROUND_Y - 80, 25, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 10px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('NASA', nbx + NASA_BUILDING_POS.w / 2, GROUND_Y - 77);
+    ctx.textAlign = 'left';
+    // Windows
+    for (let w = 0; w < 4; w++) {
+      ctx.fillStyle = '#bfdbfe';
+      ctx.fillRect(nbx + 15 + w * 42, GROUND_Y - 55, 25, 20);
+    }
+    // Door
+    ctx.fillStyle = '#64748b';
+    ctx.fillRect(nbx + NASA_BUILDING_POS.w / 2 - 15, GROUND_Y - 40, 30, 40);
+  }
+
+  // Space Suit Area
+  const ssx = SPACE_SUIT_POS.x - cam;
+  if (ssx > -60 && ssx < W + 60) {
+    // Display case
+    ctx.fillStyle = '#e2e8f0';
+    ctx.fillRect(ssx - 20, GROUND_Y - 60, 40, 60);
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(ssx - 20, GROUND_Y - 60, 40, 60);
+    // Suit on display (if not worn)
+    if (!capeSpaceSuit) {
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(ssx - 8, GROUND_Y - 50, 16, 35);
+      // Helmet
+      ctx.fillStyle = '#bfdbfe';
+      ctx.beginPath();
+      ctx.arc(ssx, GROUND_Y - 52, 10, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = '#fff';
+    ctx.font = '10px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('Space Suit', ssx, GROUND_Y - 65);
+    ctx.textAlign = 'left';
+  }
+
+  // THE ROCKET - the centerpiece!
+  const rx = ROCKET_POS.x - cam;
+  if (rx > -100 && rx < W + 100) {
+    // Launch tower
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillRect(rx + 30, GROUND_Y - 200, 8, 200);
+    // Cross beams
+    for (let i = 0; i < 5; i++) {
+      ctx.fillRect(rx + 10, GROUND_Y - 40 * i - 30, 35, 3);
+    }
+
+    // Rocket body
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(rx - 15, GROUND_Y - 180, 30, 140);
+
+    // Rocket nose cone
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath();
+    ctx.moveTo(rx, GROUND_Y - 220);
+    ctx.lineTo(rx + 15, GROUND_Y - 180);
+    ctx.lineTo(rx - 15, GROUND_Y - 180);
+    ctx.closePath();
+    ctx.fill();
+
+    // Rocket stripes
+    ctx.fillStyle = '#3b82f6';
+    ctx.fillRect(rx - 15, GROUND_Y - 120, 30, 10);
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(rx - 15, GROUND_Y - 80, 30, 10);
+
+    // Fins
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath();
+    ctx.moveTo(rx - 15, GROUND_Y - 40);
+    ctx.lineTo(rx - 30, GROUND_Y);
+    ctx.lineTo(rx - 15, GROUND_Y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(rx + 15, GROUND_Y - 40);
+    ctx.lineTo(rx + 30, GROUND_Y);
+    ctx.lineTo(rx + 15, GROUND_Y);
+    ctx.closePath();
+    ctx.fill();
+
+    // Engine nozzle
+    ctx.fillStyle = '#475569';
+    ctx.fillRect(rx - 10, GROUND_Y - 40, 20, 10);
+
+    // Fuel gauge if fueling
+    if (capeFueling > 0 && capeFueling < 3000) {
+      const pct = capeFueling / 3000;
+      ctx.fillStyle = '#1f2937';
+      ctx.fillRect(rx - 25, GROUND_Y - 250, 50, 8);
+      ctx.fillStyle = '#22c55e';
+      ctx.fillRect(rx - 25, GROUND_Y - 250, 50 * pct, 8);
+      ctx.fillStyle = '#fff';
+      ctx.font = '10px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText('Fueling...', rx, GROUND_Y - 255);
+      ctx.textAlign = 'left';
+    }
+
+    // Fueled indicator
+    if (capeFueled && !capeLaunching) {
+      ctx.fillStyle = '#22c55e';
+      ctx.font = 'bold 12px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText('\u2713 FUELED', rx, GROUND_Y - 235);
+      ctx.textAlign = 'left';
+    }
+
+    // Launch flames!
+    if (capeLaunching) {
+      for (let i = 0; i < 8; i++) {
+        const flameH = 20 + Math.random() * 30;
+        const fx = rx - 8 + Math.random() * 16;
+        ctx.fillStyle = i % 2 === 0 ? '#f59e0b' : '#ef4444';
+        ctx.beginPath();
+        ctx.moveTo(fx - 5, GROUND_Y - 30);
+        ctx.lineTo(fx, GROUND_Y - 30 + flameH);
+        ctx.lineTo(fx + 5, GROUND_Y - 30);
+        ctx.closePath();
+        ctx.fill();
+      }
+      // Smoke
+      ctx.fillStyle = 'rgba(156, 163, 175, 0.6)';
+      for (let i = 0; i < 6; i++) {
+        const smokeX = rx - 20 + Math.random() * 40;
+        const smokeY = GROUND_Y + Math.random() * 20;
+        ctx.beginPath();
+        ctx.arc(smokeX, smokeY, 10 + Math.random() * 15, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+
+  // Palm trees
+  for (const scene of level11Cape.scenes) {
+    if (scene.type !== 'palm_tree') continue;
+    const px = scene.x - cam;
+    if (px < -30 || px > W + 30) continue;
+    // Trunk
+    ctx.fillStyle = '#92400e';
+    ctx.fillRect(px - 3, GROUND_Y - 50, 6, 50);
+    // Fronds
+    ctx.fillStyle = '#22c55e';
+    for (let f = 0; f < 5; f++) {
+      const angle = -Math.PI / 2 + (f - 2) * 0.4 + Math.sin(t / 1000 + scene.x) * 0.05;
+      ctx.beginPath();
+      ctx.moveTo(px, GROUND_Y - 50);
+      ctx.quadraticCurveTo(
+        px + Math.cos(angle) * 20,
+        GROUND_Y - 50 + Math.sin(angle) * 20,
+        px + Math.cos(angle) * 35,
+        GROUND_Y - 50 + Math.sin(angle) * 35
+      );
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#16a34a';
+      ctx.stroke();
+    }
+  }
+
+  // Platforms — concrete/metal style
+  for (const p of level11Cape.platforms) {
+    const px = p.x - cam;
+    if (px + p.w < 0 || px > W) continue;
+    ctx.fillStyle = '#64748b';
+    ctx.fillRect(px, p.y, p.w, 10);
+    ctx.fillStyle = '#475569';
+    ctx.fillRect(px, p.y + 10, p.w, 4);
+    // Safety stripes
+    ctx.fillStyle = '#fbbf24';
+    for (let s = 0; s < p.w; s += 12) {
+      ctx.fillRect(px + s, p.y, 6, 2);
+    }
+  }
+
+  // Yarn balls
+  for (const yb of level11Cape.yarnBalls) {
+    const yx = yb.x - cam;
+    if (yx < -15 || yx > W + 15) continue;
+    if (yb.collected) continue;
+    const bob = Math.sin(t / 300 + yb.bobPhase) * 3;
+    ctx.fillStyle = yb.color;
+    ctx.beginPath();
+    ctx.arc(yx, yb.y + bob, 8, 0, Math.PI * 2);
+    ctx.fill();
+    // Yarn lines
+    ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(yx, yb.y + bob, 5, 0, Math.PI);
+    ctx.stroke();
+  }
+
+  // NPCs
+  for (const npc of level11Cape.npcs) {
+    const nx = npc.x - cam;
+    if (nx < -30 || nx > W + 30) continue;
+    drawKitty(npc.x, npc.y, npc.color, npc.facing, npc.walkFrame, npc.accessory);
+  }
+
+  // Interaction prompts
+  const px = player.x;
+  if (!capeSpaceSuit && Math.abs(px - SPACE_SUIT_POS.x) < BUILDING_RANGE) {
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 14px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('Press S for Space Suit!', SPACE_SUIT_POS.x - cam, GROUND_Y - 80);
+    ctx.textAlign = 'left';
+  }
+
+  if (Math.abs(px - ROCKET_POS.x) < BUILDING_RANGE && !capeFueled) {
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 14px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('Hold P to Fuel Rocket', ROCKET_POS.x - cam, GROUND_Y - 235);
+    ctx.textAlign = 'left';
+  }
+
+  if (capeFueled && capeSpaceSuit && Math.abs(px - ROCKET_POS.x) < BUILDING_RANGE && !capeLaunching) {
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 14px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('Press Enter to Board Rocket!', ROCKET_POS.x - cam, GROUND_Y - 235);
+    ctx.textAlign = 'left';
+  }
+}
+
+// Cape Canaveral Launch Scene (interior)
+function drawCapeLaunchScene(cam, W, H) {
+  const cx = W / 2;
+  const cy = H / 2;
+
+  // Dark sky background
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(0, 0, W, H);
+
+  // Stars
+  for (let i = 0; i < 50; i++) {
+    ctx.fillStyle = 'rgba(255,255,255,' + (0.3 + Math.random() * 0.7) + ')';
+    ctx.beginPath();
+    ctx.arc((i * 97 + 30) % W, (i * 61 + 15) % H, 1, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Countdown display
+  ctx.fillStyle = '#fbbf24';
+  ctx.font = 'bold 72px system-ui';
+  ctx.textAlign = 'center';
+  const countNum = Math.max(0, Math.ceil(capeCountdown / 1000));
+  ctx.fillText(countNum.toString(), cx, cy - 20);
+
+  if (countNum <= 0) {
+    ctx.fillStyle = '#22c55e';
+    ctx.font = 'bold 36px system-ui';
+    ctx.fillText('LIFTOFF!', cx, cy + 40);
+  } else {
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '18px system-ui';
+    ctx.fillText('Hold SPACE to launch!', cx, cy + 40);
+
+    // Power bar
+    const barW = 200;
+    ctx.fillStyle = '#1f2937';
+    ctx.fillRect(cx - barW / 2, cy + 60, barW, 20);
+    ctx.fillStyle = capeLaunchPower > 0.8 ? '#22c55e' : '#f59e0b';
+    ctx.fillRect(cx - barW / 2, cy + 60, barW * capeLaunchPower, 20);
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(cx - barW / 2, cy + 60, barW, 20);
+  }
+
+  ctx.textAlign = 'left';
+}
+
 // ── Level Registry ──
 // Central registry mapping level numbers to their data and draw functions.
 // Defined here (at the bottom of drawing.js) because all level data from
@@ -4920,6 +5271,16 @@ const levelRegistry = {
     musicId: 'musicFlight',
     drawSky: drawFlightSky,
     drawWorld: drawFlightWorld,
+  },
+  11: {
+    name: 'Cape Canaveral',
+    worldW: level11Cape.worldW,
+    platforms: level11Cape.platforms,
+    yarnBalls: level11Cape.yarnBalls,
+    npcs: capeNpcs,
+    musicId: 'musicCapeCanaveral',
+    drawSky: drawCapeSky,
+    drawWorld: drawCapeWorld,
   },
 };
 

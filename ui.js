@@ -587,6 +587,23 @@ function updatePrompt(near) {
     el.textContent = 'Press Enter to head to the Alps!';
     el.style.display = 'block';
     setAction('Enter', 'Alps');
+  } else if (currentScene === Scene.CAPE_LAUNCH) {
+    el.textContent = 'Hold SPACE to power the launch!';
+    el.style.display = 'block';
+    setAction('Space', 'Launch');
+    return;
+  } else if (currentLevel === 11 && !capeSpaceSuit && Math.abs(player.x - SPACE_SUIT_POS.x) < BUILDING_RANGE) {
+    el.textContent = 'Press S to put on Space Suit!';
+    el.style.display = 'block';
+    setAction('KeyS', 'Suit');
+  } else if (currentLevel === 11 && Math.abs(player.x - ROCKET_POS.x) < BUILDING_RANGE && !capeFueled) {
+    el.textContent = 'Hold P to fuel the rocket!';
+    el.style.display = 'block';
+    setAction('KeyP', 'Fuel');
+  } else if (currentLevel === 11 && capeFueled && capeSpaceSuit && Math.abs(player.x - ROCKET_POS.x) < BUILDING_RANGE && !capeLaunching) {
+    el.textContent = 'Press Enter to board the rocket!';
+    el.style.display = 'block';
+    setAction('Enter', 'Board');
   } else if (currentLevel === 1 && Math.abs(player.x - BRIDGE_PORTAL.x) < 60) {
     el.textContent = 'Press Enter to go sledding!';
     el.style.display = 'block';
