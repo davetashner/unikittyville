@@ -123,6 +123,11 @@ function draw() {
   if (postcardOpen) {
     drawPostcard(W, H);
   }
+
+  // Train signal puzzle overlay (sledding level)
+  if (trainPuzzleActive && currentLevel === 2) {
+    drawTrainPuzzleOverlay(W, H);
+  }
 }
 
 function drawPhotoGallery(W, H) {
@@ -1819,6 +1824,291 @@ function drawPostcardGallery(W, H) {
   ctx.font = 'bold ' + Math.round(H * 0.025) + 'px "Segoe UI", system-ui, sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText(postcardSentLevels.size + '/' + TOTAL_LEVELS + ' unique level postcards', W / 2, H * 0.93);
+}
+
+function drawTrainPuzzleOverlay(W, H) {
+  const puzzle = TRAIN_PUZZLES[trainPuzzleRound];
+  if (!puzzle) return;
+
+  // Dark overlay
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Title
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#fbbf24';
+  ctx.font = 'bold ' + Math.round(H * 0.055) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.fillText('Train Signal Puzzle', W / 2, H * 0.09);
+
+  // Progress dots
+  const dotR = 8;
+  const dotGap = 28;
+  const dotsStartX = W / 2 - (TRAIN_PUZZLES.length - 1) * dotGap / 2;
+  for (let i = 0; i < TRAIN_PUZZLES.length; i++) {
+    ctx.beginPath();
+    ctx.arc(dotsStartX + i * dotGap, H * 0.14, dotR, 0, Math.PI * 2);
+    if (i < trainPuzzleRound) {
+      ctx.fillStyle = '#4ade80';
+    } else if (i === trainPuzzleRound) {
+      ctx.fillStyle = '#fbbf24';
+    } else {
+      ctx.fillStyle = '#374151';
+    }
+    ctx.fill();
+    ctx.strokeStyle = '#6b7280';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // Round label
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = Math.round(H * 0.03) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.fillText('Signal ' + (trainPuzzleRound + 1) + ' of ' + TRAIN_PUZZLES.length, W / 2, H * 0.19);
+
+  // Code block background for the rule
+  const codeBlockW = Math.min(W * 0.75, 520);
+  const codeBlockH = H * 0.22;
+  const codeBlockX = (W - codeBlockW) / 2;
+  const codeBlockY = H * 0.22;
+  ctx.fillStyle = '#1e1e2e';
+  ctx.strokeStyle = '#3b3b5c';
+  ctx.lineWidth = 2;
+  ctx.fillRect(codeBlockX, codeBlockY, codeBlockW, codeBlockH);
+  ctx.strokeRect(codeBlockX, codeBlockY, codeBlockW, codeBlockH);
+
+  // Draw syntax-highlighted rule text
+  const ruleLines = puzzle.rule.split('\n');
+  const lineH = Math.round(H * 0.038);
+  const startTextY = codeBlockY + lineH + 8;
+  ctx.font = 'bold ' + Math.round(H * 0.032) + 'px "Courier New", monospace';
+  ctx.textAlign = 'left';
+
+  for (let li = 0; li < ruleLines.length; li++) {
+    const lineY = startTextY + li * lineH;
+    const line = ruleLines[li];
+    // Syntax highlight: IF/THEN/AND/OR/NOT in colors, conditions in yellow
+    let xPos = codeBlockX + 16;
+    const tokens = line.split(/(\b(?:IF|THEN|AND|OR|NOT|Otherwise)\b)/g);
+    for (const token of tokens) {
+      if (token === 'IF' || token === 'AND' || token === 'OR' || token === 'NOT') {
+        ctx.fillStyle = '#60a5fa'; // blue for conditionals
+      } else if (token === 'THEN') {
+        ctx.fillStyle = '#4ade80'; // green for THEN
+      } else if (token === 'Otherwise') {
+        ctx.fillStyle = '#a78bfa'; // purple for Otherwise
+      } else if (/RED|GREEN|LEFT|RIGHT|FAST|CURVED|SNOWING|ICY|SAND|STOP|GO|SLOW DOWN|HEADLIGHTS|daytime/.test(token)) {
+        // Highlight condition words in yellow
+        ctx.fillStyle = '#fbbf24';
+      } else {
+        ctx.fillStyle = '#e2e8f0'; // default white-ish
+      }
+      ctx.fillText(token, xPos, lineY);
+      xPos += ctx.measureText(token).width;
+    }
+  }
+
+  // Visual condition indicator area
+  const vizY = codeBlockY + codeBlockH + H * 0.04;
+  const vizH = H * 0.18;
+  const vizW = Math.min(W * 0.4, 240);
+  const vizX = (W - vizW) / 2;
+
+  ctx.fillStyle = '#111827';
+  ctx.strokeStyle = '#374151';
+  ctx.lineWidth = 2;
+  ctx.fillRect(vizX, vizY, vizW, vizH);
+  ctx.strokeRect(vizX, vizY, vizW, vizH);
+
+  const vizCX = vizX + vizW / 2;
+  const vizCY = vizY + vizH / 2;
+
+  if (puzzle.visual === 'red_light') {
+    // Traffic light with red active
+    const lightW = 30, lightH = 80;
+    const lx = vizCX - lightW / 2, ly = vizCY - lightH / 2;
+    ctx.fillStyle = '#1f2937';
+    ctx.fillRect(lx, ly, lightW, lightH);
+    // Red light (top) — active
+    ctx.beginPath();
+    ctx.arc(vizCX, ly + 15, 10, 0, Math.PI * 2);
+    ctx.fillStyle = '#ef4444';
+    ctx.fill();
+    ctx.shadowColor = '#ef4444';
+    ctx.shadowBlur = 12;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    // Yellow (middle) — dim
+    ctx.beginPath();
+    ctx.arc(vizCX, ly + 40, 10, 0, Math.PI * 2);
+    ctx.fillStyle = '#4b4520';
+    ctx.fill();
+    // Green (bottom) — dim
+    ctx.beginPath();
+    ctx.arc(vizCX, ly + 65, 10, 0, Math.PI * 2);
+    ctx.fillStyle = '#1a3a1a';
+    ctx.fill();
+    // Label
+    ctx.fillStyle = '#ef4444';
+    ctx.font = 'bold ' + Math.round(H * 0.03) + 'px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('RED', vizCX, vizY + vizH - 6);
+  } else if (puzzle.visual === 'right_track') {
+    // Track with arrow pointing right
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 4;
+    // Straight track segment
+    ctx.beginPath();
+    ctx.moveTo(vizCX - 60, vizCY);
+    ctx.lineTo(vizCX + 60, vizCY);
+    ctx.stroke();
+    // Arrow head pointing right
+    ctx.beginPath();
+    ctx.moveTo(vizCX + 40, vizCY - 15);
+    ctx.lineTo(vizCX + 65, vizCY);
+    ctx.lineTo(vizCX + 40, vizCY + 15);
+    ctx.closePath();
+    ctx.fillStyle = '#fbbf24';
+    ctx.fill();
+    // Track ties
+    ctx.strokeStyle = '#6b7280';
+    ctx.lineWidth = 2;
+    for (let tx = -50; tx <= 50; tx += 20) {
+      ctx.beginPath();
+      ctx.moveTo(vizCX + tx, vizCY - 8);
+      ctx.lineTo(vizCX + tx, vizCY + 8);
+      ctx.stroke();
+    }
+    // Label
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold ' + Math.round(H * 0.03) + 'px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('RIGHT', vizCX, vizY + vizH - 6);
+  } else if (puzzle.visual === 'fast_curved') {
+    // Fast train on a curved track
+    // Curved track
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(vizCX, vizCY + 60, 70, -Math.PI * 0.8, -Math.PI * 0.2);
+    ctx.stroke();
+    // Speed lines
+    ctx.strokeStyle = '#60a5fa';
+    ctx.lineWidth = 2;
+    for (let sl = 0; sl < 3; sl++) {
+      const sy = vizCY - 15 + sl * 12;
+      ctx.beginPath();
+      ctx.moveTo(vizCX - 50 - sl * 5, sy);
+      ctx.lineTo(vizCX - 25, sy);
+      ctx.stroke();
+    }
+    // Train icon (simple rectangle)
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(vizCX - 20, vizCY - 22, 40, 20);
+    ctx.fillStyle = '#1f2937';
+    ctx.fillRect(vizCX - 15, vizCY - 18, 10, 10);
+    ctx.fillRect(vizCX + 5, vizCY - 18, 10, 10);
+    // Labels
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold ' + Math.round(H * 0.025) + 'px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('FAST + CURVED', vizCX, vizY + vizH - 6);
+  } else if (puzzle.visual === 'snowing') {
+    // Snow scene
+    ctx.fillStyle = '#1e3a5f';
+    ctx.fillRect(vizX + 4, vizY + 4, vizW - 8, vizH - 8);
+    // Snowflakes
+    ctx.fillStyle = '#e2e8f0';
+    const snowSeed = [0.1, 0.3, 0.5, 0.7, 0.9, 0.2, 0.6, 0.8, 0.4, 0.15, 0.85, 0.55];
+    for (let si = 0; si < snowSeed.length; si++) {
+      const sx = vizX + 10 + snowSeed[si] * (vizW - 20);
+      const sy = vizY + 10 + ((snowSeed[(si + 3) % snowSeed.length]) * (vizH - 30));
+      ctx.fillText('*', sx, sy);
+    }
+    // Track with ice
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(vizX + 20, vizCY + 20);
+    ctx.lineTo(vizX + vizW - 20, vizCY + 20);
+    ctx.stroke();
+    // Label
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold ' + Math.round(H * 0.03) + 'px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('SNOWING', vizCX, vizY + vizH - 6);
+  } else if (puzzle.visual === 'night') {
+    // Nighttime scene
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(vizX + 4, vizY + 4, vizW - 8, vizH - 8);
+    // Moon
+    ctx.beginPath();
+    ctx.arc(vizCX + 40, vizY + 25, 15, 0, Math.PI * 2);
+    ctx.fillStyle = '#fef9c3';
+    ctx.fill();
+    // Stars
+    ctx.fillStyle = '#fef9c3';
+    ctx.font = '10px sans-serif';
+    const starPositions = [[0.2, 0.15], [0.35, 0.25], [0.6, 0.12], [0.15, 0.35], [0.8, 0.2]];
+    for (const [px, py] of starPositions) {
+      ctx.fillText('\u2605', vizX + px * vizW, vizY + py * vizH);
+    }
+    // Track
+    ctx.strokeStyle = '#4b5563';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(vizX + 20, vizCY + 20);
+    ctx.lineTo(vizX + vizW - 20, vizCY + 20);
+    ctx.stroke();
+    // Label
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold ' + Math.round(H * 0.03) + 'px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('NIGHTTIME', vizCX, vizY + vizH - 6);
+  }
+
+  // Answer buttons
+  const btnY = vizY + vizH + H * 0.04;
+  const btnW = Math.min(W * 0.22, 160);
+  const btnH = H * 0.08;
+  const btnGap = W * 0.06;
+
+  // Button 1
+  const btn1X = W / 2 - btnW - btnGap / 2;
+  ctx.fillStyle = trainPuzzleFeedback === 'wrong' ? '#7f1d1d' : '#1e3a5f';
+  ctx.strokeStyle = '#60a5fa';
+  ctx.lineWidth = 2;
+  ctx.fillRect(btn1X, btnY, btnW, btnH);
+  ctx.strokeRect(btn1X, btnY, btnW, btnH);
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = 'bold ' + Math.round(H * 0.035) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Press 1', btn1X + btnW / 2, btnY + btnH * 0.62);
+
+  // Button 2
+  const btn2X = W / 2 + btnGap / 2;
+  ctx.fillStyle = trainPuzzleFeedback === 'wrong' ? '#7f1d1d' : '#1e3a5f';
+  ctx.strokeStyle = '#60a5fa';
+  ctx.fillRect(btn2X, btnY, btnW, btnH);
+  ctx.strokeRect(btn2X, btnY, btnW, btnH);
+  ctx.fillStyle = '#e2e8f0';
+  ctx.fillText('Press 2', btn2X + btnW / 2, btnY + btnH * 0.62);
+
+  // Feedback text
+  if (trainPuzzleFeedback === 'correct') {
+    ctx.fillStyle = '#4ade80';
+    ctx.font = 'bold ' + Math.round(H * 0.045) + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Correct! Great signal work!', W / 2, btnY + btnH + H * 0.06);
+  } else if (trainPuzzleFeedback === 'wrong') {
+    ctx.fillStyle = '#ef4444';
+    ctx.font = 'bold ' + Math.round(H * 0.04) + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Try again!', W / 2, btnY + btnH + H * 0.05);
+    // Hint
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = Math.round(H * 0.028) + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.fillText(puzzle.hint, W / 2, btnY + btnH + H * 0.09);
+  }
 }
 
 function drawSpeechBubbles() {
