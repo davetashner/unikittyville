@@ -48,6 +48,8 @@ function draw() {
       [Scene.TELEGRAM]: () => drawTelegramOffice(cam, W, H),
 
       [Scene.APOLLO_MISSION]: () => drawApolloMissionScene(cam, W, H),
+
+      [Scene.GELATO_SHOP]: () => drawGelatoShopInterior(cam, W, H),
     };
     if (sceneDrawMap[currentScene]) sceneDrawMap[currentScene]();
   } else {
@@ -7921,6 +7923,215 @@ function drawApolloMissionScene(cam, W, H) {
   ctx.fillStyle = '#64748b';
   ctx.font = '10px system-ui';
   ctx.fillText('Esc to exit', cx, cy + 165);
+  }
+
+// Gelato Shop Interior
+function drawGelatoShopInterior(cam, W, H) {
+  const cx = cam + W / 2;
+  const cy = H / 2;
+
+  // Background — warm Italian interior
+  ctx.fillStyle = '#fef3c7';
+  ctx.fillRect(cx - 260, cy - 160, 520, 340);
+  // Tiled floor
+  ctx.fillStyle = '#d4a373';
+  ctx.fillRect(cx - 260, cy + 40, 520, 140);
+  // Counter
+  ctx.fillStyle = '#92400e';
+  ctx.fillRect(cx - 260, cy + 30, 520, 15);
+
+  // Title
+  ctx.fillStyle = '#92400e';
+  ctx.font = 'bold 16px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText('Gelateria Roma', cx, cy - 138);
+
+  const isThirds = gelatoOrder && gelatoOrder.thirds;
+  const maxScoops = isThirds ? 3 : 4;
+
+  // ── Cup visualization (left side) ──
+  const cupX = cx - 160;
+  const cupY = cy - 100;
+  const cupW = 80;
+  const cupH = 160;
+
+  // Cup outline
+  ctx.strokeStyle = '#1f2937';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(cupX - cupW / 2, cupY, cupW, cupH);
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(cupX - cupW / 2 + 1, cupY + 1, cupW - 2, cupH - 2);
+
+  // Fill cup from bottom with scoops
+  const scoopH = cupH / maxScoops;
+  for (let i = 0; i < gelatoCup.length; i++) {
+    const flavor = GELATO_FLAVORS.find(f => f.name === gelatoCup[i]);
+    if (flavor) {
+      ctx.fillStyle = flavor.color;
+      const sy = cupY + cupH - (i + 1) * scoopH;
+      ctx.fillRect(cupX - cupW / 2 + 1, sy + 1, cupW - 2, scoopH - 1);
+      // Fraction label on each section
+      ctx.fillStyle = '#1f2937';
+      ctx.font = 'bold 11px system-ui';
+      ctx.textAlign = 'center';
+      const fracLabel = isThirds ? '1/3' : '1/4';
+      ctx.fillText(fracLabel, cupX, sy + scoopH / 2 + 4);
+    }
+  }
+
+  // Cup label
+  ctx.fillStyle = '#1f2937';
+  ctx.font = '10px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText('Your Cup', cupX, cupY + cupH + 15);
+  ctx.fillText(gelatoCup.length + '/' + maxScoops + ' filled', cupX, cupY + cupH + 28);
+
+  // ── Target order (center) ──
+  const orderX = cx + 10;
+  ctx.fillStyle = '#1f2937';
+  ctx.font = 'bold 13px system-ui';
+  ctx.textAlign = 'center';
+
+  if (gelatoComplete) {
+    ctx.fillStyle = '#16a34a';
+    ctx.font = 'bold 18px system-ui';
+    ctx.fillText('All Orders Complete!', orderX, cy - 90);
+    ctx.font = '14px system-ui';
+    ctx.fillText('Press Enter to leave', orderX, cy - 65);
+  } else {
+    // Customer NPC (simple cat face)
+    ctx.fillStyle = '#f59e0b';
+    ctx.beginPath();
+    ctx.arc(orderX, cy - 95, 18, 0, Math.PI * 2);
+    ctx.fill();
+    // Eyes
+    ctx.fillStyle = '#1f2937';
+    ctx.beginPath(); ctx.arc(orderX - 6, cy - 99, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(orderX + 6, cy - 99, 2, 0, Math.PI * 2); ctx.fill();
+    // Mouth
+    ctx.beginPath(); ctx.arc(orderX, cy - 90, 4, 0, Math.PI); ctx.stroke();
+    // Ears
+    ctx.fillStyle = '#f59e0b';
+    ctx.beginPath(); ctx.moveTo(orderX - 14, cy - 108); ctx.lineTo(orderX - 6, cy - 118); ctx.lineTo(orderX - 2, cy - 105); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(orderX + 14, cy - 108); ctx.lineTo(orderX + 6, cy - 118); ctx.lineTo(orderX + 2, cy - 105); ctx.fill();
+
+    ctx.fillStyle = '#1f2937';
+    ctx.font = '11px system-ui';
+    ctx.fillText('Round ' + (gelatoRound + 1) + ' of 5', orderX, cy - 68);
+    ctx.font = 'bold 12px system-ui';
+    ctx.fillText("I'd like:", orderX, cy - 50);
+
+    // Parse and display order with colored labels
+    if (gelatoOrder) {
+      const parts = gelatoOrder.desc.split(', ');
+      let yOff = cy - 32;
+      for (const part of parts) {
+        // Find flavor name in part
+        const flav = GELATO_FLAVORS.find(f => part.includes(f.name));
+        if (flav) {
+          // Color swatch
+          ctx.fillStyle = flav.color;
+          ctx.fillRect(orderX - 60, yOff - 9, 12, 12);
+          ctx.strokeStyle = '#1f2937';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(orderX - 60, yOff - 9, 12, 12);
+          // Text
+          ctx.fillStyle = '#1f2937';
+          ctx.font = '12px system-ui';
+          ctx.textAlign = 'left';
+          ctx.fillText(part, orderX - 44, yOff);
+          ctx.textAlign = 'center';
+        }
+        yOff += 18;
+      }
+
+      // ── Target fraction bar ──
+      const barX = orderX - 60;
+      const barY = yOff + 8;
+      const barW = 120;
+      const barH = 16;
+      ctx.fillStyle = '#e5e7eb';
+      ctx.fillRect(barX, barY, barW, barH);
+      ctx.strokeStyle = '#1f2937';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(barX, barY, barW, barH);
+      // Fill target bar proportionally
+      let bx = barX;
+      const totalParts = isThirds ? 3 : 4;
+      for (const [fname, count] of Object.entries(gelatoOrder.fractions)) {
+        const flav = GELATO_FLAVORS.find(f => f.name === fname);
+        const segW = (count / totalParts) * barW;
+        ctx.fillStyle = flav ? flav.color : '#999';
+        ctx.fillRect(bx, barY, segW, barH);
+        bx += segW;
+      }
+      ctx.strokeRect(barX, barY, barW, barH);
+      ctx.fillStyle = '#1f2937';
+      ctx.font = '9px system-ui';
+      ctx.fillText('Target', orderX, barY + barH + 12);
+
+      // ── Current fraction bar ──
+      const curBarY = barY + barH + 18;
+      ctx.fillStyle = '#e5e7eb';
+      ctx.fillRect(barX, curBarY, barW, barH);
+      ctx.strokeStyle = '#1f2937';
+      ctx.strokeRect(barX, curBarY, barW, barH);
+      let cbx = barX;
+      for (let i = 0; i < gelatoCup.length; i++) {
+        const flav = GELATO_FLAVORS.find(f => f.name === gelatoCup[i]);
+        const segW = barW / maxScoops;
+        ctx.fillStyle = flav ? flav.color : '#999';
+        ctx.fillRect(cbx, curBarY, segW, barH);
+        cbx += segW;
+      }
+      ctx.strokeRect(barX, curBarY, barW, barH);
+      ctx.fillStyle = '#1f2937';
+      ctx.font = '9px system-ui';
+      ctx.fillText('Your Mix', orderX, curBarY + barH + 12);
+    }
+  }
+
+  // ── Flavor buttons (bottom) ──
+  ctx.font = '10px system-ui';
+  ctx.textAlign = 'center';
+  const btnY = cy + 55;
+  for (let i = 0; i < GELATO_FLAVORS.length; i++) {
+    const bx = cx - 150 + i * 55;
+    // Color swatch
+    ctx.fillStyle = GELATO_FLAVORS[i].color;
+    ctx.fillRect(bx - 18, btnY, 36, 20);
+    ctx.strokeStyle = '#1f2937';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(bx - 18, btnY, 36, 20);
+    // Key number
+    ctx.fillStyle = '#1f2937';
+    ctx.font = 'bold 12px system-ui';
+    ctx.fillText(String(i + 1), bx, btnY - 4);
+    // Flavor name
+    ctx.font = '8px system-ui';
+    ctx.fillText(GELATO_FLAVORS[i].name, bx, btnY + 35);
+  }
+
+  // Feedback message
+  if (gelatoMsgTimer > 0 && gelatoMessage) {
+    ctx.fillStyle = gelatoMessage.includes('Perfetto') || gelatoMessage.includes('Magnifico') ? '#16a34a' : '#dc2626';
+    ctx.font = 'bold 14px system-ui';
+    ctx.fillText(gelatoMessage, cx, cy + 110);
+  }
+
+  // Instructions
+  ctx.fillStyle = '#78716c';
+  ctx.font = '11px system-ui';
+  if (!gelatoComplete) {
+    ctx.fillText('Press 1-6 to add scoops | Esc to leave', cx, cy + 155);
+  } else {
+    ctx.fillText('Press Enter to leave', cx, cy + 155);
+  }
+
+  // Round / score
+  ctx.fillStyle = '#92400e';
+  ctx.font = 'bold 11px system-ui';
+  ctx.fillText('Orders filled: ' + gelatoRound + '/5', cx, cy + 140);
 
   ctx.textAlign = 'left';
 }

@@ -77,6 +77,8 @@ const Scene = {
   TELEGRAM: 'telegram',
 
   APOLLO_MISSION: 'apolloMission',
+
+  GELATO_SHOP: 'gelatoShop',
 };
 let currentScene = null;
 
@@ -246,6 +248,28 @@ const FOUNTAIN_POS = { x: 1500 };
 const GELATO_POSITIONS = [1000, 2800];
 const PANTHEON_POS = { x: 2600 };
 const FIAT_POS = { x: 4500 };
+// Gelato Shop minigame state
+const GELATO_FLAVORS = [
+  { name: 'Strawberry', color: '#ef4444' },
+  { name: 'Chocolate', color: '#92400e' },
+  { name: 'Pistachio', color: '#22c55e' },
+  { name: 'Vanilla', color: '#fef3c7' },
+  { name: 'Lemon', color: '#fde047' },
+  { name: 'Blueberry', color: '#6366f1' },
+];
+const GELATO_ORDERS = [
+  { desc: '1/2 Strawberry, 1/2 Chocolate', fractions: { Strawberry: 2, Chocolate: 2 } },
+  { desc: '1/2 Vanilla, 1/4 Pistachio, 1/4 Lemon', fractions: { Vanilla: 2, Pistachio: 1, Lemon: 1 } },
+  { desc: '1/3 Blueberry, 1/3 Strawberry, 1/3 Chocolate', fractions: { Blueberry: 1, Strawberry: 1, Chocolate: 1 }, thirds: true },
+  { desc: '3/4 Pistachio, 1/4 Vanilla', fractions: { Pistachio: 3, Vanilla: 1 } },
+  { desc: '1/4 Strawberry, 1/4 Chocolate, 1/4 Pistachio, 1/4 Vanilla', fractions: { Strawberry: 1, Chocolate: 1, Pistachio: 1, Vanilla: 1 } },
+];
+let gelatoRound = 0;
+let gelatoCup = [];          // array of flavor names (each entry = 1 scoop = 1/4 cup, or 1/3 for thirds orders)
+let gelatoOrder = null;       // current GELATO_ORDERS entry
+let gelatoComplete = false;   // all 5 rounds done
+let gelatoMessage = '';       // feedback message
+let gelatoMsgTimer = 0;       // how long to show message
 // Hawaii interactions
 let tikiCount = 0;
 let coconutCount = 0;
@@ -2251,6 +2275,16 @@ function update(dt) {
           addPopup(player.x, player.y - 40, '+' + POINTS.GELATO + ' Gelato!', '#fda4af');
           playChaChing();
         }
+        // Enter gelato shop minigame
+        if (keys['Enter'] && currentScene === null && !gelatoComplete) {
+          keys['Enter'] = false;
+          currentScene = Scene.GELATO_SHOP;
+          gelatoRound = 0;
+          gelatoCup = [];
+          gelatoOrder = GELATO_ORDERS[0];
+          gelatoMessage = '';
+          gelatoMsgTimer = 0;
+        }
         break;
       }
     }
@@ -3322,6 +3356,70 @@ function update(dt) {
         keys['Enter'] = false;
         currentScene = null;
       }
+    }
+  }
+
+  // Gelato Shop minigame
+  if (currentScene === Scene.GELATO_SHOP) {
+    if (gelatoMsgTimer > 0) gelatoMsgTimer -= 16;
+
+    const maxScoops = gelatoOrder && gelatoOrder.thirds ? 3 : 4;
+
+    // Number keys 1-6 add scoops
+    for (let i = 0; i < 6; i++) {
+      const key = 'Digit' + (i + 1);
+      if (keys[key] && gelatoCup.length < maxScoops && !gelatoComplete) {
+        keys[key] = false;
+        gelatoCup.push(GELATO_FLAVORS[i].name);
+        addPopup(player.x, player.y - 30, '+' + GELATO_FLAVORS[i].name, GELATO_FLAVORS[i].color);
+      }
+    }
+
+    // Check if cup is full — compare with order
+    if (gelatoCup.length === maxScoops && gelatoMsgTimer <= 0) {
+      // Count scoops by flavor
+      const cupCounts = {};
+      for (const f of gelatoCup) cupCounts[f] = (cupCounts[f] || 0) + 1;
+      // Compare with order
+      const orderFracs = gelatoOrder.fractions;
+      let match = true;
+      for (const [flavor, count] of Object.entries(orderFracs)) {
+        if ((cupCounts[flavor] || 0) !== count) { match = false; break; }
+      }
+      // Also check no extra flavors
+      for (const [flavor, count] of Object.entries(cupCounts)) {
+        if ((orderFracs[flavor] || 0) !== count) { match = false; break; }
+      }
+
+      if (match) {
+        score += 40;
+        addPopup(player.x, player.y - 40, '+40 Perfect order!', '#22c55e');
+        playChaChing();
+        gelatoMessage = 'Perfetto! The customer loves it!';
+        gelatoMsgTimer = 1500;
+        gelatoRound++;
+        if (gelatoRound >= GELATO_ORDERS.length) {
+          score += 100;
+          addPopup(player.x, player.y - 60, '+100 All orders complete!', '#fbbf24');
+          gelatoComplete = true;
+          gelatoMessage = 'Magnifico! All 5 orders complete! +100 bonus!';
+          gelatoMsgTimer = 3000;
+        } else {
+          gelatoOrder = GELATO_ORDERS[gelatoRound];
+        }
+        gelatoCup = [];
+      } else {
+        gelatoMessage = 'Wrong mix! Try again...';
+        gelatoMsgTimer = 1200;
+        gelatoCup = [];
+      }
+    }
+
+    // Escape / Enter to exit
+    if (keys['Escape'] || (keys['Enter'] && gelatoComplete)) {
+      keys['Escape'] = false;
+      keys['Enter'] = false;
+      currentScene = null;
     }
   }
 
