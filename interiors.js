@@ -514,10 +514,81 @@ function drawParkInterior(cam, W, H) {
   // Title and instructions
   ctx.fillStyle = '#fff'; ctx.font = 'bold 18px system-ui'; ctx.textAlign = 'center';
   ctx.fillText('Central Park', cx, cy - 130);
-  ctx.font = '13px system-ui'; ctx.fillStyle = 'rgba(255,255,255,0.8)';
-  ctx.fillText('Press Enter to leave', cx, cy + 150);
+
   // Draw player
-  drawKitty(cx, cy + 60, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
+  drawKitty(cx - 40, cy + 60, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
+
+  // Kit's stroller next to player
+  if (hasStroller) {
+    drawStroller(cx - 15, cy + 60, kitFurColor);
+
+    // Picnic blanket and food
+    if (picnic.active || kitParkBonus) {
+      // Blanket
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.ellipse(cx + 60, cy + 75, 45, 20, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fef2f2';
+      // Checkerboard pattern
+      for (let r = 0; r < 3; r++) {
+        for (let c = 0; c < 4; c++) {
+          if ((r + c) % 2 === 0) {
+            ctx.fillRect(cx + 30 + c * 15, cy + 63 + r * 8, 15, 8);
+          }
+        }
+      }
+      // Food items
+      // Sandwich
+      ctx.fillStyle = '#fbbf24';
+      ctx.fillRect(cx + 40, cy + 65, 12, 6);
+      ctx.fillStyle = '#22c55e';
+      ctx.fillRect(cx + 40, cy + 67, 12, 2);
+      // Apple
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath(); ctx.arc(cx + 65, cy + 70, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#166534';
+      ctx.fillRect(cx + 64, cy + 64, 2, 3);
+      // Juice box
+      ctx.fillStyle = '#f97316';
+      ctx.fillRect(cx + 80, cy + 64, 8, 12);
+      ctx.fillStyle = '#fbbf24';
+      ctx.fillRect(cx + 81, cy + 66, 6, 4);
+    }
+
+    // Picnic interaction
+    if (picnic.active) {
+      const foods = ['Sandwich', 'Apple', 'Juice'];
+      ctx.fillStyle = '#fbbf24'; ctx.font = 'bold 14px system-ui';
+      ctx.fillText('Picnic with Kit!', cx, cy - 100);
+      ctx.fillStyle = '#fff'; ctx.font = '12px system-ui';
+      ctx.fillText('Press F to feed Kit (' + picnic.fed + '/3)', cx, cy + 130);
+      if (picnic.feeding) {
+        ctx.fillStyle = '#f472b6';
+        ctx.fillText('Kit is eating the ' + foods[picnic.fed] + '...', cx, cy + 145);
+        // Feeding progress bar
+        const pct = picnic.feedTimer / 800;
+        ctx.fillStyle = '#1f2937';
+        ctx.fillRect(cx - 40, cy + 100, 80, 6);
+        ctx.fillStyle = '#f472b6';
+        ctx.fillRect(cx - 40, cy + 100, 80 * pct, 6);
+      }
+    } else if (kitParkBonus) {
+      ctx.fillStyle = '#f472b6'; ctx.font = '12px system-ui';
+      ctx.fillText('Kit had a wonderful picnic!', cx, cy + 130);
+      ctx.font = '13px system-ui'; ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      ctx.fillText('Press Enter to leave', cx, cy + 150);
+    } else {
+      ctx.fillStyle = '#f472b6'; ctx.font = '12px system-ui';
+      ctx.fillText('Press P for a picnic with Kit!', cx, cy + 130);
+      ctx.font = '13px system-ui'; ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      ctx.fillText('Press Enter to leave', cx, cy + 150);
+    }
+  } else {
+    ctx.font = '13px system-ui'; ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.fillText('Press Enter to leave', cx, cy + 150);
+  }
+  ctx.textAlign = 'left';
 }
 
 function drawPantheonInterior(cam, W, H) {

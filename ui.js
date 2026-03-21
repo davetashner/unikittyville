@@ -608,9 +608,19 @@ function updatePrompt(near) {
     return;
   }
   if (currentScene === Scene.PARK) {
-    el.textContent = 'Relaxing in Central Park... Press Enter to leave';
-    el.style.display = 'block';
-    setAction('Enter', 'Exit');
+    if (hasStroller && picnic.active) {
+      el.textContent = picnic.feeding ? 'Kit is eating...' : 'Press F to feed Kit!';
+      el.style.display = 'block';
+      setAction('KeyF', 'Feed', 'Enter', 'Exit');
+    } else if (hasStroller && !kitParkBonus) {
+      el.textContent = 'Central Park with Kit! Press P for a picnic';
+      el.style.display = 'block';
+      setAction('KeyP', 'Picnic', 'Enter', 'Exit');
+    } else {
+      el.textContent = 'Relaxing in Central Park... Press Enter to leave';
+      el.style.display = 'block';
+      setAction('Enter', 'Exit');
+    }
     return;
   }
   if (currentScene === Scene.HOSPITAL) {
