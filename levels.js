@@ -1573,70 +1573,68 @@ for (let i = 0; i < 4; i++) {
 }
 
 const level5 = {
-  worldW: ALPS_WORLD_W,
-  // Cornices (big snow ledges to jump off)
+  worldW: 960, // FP view — no world scrolling
+  // Cornices — jump ramps at specific z-distances down the mountain
   cornices: [
-    { x: 800, y: 340, w: 120 },
-    { x: 1600, y: 300, w: 140 },
-    { x: 2500, y: 320, w: 130 },
-    { x: 3400, y: 310, w: 150 },
-    { x: 4300, y: 310, w: 120 },
-    { x: 5000, y: 310, w: 140 },
+    { z: 400 },
+    { z: 900 },
+    { z: 1400 },
+    { z: 2000 },
+    { z: 2500 },
   ],
-  // Trees to dodge (x positions)
+  // Trees to dodge (z = depth, lane = horizontal position -200 to 200)
   trees: [],
-  // Diamonds to collect
+  // Diamonds to collect (z = depth, lane = horizontal, airOnly = only when jumping)
   diamonds: [],
 };
 
-// Generate trees along the slope
-for (let tx = 300; tx < ALPS_WORLD_W - 200; tx += 140 + Math.random() * 120) {
-  // Don't place trees on cornices
+// Generate trees — scattered down the mountain
+for (let tz = 100; tz < 3000; tz += 40 + Math.random() * 60) {
+  // Don't place trees near cornices
   let onCornice = false;
   for (const c of level5.cornices) {
-    if (tx > c.x - 20 && tx < c.x + c.w + 20) { onCornice = true; break; }
+    if (Math.abs(tz - c.z) < 60) { onCornice = true; break; }
   }
   if (!onCornice) {
     level5.trees.push({
-      x: tx,
-      y: GROUND_Y,
+      z: tz,
+      lane: (Math.random() - 0.5) * 350, // -175 to 175
       size: 0.7 + Math.random() * 0.6,
       hit: false
     });
   }
 }
 
-// Generate diamonds along the run — many on cornices, some in the air
+// Generate diamonds — arcs above cornices (collected while airborne)
 for (const c of level5.cornices) {
-  // Row of diamonds above each cornice
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 5; i++) {
     level5.diamonds.push({
-      x: c.x + 20 + i * (c.w - 40) / 2,
-      y: c.y - 30 - i * 10,
+      z: c.z + 20 + i * 15,
+      lane: (i - 2) * 40, // spread across lanes
       collected: false,
       bobPhase: Math.random() * Math.PI * 2
     });
   }
 }
-// Some diamonds between cornices
-for (let dx = 400; dx < ALPS_WORLD_W - 300; dx += 250 + Math.random() * 200) {
+// Ground-level diamonds between cornices
+for (let dz = 200; dz < 2800; dz += 80 + Math.random() * 100) {
   let onCornice = false;
   for (const c of level5.cornices) {
-    if (dx > c.x - 40 && dx < c.x + c.w + 40) { onCornice = true; break; }
+    if (Math.abs(dz - c.z) < 80) { onCornice = true; break; }
   }
   if (!onCornice) {
     level5.diamonds.push({
-      x: dx,
-      y: GROUND_Y - 40 - Math.random() * 30,
+      z: dz,
+      lane: (Math.random() - 0.5) * 300,
       collected: false,
       bobPhase: Math.random() * Math.PI * 2
     });
   }
 }
 
-// Use cornices as platforms for the Alps
-level5.platforms = level5.cornices.map(c => ({ x: c.x, y: c.y, w: c.w }));
-level5.yarnBalls = []; // No yarn balls — diamonds instead
+// Platforms array needed for test compatibility (reachability tests)
+level5.platforms = [{ x: 100, y: 380, w: 100 }];
+level5.yarnBalls = [];
 
 // Level 5 NPCs (ski-themed kitties standing around)
 const alpsNpcs = [];

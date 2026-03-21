@@ -2682,66 +2682,274 @@ function drawAlpsSky(W, H, cycle, isNight) {
 }
 
 function drawAlpsWorld(W, H, cam) {
-  const ww = getCurrentWorldW();
-  // Snow-covered ground
-  ctx.fillStyle = '#f0f9ff';
-  ctx.fillRect(0, GROUND_Y, ww, H);
-  // Snow surface with sparkle
-  const snowGrad = ctx.createLinearGradient(0, GROUND_Y, 0, GROUND_Y + 6);
-  snowGrad.addColorStop(0, '#e0f2fe');
-  snowGrad.addColorStop(1, '#f0f9ff');
+  // First-person downhill ski view
+  const cx = W / 2 + cam; // center x in world coords (translate is active)
+  const vanishY = H * 0.3; // vanishing point y
+  const groundH = H - vanishY; // ground area height
+  const focal = 300; // perspective focal length
+
+  // Snow-covered slope — gradient from horizon to bottom
+  const snowGrad = ctx.createLinearGradient(cam, vanishY, cam, H);
+  snowGrad.addColorStop(0, '#cce4f7');
+  snowGrad.addColorStop(0.3, '#e0f2fe');
+  snowGrad.addColorStop(1, '#f8fafc');
   ctx.fillStyle = snowGrad;
-  ctx.fillRect(0, GROUND_Y - 2, ww, 8);
-  // Snow sparkles
+  ctx.fillRect(cam, vanishY, W, groundH);
+
+  // Perspective slope lines (converge to vanishing point)
+  ctx.strokeStyle = 'rgba(180, 210, 235, 0.3)';
+  ctx.lineWidth = 1;
+  for (let i = -5; i <= 5; i++) {
+    ctx.beginPath();
+    ctx.moveTo(cx, vanishY);
+    ctx.lineTo(cx + i * W * 0.15, H);
+    ctx.stroke();
+  }
+
+  // Horizontal depth lines (closer = wider apart)
+  ctx.strokeStyle = 'rgba(200, 220, 240, 0.25)';
+  for (let d = 1; d < 8; d++) {
+    const depthY = vanishY + groundH * (d / 8) * (d / 8);
+    ctx.beginPath();
+    ctx.moveTo(cam, depthY);
+    ctx.lineTo(cam + W, depthY);
+    ctx.stroke();
+  }
+
+  // Snow sparkles on the slope
   ctx.fillStyle = '#fff';
-  for (let sx = Math.floor((cam - 10) / 30) * 30; sx < cam + W + 10; sx += 30) {
-    const sparkle = Math.sin(gameTime / 300 + sx * 0.1) * 0.5 + 0.5;
-    ctx.globalAlpha = sparkle * 0.7;
-    ctx.beginPath(); ctx.arc(sx + 15, GROUND_Y - 1, 1.5, 0, Math.PI * 2); ctx.fill();
+  for (let i = 0; i < 30; i++) {
+    const sparkleZ = ((i * 137 + alpsScrollZ * 0.5) % 600) + 20;
+    const sparkleL = ((i * 89) % 400) - 200;
+    const sz = focal / sparkleZ;
+    if (sz < 0.05 || sz > 3) continue;
+    const sy = vanishY + groundH * (1 - 1 / (sparkleZ * 0.01 + 1));
+    const ssx = cx + sparkleL * sz;
+    ctx.globalAlpha = Math.sin(gameTime / 300 + i) * 0.3 + 0.4;
+    ctx.beginPath();
+    ctx.arc(ssx, sy, sz * 1.5, 0, Math.PI * 2);
+    ctx.fill();
   }
   ctx.globalAlpha = 1;
 
-  // Draw pine trees (obstacles)
+  // Sort all objects by z-distance (far to near) for proper overlap
+  const drawList = [];
+
+  // Trees
   for (const tree of level5.trees) {
-    if (tree.x < cam - 100 || tree.x > cam + W + 100) continue;
-    drawAlpsPineTree(tree.x, tree.size, tree.hit);
+    const dz = tree.z - alpsScrollZ;
+    if (dz < 5 || dz > 500) continue;
+    drawList.push({ type: 'tree', dz, lane: tree.lane, size: tree.size, hit: tree.hit });
   }
 
-  // Draw cornices (snow ledges)
+  // Cornices (jump ramps)
   for (const c of level5.cornices) {
-    if (c.x < cam - 200 || c.x > cam + W + 200) continue;
-    drawCornice(c.x, c.y, c.w);
+    const dz = c.z - alpsScrollZ;
+    if (dz < -30 || dz > 400) continue;
+    drawList.push({ type: 'cornice', dz });
   }
 
-  // Draw diamonds
+  // Diamonds
   for (const d of level5.diamonds) {
     if (d.collected) continue;
-    if (d.x < cam - 50 || d.x > cam + W + 50) continue;
+    const dz = d.z - alpsScrollZ;
+    if (dz < 0 || dz > 500) continue;
     const bob = Math.sin(gameTime / 350 + d.bobPhase) * 3;
-    drawDiamond(d.x, d.y + bob);
+    drawList.push({ type: 'diamond', dz, lane: d.lane, bob });
   }
 
-  // Chalet at the end
-  if (ALPS_WORLD_W - 150 > cam - 200 && ALPS_WORLD_W - 150 < cam + W + 200) {
-    drawChalet(ALPS_WORLD_W - 150);
-  }
+  // Sort far to near
+  drawList.sort((a, b) => b.dz - a.dz);
 
-  for (const npc of alpsNpcs) drawKitty(npc.x, npc.y, npc.color, npc.facing, npc.walkFrame, npc.accessory);
+  // Draw all objects with perspective projection
+  for (const obj of drawList) {
+    const dz = Math.max(obj.dz, 5);
+    const scale = focal / dz;
+    const screenY = vanishY + groundH * (1 - 1 / (dz * 0.008 + 1));
 
-  // Draw equipment on player during the run
-  if (alpsEquipment && !alpsChoosing) {
-    const px = player.x;
-    const py = player.y;
-    if (alpsEquipment === 'skis') {
-      drawSkisOnPlayer(px, py);
-    } else {
-      drawSnowboardOnPlayer(px, py);
+    if (obj.type === 'tree') {
+      const tx = cx + obj.lane * scale;
+      const treeH = 40 * obj.size * scale;
+      const treeW = 20 * obj.size * scale;
+      // Trunk
+      ctx.fillStyle = '#78350f';
+      ctx.fillRect(tx - treeW * 0.1, screenY - treeH * 0.2, treeW * 0.2, treeH * 0.3);
+      // Tree layers
+      ctx.fillStyle = obj.hit ? '#ef4444' : '#166534';
+      for (let layer = 0; layer < 3; layer++) {
+        const ly = screenY - treeH * (0.2 + layer * 0.28);
+        const lw = treeW * (1 - layer * 0.25);
+        ctx.beginPath();
+        ctx.moveTo(tx - lw, ly);
+        ctx.lineTo(tx, ly - treeH * 0.3);
+        ctx.lineTo(tx + lw, ly);
+        ctx.closePath();
+        ctx.fill();
+      }
+      // Snow caps
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      for (let layer = 0; layer < 3; layer++) {
+        const ly = screenY - treeH * (0.2 + layer * 0.28);
+        const lw = treeW * (0.6 - layer * 0.15);
+        ctx.beginPath();
+        ctx.moveTo(tx - lw, ly - treeH * 0.15);
+        ctx.lineTo(tx, ly - treeH * 0.3);
+        ctx.lineTo(tx + lw, ly - treeH * 0.15);
+        ctx.closePath();
+        ctx.fill();
+      }
+    } else if (obj.type === 'cornice') {
+      // Snow ramp across the slope
+      const rampW = W * 0.6 * scale;
+      ctx.fillStyle = '#bae6fd';
+      ctx.beginPath();
+      ctx.moveTo(cx - rampW, screenY);
+      ctx.lineTo(cx - rampW * 0.8, screenY - 15 * scale);
+      ctx.lineTo(cx + rampW * 0.8, screenY - 15 * scale);
+      ctx.lineTo(cx + rampW, screenY);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#93c5fd';
+      ctx.lineWidth = Math.max(1, 2 * scale);
+      ctx.stroke();
+    } else if (obj.type === 'diamond') {
+      const dx = cx + obj.lane * scale;
+      const dy = screenY - (alpsAirborne ? 30 : 10) * scale + obj.bob;
+      const ds = Math.max(4, 12 * scale);
+      // Diamond shape
+      ctx.fillStyle = '#60a5fa';
+      ctx.beginPath();
+      ctx.moveTo(dx, dy - ds);
+      ctx.lineTo(dx + ds * 0.7, dy);
+      ctx.lineTo(dx, dy + ds * 0.5);
+      ctx.lineTo(dx - ds * 0.7, dy);
+      ctx.closePath();
+      ctx.fill();
+      // Sparkle
+      ctx.fillStyle = '#bfdbfe';
+      ctx.beginPath();
+      ctx.moveTo(dx - ds * 0.2, dy - ds * 0.3);
+      ctx.lineTo(dx + ds * 0.1, dy - ds * 0.5);
+      ctx.lineTo(dx + ds * 0.15, dy - ds * 0.15);
+      ctx.closePath();
+      ctx.fill();
     }
   }
 
-  drawPlayerAndUI();
+  // Chalet at the end of the run
+  if (alpsScrollZ >= ALPS_RUN_LENGTH - 200) {
+    const chaletDz = ALPS_RUN_LENGTH - alpsScrollZ;
+    const chaletScale = focal / Math.max(chaletDz, 20);
+    const chaletY = vanishY + groundH * (1 - 1 / (Math.max(chaletDz, 20) * 0.008 + 1));
+    const cw = 80 * chaletScale;
+    const ch = 60 * chaletScale;
+    // Chalet body
+    ctx.fillStyle = '#92400e';
+    ctx.fillRect(cx - cw / 2, chaletY - ch, cw, ch);
+    // Roof
+    ctx.fillStyle = '#dc2626';
+    ctx.beginPath();
+    ctx.moveTo(cx - cw * 0.65, chaletY - ch);
+    ctx.lineTo(cx, chaletY - ch - ch * 0.6);
+    ctx.lineTo(cx + cw * 0.65, chaletY - ch);
+    ctx.closePath();
+    ctx.fill();
+    // Snow on roof
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.moveTo(cx - cw * 0.6, chaletY - ch - 2);
+    ctx.lineTo(cx, chaletY - ch - ch * 0.55);
+    ctx.lineTo(cx + cw * 0.6, chaletY - ch - 2);
+    ctx.closePath();
+    ctx.fill();
+    // Door
+    ctx.fillStyle = '#fbbf24';
+    ctx.fillRect(cx - cw * 0.1, chaletY - ch * 0.5, cw * 0.2, ch * 0.5);
+    // Windows
+    ctx.fillStyle = '#fef08a';
+    ctx.fillRect(cx - cw * 0.35, chaletY - ch * 0.7, cw * 0.15, cw * 0.15);
+    ctx.fillRect(cx + cw * 0.2, chaletY - ch * 0.7, cw * 0.15, cw * 0.15);
+  }
 
-  // Equipment choice overlay (drawn last, on top of everything)
+  // Draw player (from behind) at bottom-center of screen
+  const playerY = alpsAirborne ? H * 0.65 - Math.sin(alpsAirTimer / ALPS_AIR_DURATION * Math.PI) * 80 : H * 0.82;
+  const playerX = cx + alpsPlayerLane;
+  // Simple back-view silhouette
+  const pScale = 1.2;
+  // Body
+  ctx.fillStyle = player.color;
+  ctx.beginPath();
+  ctx.ellipse(playerX, playerY - 12 * pScale, 10 * pScale, 14 * pScale, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Head
+  ctx.beginPath();
+  ctx.arc(playerX, playerY - 30 * pScale, 8 * pScale, 0, Math.PI * 2);
+  ctx.fill();
+  // Horn
+  ctx.fillStyle = '#c084fc';
+  ctx.beginPath();
+  ctx.moveTo(playerX - 2, playerY - 38 * pScale);
+  ctx.lineTo(playerX, playerY - 52 * pScale);
+  ctx.lineTo(playerX + 2, playerY - 38 * pScale);
+  ctx.closePath();
+  ctx.fill();
+  // Ears
+  ctx.fillStyle = player.color;
+  ctx.beginPath();
+  ctx.moveTo(playerX - 7 * pScale, playerY - 34 * pScale);
+  ctx.lineTo(playerX - 4 * pScale, playerY - 42 * pScale);
+  ctx.lineTo(playerX - 1 * pScale, playerY - 34 * pScale);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(playerX + 1 * pScale, playerY - 34 * pScale);
+  ctx.lineTo(playerX + 4 * pScale, playerY - 42 * pScale);
+  ctx.lineTo(playerX + 7 * pScale, playerY - 34 * pScale);
+  ctx.closePath();
+  ctx.fill();
+  // Equipment under feet
+  if (alpsEquipment === 'skis') {
+    ctx.strokeStyle = '#3b82f6';
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(playerX - 6, playerY + 4); ctx.lineTo(playerX - 6, playerY + 14); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(playerX + 6, playerY + 4); ctx.lineTo(playerX + 6, playerY + 14); ctx.stroke();
+  } else if (alpsEquipment === 'snowboard') {
+    ctx.fillStyle = '#7c3aed';
+    ctx.beginPath();
+    ctx.roundRect(playerX - 14, playerY + 4, 28, 6, 3);
+    ctx.fill();
+  }
+
+  // Speed lines (motion blur effect)
+  if (skiing && !alpsChoosing) {
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 8; i++) {
+      const lx = cx + ((i * 137 + 50) % W) - W / 2;
+      const ly1 = vanishY + 50 + (i * 40);
+      ctx.beginPath();
+      ctx.moveTo(lx, ly1);
+      ctx.lineTo(lx + (lx - cx) * 0.3, ly1 + 30 + i * 5);
+      ctx.stroke();
+    }
+  }
+
+  // Progress indicator
+  if (skiing && !alpsChoosing) {
+    const progress = Math.min(1, alpsScrollZ / ALPS_RUN_LENGTH);
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.fillRect(cam + W - 60, 50, 20, 200);
+    ctx.fillStyle = '#60a5fa';
+    ctx.fillRect(cam + W - 60, 50 + 200 * (1 - progress), 20, 200 * progress);
+    ctx.fillStyle = '#fff';
+    ctx.font = '10px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText(Math.round(progress * 100) + '%', cam + W - 50, 45);
+    ctx.textAlign = 'left';
+  }
+
+  // Equipment choice overlay
   if (alpsChoosing) {
     drawAlpsEquipmentChoice(W, H);
   }
