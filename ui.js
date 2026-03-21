@@ -807,6 +807,28 @@ function updatePrompt(near) {
     el.textContent = 'Ski downhill! Dodge trees, jump cornices, collect diamonds!';
     el.style.display = 'block';
     setAction(null, '');
+  } else if (currentLevel === 10) {
+    if (player.x > level10Flight.worldW - 500) {
+      el.textContent = 'Press Enter to land at Cape Canaveral!';
+      el.style.display = 'block';
+      setAction('Enter', 'Land');
+    } else {
+      el.textContent = 'Fly through the sky! Dodge seagulls, collect rubies!';
+      el.style.display = 'block';
+      setAction(null, '');
+    }
+    return;
+  } else if (currentLevel === 12) {
+    if (player.x > levelRegistry[12].worldW - 600) {
+      el.textContent = 'Press Enter to land on the Moon!';
+      el.style.display = 'block';
+      setAction('Enter', 'Land');
+    } else {
+      el.textContent = 'Fly through space! Dodge asteroids, collect star crystals!';
+      el.style.display = 'block';
+      setAction(null, '');
+    }
+    return;
   } else if (currentLevel === 6 && player.x > ORIENTAL_WORLD_W - 150) {
     el.textContent = 'Press Enter to head to the Alps!';
     el.style.display = 'block';

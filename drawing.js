@@ -4940,7 +4940,7 @@ function drawFlightWorld(W, H, cam, cycle, isNight) {
   const shipPositions = [800, 2200, 3600, 5000];
   for (const shipX of shipPositions) {
     const sx = shipX + cam * 0.5; // parallax (translate already applied)
-    if (sx < -40 || sx > W + 40) continue;
+    if (sx < cam - 40 || sx > cam + W + 40) continue;
     ctx.fillStyle = '#94a3b8';
     ctx.fillRect(sx - 8, oceanTop + 8, 16, 6);
     ctx.fillStyle = '#cbd5e1';
@@ -4951,7 +4951,7 @@ function drawFlightWorld(W, H, cam, cycle, isNight) {
   const islandPositions = [1500, 3800];
   for (const ix of islandPositions) {
     const isx = ix + cam * 0.5;
-    if (isx < -60 || isx > W + 60) continue;
+    if (isx < cam - 60 || isx > cam + W + 60) continue;
     ctx.fillStyle = '#22c55e';
     ctx.beginPath();
     ctx.ellipse(isx, oceanTop + 5, 25, 8, 0, 0, Math.PI * 2);
@@ -4966,38 +4966,67 @@ function drawFlightWorld(W, H, cam, cycle, isNight) {
   }
 
   // Florida coastline at end of level
-  const coastX = ww - 300;
-  if (coastX < W + 100) {
+  const coastX = ww - 500;
+  if (coastX < cam + W + 200) {
     ctx.fillStyle = '#fbbf24'; // sandy beach
     ctx.beginPath();
     ctx.moveTo(coastX, oceanTop);
-    ctx.lineTo(coastX + 300, oceanTop - 20);
-    ctx.lineTo(coastX + 400, oceanTop);
-    ctx.lineTo(coastX + 400, H);
+    ctx.lineTo(coastX + 200, oceanTop - 30);
+    ctx.lineTo(coastX + 600, oceanTop - 15);
+    ctx.lineTo(coastX + 600, H);
     ctx.lineTo(coastX, H);
     ctx.closePath();
     ctx.fill();
     ctx.fillStyle = '#22c55e'; // green land
     ctx.beginPath();
-    ctx.moveTo(coastX + 30, oceanTop - 5);
-    ctx.lineTo(coastX + 280, oceanTop - 25);
-    ctx.lineTo(coastX + 400, oceanTop - 10);
-    ctx.lineTo(coastX + 400, oceanTop);
-    ctx.lineTo(coastX + 30, oceanTop);
+    ctx.moveTo(coastX + 50, oceanTop - 10);
+    ctx.lineTo(coastX + 200, oceanTop - 35);
+    ctx.lineTo(coastX + 550, oceanTop - 20);
+    ctx.lineTo(coastX + 600, oceanTop - 15);
+    ctx.lineTo(coastX + 600, oceanTop);
+    ctx.lineTo(coastX + 50, oceanTop);
     ctx.closePath();
     ctx.fill();
-    // "Florida" label
+    // Airstrip runway
+    ctx.fillStyle = '#374151';
+    ctx.fillRect(coastX + 150, oceanTop - 28, 300, 12);
+    // Runway center line (dashed)
+    ctx.strokeStyle = '#fbbf24';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([10, 8]);
+    ctx.beginPath();
+    ctx.moveTo(coastX + 160, oceanTop - 22);
+    ctx.lineTo(coastX + 440, oceanTop - 22);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // Runway edge lights
+    ctx.fillStyle = '#ef4444';
+    for (let lx = coastX + 160; lx < coastX + 440; lx += 40) {
+      ctx.beginPath();
+      ctx.arc(lx, oceanTop - 16, 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(lx, oceanTop - 28, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // "Cape Canaveral" label
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 14px system-ui';
     ctx.textAlign = 'center';
-    ctx.fillText('Florida!', coastX + 200, oceanTop - 30);
+    ctx.fillText('Cape Canaveral!', coastX + 300, oceanTop - 45);
+    // "Press Enter to Land" prompt
+    if (player.x > coastX + 100) {
+      ctx.fillStyle = '#fbbf24';
+      ctx.font = 'bold 16px system-ui';
+      ctx.fillText('Press Enter to Land!', coastX + 300, oceanTop - 60);
+    }
     ctx.textAlign = 'left';
   }
 
   // Draw clouds (translucent, visual only, behind obstacles)
   for (const cloud of level10Flight.clouds) {
     const cx = cloud.x + Math.sin(t / 2000 + cloud.x) * 20;
-    if (cx < -cloud.w || cx > W + cloud.w) continue;
+    if (cx < cam -cloud.w || cx > cam + W + cloud.w) continue;
     ctx.globalAlpha = cloud.alpha;
     ctx.fillStyle = '#fff';
     ctx.beginPath();
@@ -5015,7 +5044,7 @@ function drawFlightWorld(W, H, cam, cycle, isNight) {
   // Draw seagulls
   for (const sg of level10Flight.seagulls) {
     const sx = sg.x;
-    if (sx < -30 || sx > W + 30) continue;
+    if (sx < cam - 30 || sx > cam + W + 30) continue;
     if (sg.hit) continue;
     const wingY = Math.sin(t / 200 + sg.wingPhase) * 5;
     ctx.strokeStyle = '#f8fafc';
@@ -5043,7 +5072,7 @@ function drawFlightWorld(W, H, cam, cycle, isNight) {
   // Draw thunderstorms
   for (const storm of level10Flight.storms) {
     const sx = storm.x;
-    if (sx < -storm.w || sx > W + storm.w) continue;
+    if (sx < cam -storm.w || sx > cam + W + storm.w) continue;
     if (storm.hit) continue;
     // Dark cloud
     ctx.fillStyle = 'rgba(30, 41, 59, 0.85)';
@@ -5073,7 +5102,7 @@ function drawFlightWorld(W, H, cam, cycle, isNight) {
   // Draw hurricanes
   for (const hur of level10Flight.hurricanes) {
     const hx = hur.x;
-    if (hx < -hur.radius * 2 || hx > W + hur.radius * 2) continue;
+    if (hx < cam -hur.radius * 2 || hx > cam + W + hur.radius * 2) continue;
     if (hur.hit) continue;
     hur.rotation += 0.02;
     // Swirling cloud
@@ -5096,7 +5125,7 @@ function drawFlightWorld(W, H, cam, cycle, isNight) {
   // Draw rubies (yarn balls with ruby appearance)
   for (const ruby of level10Flight.yarnBalls) {
     const rx = ruby.x;
-    if (rx < -20 || rx > W + 20) continue;
+    if (rx < cam - 20 || rx > cam + W + 20) continue;
     if (ruby.collected) continue;
     const bob = Math.sin(t / 300 + ruby.bobPhase) * 3;
     // Ruby gem shape
@@ -5199,7 +5228,7 @@ function drawCapeSky(W, H, cycle, isNight, cam) {
   const cloudPositions = [200, 600, 1100, 1600, 2200, 3000, 3500, 4200, 4800];
   for (const cp of cloudPositions) {
     const x = cp + cam * 0.7;
-    if (x < -80 || x > W + 80) continue;
+    if (x < cam - 80 || x > cam + W + 80) continue;
     ctx.beginPath();
     ctx.ellipse(x, 60 + (cp % 50), 40, 15, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -5238,7 +5267,7 @@ function drawCapeWorld(W, H, cam, cycle, isNight) {
 
   // NASA Building
   const nbx = NASA_BUILDING_POS.x;
-  if (nbx > -200 && nbx < W + 200) {
+  if (nbx > cam - 200 && nbx < cam + W + 200) {
     // Main building
     ctx.fillStyle = '#e2e8f0';
     ctx.fillRect(nbx, GROUND_Y - 120, NASA_BUILDING_POS.w, 120);
@@ -5267,7 +5296,7 @@ function drawCapeWorld(W, H, cam, cycle, isNight) {
 
   // Space Suit Area
   const ssx = SPACE_SUIT_POS.x;
-  if (ssx > -60 && ssx < W + 60) {
+  if (ssx > cam - 60 && ssx < cam + W + 60) {
     // Display case
     ctx.fillStyle = '#e2e8f0';
     ctx.fillRect(ssx - 20, GROUND_Y - 60, 40, 60);
@@ -5293,7 +5322,7 @@ function drawCapeWorld(W, H, cam, cycle, isNight) {
 
   // THE ROCKET - the centerpiece!
   const rx = ROCKET_POS.x;
-  if (rx > -100 && rx < W + 100) {
+  if (rx > cam - 100 && rx < cam + W + 100) {
     // Launch tower
     ctx.fillStyle = '#94a3b8';
     ctx.fillRect(rx + 30, GROUND_Y - 200, 8, 200);
@@ -5392,7 +5421,7 @@ function drawCapeWorld(W, H, cam, cycle, isNight) {
   for (const scene of level11Cape.scenes) {
     if (scene.type !== 'palm_tree') continue;
     const px = scene.x;
-    if (px < -30 || px > W + 30) continue;
+    if (px < cam - 30 || px > cam + W + 30) continue;
     // Trunk
     ctx.fillStyle = '#92400e';
     ctx.fillRect(px - 3, GROUND_Y - 50, 6, 50);
@@ -5432,7 +5461,7 @@ function drawCapeWorld(W, H, cam, cycle, isNight) {
   // Yarn balls
   for (const yb of level11Cape.yarnBalls) {
     const yx = yb.x;
-    if (yx < -15 || yx > W + 15) continue;
+    if (yx < cam - 15 || yx > cam + W + 15) continue;
     if (yb.collected) continue;
     const bob = Math.sin(t / 300 + yb.bobPhase) * 3;
     ctx.fillStyle = yb.color;
@@ -5450,7 +5479,7 @@ function drawCapeWorld(W, H, cam, cycle, isNight) {
   // NPCs
   for (const npc of level11Cape.npcs) {
     const nx = npc.x;
-    if (nx < -30 || nx > W + 30) continue;
+    if (nx < cam - 30 || nx > cam + W + 30) continue;
     drawKitty(npc.x, npc.y, npc.color, npc.facing, npc.walkFrame, npc.accessory);
   }
 
@@ -5577,7 +5606,7 @@ function drawSpaceSky(W, H, cycle, isNight, cam) {
   for (let n = 0; n < nebulaPositions.length; n++) {
     const nb = nebulaPositions[n];
     const nx = nb.x + cam * 0.8;
-    if (nx < -200 || nx > W + 200) continue;
+    if (nx < cam - 200 || nx > cam + W + 200) continue;
     const nebGrad = ctx.createRadialGradient(nx, nb.y, 0, nx, nb.y, nb.r);
     nebGrad.addColorStop(0, nebulaColors[n]);
     nebGrad.addColorStop(1, 'transparent');
@@ -5658,7 +5687,7 @@ function drawSpaceWorld(W, H, cam, cycle, isNight) {
   // Draw asteroids
   for (const ast of level12Space.asteroids) {
     const ax = ast.x;
-    if (ax < -ast.radius * 2 || ax > W + ast.radius * 2) continue;
+    if (ax < cam -ast.radius * 2 || ax > cam + W + ast.radius * 2) continue;
     if (ast.hit) continue;
     ast.rotation += ast.rotSpeed;
     ctx.save();
@@ -5687,7 +5716,7 @@ function drawSpaceWorld(W, H, cam, cycle, isNight) {
   // Draw aliens
   for (const alien of level12Space.aliens) {
     const ax = alien.x;
-    if (ax < -20 || ax > W + 20) continue;
+    if (ax < cam - 20 || ax > cam + W + 20) continue;
     if (alien.collected) continue;
     const bob = Math.sin(t / 400 + alien.bobPhase) * 5;
     const ay = alien.y + bob;
@@ -5874,7 +5903,7 @@ function drawMoonWorld(W, H, cam, cycle, isNight) {
   for (const scene of level13Moon.scenes) {
     if (scene.type !== 'crater') continue;
     const cx = scene.x;
-    if (cx < -scene.r * 2 || cx > W + scene.r * 2) continue;
+    if (cx < cam -scene.r * 2 || cx > cam + W + scene.r * 2) continue;
     ctx.fillStyle = '#4b5563';
     ctx.beginPath();
     ctx.ellipse(cx, GROUND_Y + 5, scene.r, scene.r * 0.3, 0, 0, Math.PI * 2);
@@ -5891,7 +5920,7 @@ function drawMoonWorld(W, H, cam, cycle, isNight) {
   for (const scene of level13Moon.scenes) {
     if (scene.type !== 'rock') continue;
     const rx = scene.x;
-    if (rx < -20 || rx > W + 20) continue;
+    if (rx < cam - 20 || rx > cam + W + 20) continue;
     ctx.fillStyle = '#78716c';
     ctx.beginPath();
     ctx.moveTo(rx - 8, GROUND_Y);
@@ -5907,7 +5936,7 @@ function drawMoonWorld(W, H, cam, cycle, isNight) {
   const ssScene = level13Moon.scenes.find(s => s.type === 'smoothie_shop');
   if (ssScene) {
     const sx = ssScene.x;
-    if (sx > -150 && sx < W + 150) {
+    if (sx > cam - 150 && sx < cam + W + 150) {
       // Futuristic dome
       ctx.fillStyle = '#818cf8';
       ctx.beginPath();
@@ -5946,7 +5975,7 @@ function drawMoonWorld(W, H, cam, cycle, isNight) {
   const tgScene = level13Moon.scenes.find(s => s.type === 'topgolf');
   if (tgScene) {
     const tx = tgScene.x;
-    if (tx > -180 && tx < W + 180) {
+    if (tx > cam - 180 && tx < cam + W + 180) {
       // Large dome
       ctx.fillStyle = '#059669';
       ctx.beginPath();
@@ -5998,7 +6027,7 @@ function drawMoonWorld(W, H, cam, cycle, isNight) {
   // Yarn balls
   for (const yb of level13Moon.yarnBalls) {
     const yx = yb.x;
-    if (yx < -15 || yx > W + 15) continue;
+    if (yx < cam - 15 || yx > cam + W + 15) continue;
     if (yb.collected) continue;
     const bob = Math.sin(t / 300 + yb.bobPhase) * 3;
     ctx.fillStyle = yb.color;
@@ -6015,7 +6044,7 @@ function drawMoonWorld(W, H, cam, cycle, isNight) {
   // NPCs (includes aliens from space flight)
   for (const npc of level13Moon.npcs) {
     const nx = npc.x;
-    if (nx < -30 || nx > W + 30) continue;
+    if (nx < cam - 30 || nx > cam + W + 30) continue;
     drawKitty(npc.x, npc.y, npc.color, npc.facing, npc.walkFrame, npc.accessory);
   }
 
