@@ -785,6 +785,158 @@ function drawPantheonInterior(cam, W, H) {
     }
     ctx.restore();
   }
+
+  // ── Pantheon Architecture Puzzle ──
+  if (pantheonPuzzle.active) {
+    // Draw puzzle overlay — cross-section of the Pantheon dome
+    // Background overlay
+    ctx.fillStyle = 'rgba(30,20,10,0.85)';
+    ctx.fillRect(cam + 20, 20, W - 40, H - 40);
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#fde68a';
+    ctx.font = 'bold 16px system-ui';
+    ctx.fillText('Pantheon Architecture Puzzle', cx, 50);
+
+    // Dome cross-section dimensions
+    const domeX = cx;
+    const domeBottom = cy + 50;
+    const bandHeight = 36;
+    const domeW = 240; // full width at base
+
+    // Piece colors (placed)
+    const pieceColors = ['#78716c', '#a8a29e', '#d6d3d1', '#e7e5e4', '#87ceeb'];
+    // Piece outline colors (unplaced)
+    const outlineColor = 'rgba(200,180,140,0.4)';
+
+    for (let i = 0; i < 5; i++) {
+      const y = domeBottom - (i + 1) * bandHeight;
+      const isPlaced = i < pantheonPuzzle.placed;
+      const isAnimating = i === pantheonPuzzle.placed - 1 && pantheonPuzzle.animating;
+
+      // Each band gets narrower as we go up (dome shape)
+      let bw;
+      if (i === 0) bw = domeW;          // Foundation — full width
+      else if (i === 1) bw = domeW - 20; // Walls
+      else if (i === 2) bw = domeW - 60; // Lower dome
+      else if (i === 3) bw = domeW - 110; // Upper dome
+      else bw = 54;                       // Oculus — small circle
+
+      if (i === 4) {
+        // Oculus — draw as circle at top
+        if (isPlaced) {
+          let drawY = y + bandHeight / 2;
+          if (isAnimating) {
+            const t = pantheonPuzzle.animProgress;
+            drawY = drawY - 60 * (1 - t); // slide down from above
+          }
+          ctx.fillStyle = pieceColors[i];
+          ctx.beginPath(); ctx.arc(domeX, drawY, 27, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#fde68a';
+          ctx.globalAlpha = 0.3;
+          ctx.beginPath(); ctx.arc(domeX, drawY, 27, 0, Math.PI * 2); ctx.fill();
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = '#1e293b';
+          ctx.font = 'bold 10px system-ui';
+          ctx.fillText('OCULUS', domeX, drawY + 4);
+        } else {
+          ctx.strokeStyle = outlineColor;
+          ctx.lineWidth = 2;
+          ctx.setLineDash([4, 4]);
+          ctx.beginPath(); ctx.arc(domeX, y + bandHeight / 2, 27, 0, Math.PI * 2); ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle = 'rgba(200,180,140,0.3)';
+          ctx.font = '9px system-ui';
+          ctx.fillText('5: Oculus', domeX, y + bandHeight / 2 + 4);
+        }
+      } else {
+        // Rectangular/trapezoidal bands
+        const nextBw = (i === 0) ? domeW - 20 : (i === 1) ? domeW - 60 : (i === 2) ? domeW - 110 : 54;
+        if (isPlaced) {
+          let drawY = y;
+          if (isAnimating) {
+            const t = pantheonPuzzle.animProgress;
+            drawY = drawY - 60 * (1 - t);
+          }
+          // Draw as trapezoid
+          ctx.fillStyle = pieceColors[i];
+          ctx.beginPath();
+          ctx.moveTo(domeX - bw / 2, drawY + bandHeight);
+          ctx.lineTo(domeX + bw / 2, drawY + bandHeight);
+          ctx.lineTo(domeX + nextBw / 2, drawY);
+          ctx.lineTo(domeX - nextBw / 2, drawY);
+          ctx.closePath();
+          ctx.fill();
+          // Label
+          ctx.fillStyle = '#1e293b';
+          ctx.font = 'bold 10px system-ui';
+          ctx.fillText(PANTHEON_PIECES[i].name.toUpperCase(), domeX, drawY + bandHeight / 2 + 4);
+        } else {
+          // Dotted outline
+          ctx.strokeStyle = outlineColor;
+          ctx.lineWidth = 2;
+          ctx.setLineDash([4, 4]);
+          ctx.beginPath();
+          ctx.moveTo(domeX - bw / 2, y + bandHeight);
+          ctx.lineTo(domeX + bw / 2, y + bandHeight);
+          ctx.lineTo(domeX + nextBw / 2, y);
+          ctx.lineTo(domeX - nextBw / 2, y);
+          ctx.closePath();
+          ctx.stroke();
+          ctx.setLineDash([]);
+          // Hint label
+          ctx.fillStyle = 'rgba(200,180,140,0.3)';
+          ctx.font = '9px system-ui';
+          ctx.fillText((i + 1) + ': ' + PANTHEON_PIECES[i].name, domeX, y + bandHeight / 2 + 4);
+        }
+      }
+    }
+
+    // Draw ground line
+    ctx.strokeStyle = '#a8a29e';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx - domeW / 2 - 20, domeBottom);
+    ctx.lineTo(cx + domeW / 2 + 20, domeBottom);
+    ctx.stroke();
+
+    // Feedback text
+    if (pantheonPuzzle.feedback) {
+      ctx.fillStyle = '#fde68a';
+      ctx.font = '12px system-ui';
+      ctx.textAlign = 'center';
+      // Word-wrap the fact text
+      const words = pantheonPuzzle.feedback.split(' ');
+      let lines = [];
+      let line = '';
+      for (const w of words) {
+        if ((line + ' ' + w).length > 50) { lines.push(line); line = w; }
+        else { line = line ? line + ' ' + w : w; }
+      }
+      if (line) lines.push(line);
+      for (let li = 0; li < lines.length; li++) {
+        ctx.fillText(lines[li], cx, domeBottom + 30 + li * 16);
+      }
+    }
+
+    // Instructions
+    ctx.fillStyle = '#d6d3d1';
+    ctx.font = '11px system-ui';
+    if (pantheonPuzzle.complete) {
+      ctx.fillText('Complete! You rebuilt the Pantheon dome!', cx, H - 50);
+    } else {
+      ctx.fillText('Press 1-5 to place pieces (bottom to top)', cx, H - 50);
+    }
+    ctx.fillStyle = 'rgba(100,100,100,0.8)';
+    ctx.font = '11px system-ui';
+    ctx.fillText('Press Enter to leave', cx, H - 30);
+  } else {
+    // Normal Pantheon interior — show puzzle prompt
+    ctx.font = '13px system-ui'; ctx.fillStyle = 'rgba(100,100,100,0.8)';
+    ctx.fillText('Press A to start Architecture Puzzle', cx, cy + 130);
+    ctx.fillText('Press Enter to leave', cx, cy + 145);
+    drawKitty(cx, cy + 60, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
+  }
 }
 
 function drawSwimmingScene(cam, W, H) {
@@ -2830,6 +2982,275 @@ function drawNasaMuseumInterior(cam, W, H) {
   ctx.fillStyle = '#fff';
   ctx.font = 'bold 14px system-ui';
   ctx.fillText('Kennedy Space Center — Press Enter to leave', cx, H * 0.73);
+
+  ctx.textAlign = 'left';
+}
+
+// ── Mission Control — Command Typing Minigame ──
+function drawMissionControlInterior(cam, W, H) {
+  const cx = cam + W / 2;
+  const mc = missionControl;
+  const t = gameTime;
+
+  // Dark room background
+  ctx.fillStyle = '#0a0a0a';
+  ctx.fillRect(cam, 0, W, H);
+
+  // Subtle grid floor
+  ctx.strokeStyle = 'rgba(34, 197, 94, 0.05)';
+  ctx.lineWidth = 1;
+  for (let gx = cam; gx < cam + W; gx += 40) {
+    ctx.beginPath(); ctx.moveTo(gx, H * 0.75); ctx.lineTo(gx, H); ctx.stroke();
+  }
+  for (let gy = H * 0.75; gy < H; gy += 20) {
+    ctx.beginPath(); ctx.moveTo(cam, gy); ctx.lineTo(cam + W, gy); ctx.stroke();
+  }
+
+  // Console desk
+  ctx.fillStyle = '#1e293b';
+  ctx.fillRect(cam + W * 0.05, H * 0.68, W * 0.9, H * 0.08);
+  // Desk edge highlight
+  ctx.fillStyle = '#334155';
+  ctx.fillRect(cam + W * 0.05, H * 0.68, W * 0.9, 3);
+
+  // Side monitors (ambient screens)
+  const sideMonitors = [
+    { x: cam + W * 0.08, y: H * 0.12, w: W * 0.15, h: H * 0.18, label: 'TELEMETRY' },
+    { x: cam + W * 0.77, y: H * 0.12, w: W * 0.15, h: H * 0.18, label: 'TRACKING' },
+    { x: cam + W * 0.08, y: H * 0.35, w: W * 0.12, h: H * 0.14, label: 'COMMS' },
+    { x: cam + W * 0.80, y: H * 0.35, w: W * 0.12, h: H * 0.14, label: 'VITALS' },
+  ];
+  for (const mon of sideMonitors) {
+    // Monitor frame
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(mon.x - 3, mon.y - 3, mon.w + 6, mon.h + 6);
+    // Screen
+    ctx.fillStyle = '#0a1a0a';
+    ctx.fillRect(mon.x, mon.y, mon.w, mon.h);
+    // Scrolling data lines
+    ctx.fillStyle = '#15803d';
+    ctx.font = '8px monospace';
+    for (let l = 0; l < 6; l++) {
+      const dataY = mon.y + 12 + l * 10;
+      if (dataY < mon.y + mon.h - 4) {
+        const scrollOff = ((t / 50 + l * 17) % 30) | 0;
+        const dataStr = (scrollOff + l * 1234).toString(16).toUpperCase().padStart(8, '0');
+        ctx.fillText(dataStr, mon.x + 4, dataY);
+      }
+    }
+    // Label
+    ctx.fillStyle = '#22c55e';
+    ctx.font = 'bold 8px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(mon.label, mon.x + mon.w / 2, mon.y - 6);
+  }
+  ctx.textAlign = 'left';
+
+  // ── Main screen (center) ──
+  const mainX = cam + W * 0.25;
+  const mainY = H * 0.1;
+  const mainW = W * 0.5;
+  const mainH = H * 0.52;
+
+  // Monitor frame
+  ctx.fillStyle = '#1e293b';
+  ctx.fillRect(mainX - 5, mainY - 5, mainW + 10, mainH + 10);
+  // Screen background
+  ctx.fillStyle = '#0a1a0a';
+  ctx.fillRect(mainX, mainY, mainW, mainH);
+  // Scanline effect
+  ctx.fillStyle = 'rgba(0, 255, 0, 0.02)';
+  for (let sl = 0; sl < mainH; sl += 3) {
+    ctx.fillRect(mainX, mainY + sl, mainW, 1);
+  }
+
+  ctx.textAlign = 'center';
+
+  if (mc.complete) {
+    // ── Success: Rocket launch animation ──
+    ctx.fillStyle = '#22c55e';
+    ctx.font = 'bold 24px monospace';
+    ctx.fillText('LAUNCH SUCCESSFUL', cx, mainY + 40);
+
+    // Rocket
+    const rocketX = cx;
+    const rocketBaseY = mainY + mainH - 30 - mc.rocketY;
+
+    if (rocketBaseY > mainY - 40) {
+      // Rocket body
+      ctx.fillStyle = '#f1f5f9';
+      ctx.beginPath();
+      ctx.moveTo(rocketX - 10, rocketBaseY);
+      ctx.lineTo(rocketX - 8, rocketBaseY - 40);
+      ctx.lineTo(rocketX, rocketBaseY - 55);
+      ctx.lineTo(rocketX + 8, rocketBaseY - 40);
+      ctx.lineTo(rocketX + 10, rocketBaseY);
+      ctx.closePath();
+      ctx.fill();
+      // Nose cone
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.moveTo(rocketX - 5, rocketBaseY - 40);
+      ctx.lineTo(rocketX, rocketBaseY - 55);
+      ctx.lineTo(rocketX + 5, rocketBaseY - 40);
+      ctx.closePath();
+      ctx.fill();
+      // Fins
+      ctx.fillStyle = '#3b82f6';
+      ctx.beginPath();
+      ctx.moveTo(rocketX - 10, rocketBaseY);
+      ctx.lineTo(rocketX - 18, rocketBaseY + 10);
+      ctx.lineTo(rocketX - 10, rocketBaseY - 10);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(rocketX + 10, rocketBaseY);
+      ctx.lineTo(rocketX + 18, rocketBaseY + 10);
+      ctx.lineTo(rocketX + 10, rocketBaseY - 10);
+      ctx.closePath();
+      ctx.fill();
+      // Flame
+      const flameH = 15 + Math.sin(t / 30) * 8;
+      const flameGrad = ctx.createLinearGradient(rocketX, rocketBaseY, rocketX, rocketBaseY + flameH);
+      flameGrad.addColorStop(0, '#fbbf24');
+      flameGrad.addColorStop(0.5, '#f97316');
+      flameGrad.addColorStop(1, 'rgba(239, 68, 68, 0)');
+      ctx.fillStyle = flameGrad;
+      ctx.beginPath();
+      ctx.moveTo(rocketX - 8, rocketBaseY);
+      ctx.lineTo(rocketX, rocketBaseY + flameH);
+      ctx.lineTo(rocketX + 8, rocketBaseY);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // Score
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 18px monospace';
+    ctx.fillText('+250 MISSION COMPLETE!', cx, mainY + mainH - 15);
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '14px monospace';
+    ctx.fillText('Press Enter to exit', cx, mainY + mainH + 25);
+
+  } else if (mc.failed) {
+    // ── Failure screen ──
+    ctx.fillStyle = '#ef4444';
+    ctx.font = 'bold 22px monospace';
+    ctx.fillText('TIME EXPIRED', cx, mainY + mainH / 2 - 20);
+    ctx.fillStyle = '#fca5a5';
+    ctx.font = '14px monospace';
+    ctx.fillText('Commands completed: ' + mc.round + '/5', cx, mainY + mainH / 2 + 10);
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '14px monospace';
+    ctx.fillText('Press Enter to exit', cx, mainY + mainH / 2 + 40);
+
+  } else {
+    // ── Active typing screen ──
+    const currentCmd = MISSION_COMMANDS[mc.round];
+
+    // Header
+    ctx.fillStyle = '#22c55e';
+    ctx.font = 'bold 12px monospace';
+    ctx.fillText('NASA MISSION CONTROL', cx, mainY + 20);
+
+    // Round indicator
+    ctx.fillStyle = '#60a5fa';
+    ctx.font = 'bold 14px monospace';
+    ctx.fillText('Command ' + (mc.round + 1) + '/5', cx, mainY + 42);
+
+    // Timer
+    const timeSeconds = Math.ceil(mc.timeLeft / 1000);
+    const timerColor = timeSeconds <= 10 ? '#ef4444' : timeSeconds <= 20 ? '#fbbf24' : '#22c55e';
+    ctx.fillStyle = timerColor;
+    ctx.font = 'bold 20px monospace';
+    ctx.fillText('T-' + timeSeconds + 's', cx, mainY + 70);
+
+    // Instruction
+    ctx.fillStyle = '#475569';
+    ctx.font = '11px monospace';
+    ctx.fillText('Type the command below:', cx, mainY + 95);
+
+    // Command to type (large, prominent)
+    ctx.font = 'bold 22px monospace';
+    const cmdY = mainY + 135;
+
+    // Measure text width for centering character-by-character
+    const charW = ctx.measureText('M').width; // monospace
+    const cmdStartX = cx - (currentCmd.length * charW) / 2;
+
+    for (let i = 0; i < currentCmd.length; i++) {
+      const charX = cmdStartX + i * charW;
+      if (i < mc.typed.length) {
+        // Typed correctly
+        ctx.fillStyle = '#22c55e';
+        ctx.textAlign = 'left';
+        ctx.fillText(currentCmd[i], charX, cmdY);
+      } else if (i === mc.typed.length) {
+        // Cursor position — blinking
+        const blink = Math.sin(t / 100) > 0;
+        if (blink) {
+          ctx.fillStyle = '#22c55e';
+          ctx.fillRect(charX, cmdY + 3, charW - 2, 3);
+        }
+        ctx.fillStyle = '#4ade80';
+        ctx.textAlign = 'left';
+        ctx.fillText(currentCmd[i], charX, cmdY);
+      } else {
+        // Not yet typed
+        ctx.fillStyle = '#374151';
+        ctx.textAlign = 'left';
+        ctx.fillText(currentCmd[i], charX, cmdY);
+      }
+    }
+
+    // Player's typed text below
+    ctx.fillStyle = '#166534';
+    ctx.font = '12px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('> ' + mc.typed + '_', cx, cmdY + 35);
+
+    // Error flash
+    if (mc.errors > 0 && mc.errors > (mc._lastDrawnErrors || 0)) {
+      ctx.fillStyle = 'rgba(239, 68, 68, 0.15)';
+      ctx.fillRect(mainX, mainY, mainW, mainH);
+    }
+    mc._lastDrawnErrors = mc.errors;
+
+    // Progress bar
+    const progY = mainY + mainH - 35;
+    const progW = mainW * 0.6;
+    const progX = cx - progW / 2;
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(progX, progY, progW, 10);
+    const progFill = (mc.round + mc.typed.length / currentCmd.length) / MISSION_COMMANDS.length;
+    ctx.fillStyle = '#22c55e';
+    ctx.fillRect(progX, progY, progW * progFill, 10);
+    // Progress labels
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '9px monospace';
+    ctx.fillText('Progress', cx, progY - 4);
+
+    // Errors count
+    if (mc.errors > 0) {
+      ctx.fillStyle = '#ef4444';
+      ctx.font = '10px monospace';
+      ctx.fillText('Errors: ' + mc.errors, cx, progY + 25);
+    }
+  }
+
+  // Player at console
+  drawKitty(cx, H * 0.85, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
+
+  // Console keyboard in front of player
+  ctx.fillStyle = '#334155';
+  ctx.fillRect(cx - 25, H * 0.78, 50, 8);
+  // Key highlights when typing
+  if (!mc.complete && !mc.failed && mc.typed.length > 0) {
+    const flashIntensity = Math.max(0, 1 - (t % 200) / 200);
+    ctx.fillStyle = 'rgba(34, 197, 94, ' + (flashIntensity * 0.5) + ')';
+    ctx.fillRect(cx - 23, H * 0.78 + 1, 46, 6);
+  }
 
   ctx.textAlign = 'left';
 }
