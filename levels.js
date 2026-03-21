@@ -2075,6 +2075,82 @@ for (let i = 0; i < 4; i++) {
 }
 level11Cape.npcs = capeNpcs;
 
+// ── Level 12: Space Flight ──
+const SPACE_WORLD_W = 7000;
+const SPACE_SPEED = 3.0; // slightly slower than flight for difficulty
+
+const level12Space = {
+  worldW: SPACE_WORLD_W,
+  platforms: [], // flying level — no platforms
+  yarnBalls: [], // will hold alien collectibles for data integrity
+  aliens: [], // the actual alien data
+  asteroids: [], // obstacles
+};
+
+// Aliens — collectible friendly creatures (at least 8)
+const alienColors = ['#a78bfa', '#34d399', '#f472b6', '#60a5fa', '#fbbf24', '#f87171', '#2dd4bf', '#c084fc'];
+const alienEmojis = ['\u{1F60A}', '\u{1F917}', '\u{1F44B}', '\u2728', '\u{1F31F}', '\u{1F4AB}', '\u{1F389}', '\u{1FA90}'];
+for (let i = 0; i < 8; i++) {
+  const ax = 600 + i * 750 + (((i * 137 + 42) % 200));
+  const ay = 100 + (((i * 83 + 17) % 250));
+  level12Space.aliens.push({
+    x: ax, y: ay,
+    color: alienColors[i],
+    collected: false,
+    bobPhase: ((i * 197 + 31) % 628) / 100,
+    size: 10 + ((i * 53 + 7) % 5),
+    emoji: alienEmojis[i]
+  });
+  // Also add to yarnBalls for test compatibility
+  level12Space.yarnBalls.push({
+    x: ax, y: ay,
+    color: alienColors[i],
+    collected: false,
+    bobPhase: ((i * 197 + 31) % 628) / 100
+  });
+}
+
+// Asteroids — various sizes
+const asteroidData = [];
+for (let i = 0; i < 25; i++) {
+  asteroidData.push({
+    x: 400 + i * 260 + ((i * 137 + 42) % 100),
+    y: 60 + ((i * 83 + 17) % 320),
+    radius: 10 + ((i * 53 + 7) % 25), // small to large
+    rotation: ((i * 197 + 31) % 628) / 100,
+    rotSpeed: ((i * 41 + 13) % 80 - 40) / 1000,
+    hit: false,
+    vertices: [] // for rocky appearance
+  });
+}
+// Generate rocky vertices for each asteroid
+for (const ast of asteroidData) {
+  const numVerts = 7 + (Math.floor((ast.x * 3 + ast.y) % 4));
+  for (let v = 0; v < numVerts; v++) {
+    const angle = (v / numVerts) * Math.PI * 2;
+    const r = ast.radius * (0.7 + ((v * 31 + ast.radius) % 30) / 100);
+    ast.vertices.push({ angle, r });
+  }
+}
+level12Space.asteroids = asteroidData;
+
+// NPCs (decorative — for test compatibility)
+const spaceNpcs = [];
+const spaceNpcColors = ['#a78bfa', '#34d399', '#f472b6', '#60a5fa'];
+const spaceNpcAccessories = ['bow', 'glasses', 'scarf', 'flower'];
+for (let i = 0; i < 4; i++) {
+  spaceNpcs.push({
+    x: 300 + i * 1600 + ((i * 137 + 42) % 200),
+    y: GROUND_Y,
+    color: spaceNpcColors[i],
+    accessory: spaceNpcAccessories[i],
+    vx: 0,
+    walkFrame: 0, walkTimer: 0,
+    facing: 1,
+    idleTimer: ((i * 197 + 31) % 200)
+  });
+}
+
 npcDialogs[11] = [
   "Welcome to Cape Canaveral! Home of rockets and dreams!",
   "That rocket over there? She's going to the MOON, baby!",
@@ -2094,4 +2170,23 @@ npcDialogs[11] = [
   "If you see aliens up there, tell them we said meow!",
   "The launchpad was just repainted. Please don't scratch it. ...I know, it's tempting.",
   "Space: the final frontier. Also the best place to chase laser pointers!",
+];
+
+npcDialogs[12] = [
+  "Wow, space is HUGE! And sparkly! Just like me!",
+  "That asteroid almost hit us! This is better than a roller coaster!",
+  "I can see my house from here! ...No I can't, we're in space.",
+  "These friendly aliens are SO cute! We should take them to the Moon!",
+  "Is it just me or is Earth getting smaller? Don't worry, it'll be fine!",
+  "Zero gravity is AMAZING for my fur! So fluffy!",
+  "I wonder if there's a yarn ball floating around in space somewhere...",
+  "Space fact: there are more stars than grains of sand on all Earth's beaches!",
+  "The Moon is getting bigger! Or are we getting smaller? Science is confusing!",
+  "I just saw a shooting star! Oh wait, that was an asteroid. DODGE!",
+  "Houston, we have a PURR-fect mission so far!",
+  "That nebula looks like a giant ball of yarn! *dreamy sigh*",
+  "Alien friends collected! They're coming to the Moon with us!",
+  "My space helmet keeps fogging up from all my excited meowing!",
+  "Earth looks like a blue marble from here. I want to bat it around!",
+  "Space is like the world's biggest cat tree — infinite climbing room!",
 ];

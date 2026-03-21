@@ -139,6 +139,11 @@ const NPC_TALK_RANGE = 60;
 let activeSpeechBubbles = []; // { npc, text, life }
 const SLED_WORLD_W = 5000;
 
+// Space flight alien collection — persists to Moon level
+let collectedAlienCount = 0;
+const MAX_SPACE_ALIENS = 8;
+let spaceInvulnTimer = 0; // brief invulnerability after asteroid hit
+
 // Cape Canaveral state
 let capeSpaceSuit = false;
 let capeFueling = 0;
@@ -447,6 +452,14 @@ function completeTransition() {
   capeLaunching = false;
   capeCountdown = 10000;
   capeLaunchPower = 0;
+  // Reset space flight obstacles when re-entering level 12
+  if (levelTransition.toLevel === 12) {
+    spaceInvulnTimer = 0;
+    for (const ast of level12Space.asteroids) ast.hit = false;
+    for (const alien of level12Space.aliens) alien.collected = false;
+    for (const yb of level12Space.yarnBalls) yb.collected = false;
+    collectedAlienCount = 0;
+  }
   // Stop any looping SFX from previous level
   stopLoopSfx('sfxSailWind');
   stopLoopSfx('sfxWaterLapping');
@@ -2079,6 +2092,62 @@ function update(dt) {
         capeLaunchPower = 0;
         addPopup(player.x, player.y - 40, 'Not enough power! Try again!', '#ef4444');
       }
+    }
+  }
+
+  // ── Space Flight interactions (level 12) ──
+  if (currentLevel === 12) {
+    // Auto-scroll
+    player.vx = Math.max(player.vx, SPACE_SPEED);
+
+    // 4-directional movement
+    if (keys['ArrowUp']) player.y = Math.max(40, player.y - 3.5);
+    if (keys['ArrowDown']) player.y = Math.min(canvas.height - 40, player.y + 3.5);
+    // Left/right also work for fine control
+    if (keys['ArrowLeft']) player.vx = Math.max(SPACE_SPEED - 1.5, player.vx - 0.5);
+    if (keys['ArrowRight']) player.vx = Math.min(SPACE_SPEED + 2, player.vx + 0.3);
+
+    // Override gravity
+    player.vy = 0;
+    player.onGround = false;
+
+    // Invulnerability timer
+    if (spaceInvulnTimer > 0) spaceInvulnTimer -= 16;
+
+    // Asteroid collision
+    for (const ast of level12Space.asteroids) {
+      if (ast.hit) continue;
+      if (spaceInvulnTimer > 0) continue;
+      const dx = player.x - ast.x;
+      const dy = player.y - ast.y;
+      if (dx * dx + dy * dy < (ast.radius + 15) * (ast.radius + 15)) {
+        ast.hit = true;
+        score = Math.max(0, score - 20);
+        spaceInvulnTimer = 1000; // 1 second invulnerability
+        addPopup(ast.x, ast.y, '-20 Asteroid!', '#ef4444');
+      }
+    }
+
+    // Alien collection
+    for (let i = 0; i < level12Space.aliens.length; i++) {
+      const alien = level12Space.aliens[i];
+      if (alien.collected) continue;
+      const dx = player.x - alien.x;
+      const dy = player.y - alien.y;
+      if (dx * dx + dy * dy < COLLECT_RADIUS_SQ * 2) { // slightly larger radius
+        alien.collected = true;
+        level12Space.yarnBalls[i].collected = true; // sync
+        collectedAlienCount++;
+        score += 30;
+        addPopup(alien.x, alien.y - 20, '+30 Alien friend!', alien.color);
+        playChaChing();
+      }
+    }
+
+    // Level exit — reach the Moon
+    if (player.x > level12Space.worldW - 500 && keys['Enter']) {
+      keys['Enter'] = false;
+      switchToLevel(13);
     }
   }
 
