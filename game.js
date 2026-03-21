@@ -2901,8 +2901,12 @@ function update(dt) {
 
   // TopGolf minigame
   if (currentScene === Scene.TOPGOLF) {
-    const tgCx = canvas.width / 2;
-    const tgCy = canvas.height / 2;
+    // Use world-space coordinates (matching drawing.js ctx.translate(-cam,0))
+    const W = canvas.width, H = canvas.height;
+    const ww = getCurrentWorldW();
+    const tgCam = Math.max(0, Math.min(ww - W, player.x - W / 2));
+    const tgCx = tgCam + W / 2;
+    const tgCy = H / 2;
 
     if (!golfBall.active) {
       // Aiming

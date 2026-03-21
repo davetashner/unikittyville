@@ -6854,6 +6854,23 @@ function drawTopGolfInterior(cam, W, H) {
   ctx.fillStyle = '#065f46';
   ctx.fillRect(cx - 200, cy + 50, 80, 20);
 
+  // Player (unikitty) standing at the tee
+  const kittyX = cx - 160;
+  const kittyY = cy + 50;
+  drawKitty(kittyX, kittyY, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
+
+  // Golf club in paws
+  ctx.save();
+  ctx.translate(kittyX + 8, kittyY - 10);
+  ctx.rotate(golfBall.active ? -0.3 : -0.8 + golfAngle * 0.6);
+  // Shaft
+  ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, 22); ctx.stroke();
+  // Club head
+  ctx.fillStyle = '#64748b';
+  ctx.fillRect(-4, 20, 8, 5);
+  ctx.restore();
+
   // Aim line
   if (!golfBall.active) {
     ctx.strokeStyle = '#fbbf24';
