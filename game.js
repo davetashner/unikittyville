@@ -132,6 +132,35 @@ function playMeow() {
   sound.play().catch(() => {});
 }
 
+// ── Generic SFX player ──
+const sfxCooldowns = {};
+function playSfx(id, cooldownMs = 500) {
+  if (muted) return;
+  const now = performance.now();
+  if (sfxCooldowns[id] && now - sfxCooldowns[id] < cooldownMs) return;
+  sfxCooldowns[id] = now;
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.volume = getSfxVolume();
+  el.currentTime = 0;
+  el.play().catch(() => {});
+}
+
+function startLoopSfx(id) {
+  if (muted) return;
+  const el = document.getElementById(id);
+  if (!el || !el.paused) return;
+  el.volume = getSfxVolume() * 0.5;
+  el.play().catch(() => {});
+}
+
+function stopLoopSfx(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.pause();
+  el.currentTime = 0;
+}
+
 // ── Volume control ──
 let masterVolume = 0.4; // 0..1
 let muted = false;
@@ -237,6 +266,8 @@ function applyVolume() {
 const FADE_DURATION = 1200; // ms
 const levelMusic = { 1: 'musicMeadow', 2: 'musicSledding', 3: 'musicNYC', 4: 'musicRome', 5: 'musicHawaii', 6: 'musicOriental', 7: 'musicAlps', 8: 'musicCampground', 9: 'musicSafari' };
 const CHALET_MUSIC_ID = 'musicChalet';
+const SCUBA_MUSIC_ID = 'musicScuba';
+const FLIGHT_MUSIC_ID = 'musicFlight';
 let currentMusicId = null;
 let musicFade = null; // { out: AudioElement, in: AudioElement, timer: 0 }
 
@@ -348,6 +379,14 @@ function completeTransition() {
   safariPhotography = { active: false, timer: 0, targetAnimal: '' };
   cheetahSpeech = { text: '', timer: 0 };
   dustParticles = [];
+  // Stop any looping SFX from previous level
+  stopLoopSfx('sfxSailWind');
+  stopLoopSfx('sfxWaterLapping');
+  stopLoopSfx('sfxBubblesSwim');
+  stopLoopSfx('sfxCheetahSprint');
+  stopLoopSfx('sfxGrassRustle');
+  stopLoopSfx('sfxSavannaWind');
+  stopLoopSfx('sfxFlightWind');
 }
 
 function getCurrentPlatforms() {
@@ -607,7 +646,7 @@ function update(dt) {
         scubaPearlCount++;
         score += 15;
         addPopup(player.x, player.y - 40, '+15 ' + c.type + '!', c.color);
-        playChaChing();
+        playSfx('sfxPearlPickup');
       }
     }
     // Talk to mercats (Q key)
@@ -620,6 +659,7 @@ function update(dt) {
             const dialogs = npcDialogs[61]; // 61 = scuba sub-level dialogs
             const text = dialogs[Math.floor(Math.random() * dialogs.length)];
             activeSpeechBubbles.push({ npc: mc, text, life: 4000 });
+            playSfx('sfxMercatChirp');
           }
         }
       }
@@ -633,6 +673,8 @@ function update(dt) {
     if (keys['Enter']) {
       keys['Enter'] = false;
       scubaDiving = false;
+      stopLoopSfx('sfxBubblesSwim');
+      crossfadeToLevel(currentLevel);
       score += 50;
       addPopup(player.x, player.y - 40, '+50 Great dive!', '#38bdf8');
       playChaChing();
@@ -652,6 +694,8 @@ function update(dt) {
     if (keys['Enter']) {
       keys['Enter'] = false;
       sailing = false;
+      stopLoopSfx('sfxSailWind');
+      stopLoopSfx('sfxWaterLapping');
       player.x = SAILBOAT_POS.x;
       player.y = GROUND_Y;
       player.vy = 0;
@@ -1302,6 +1346,8 @@ function update(dt) {
       if (keys['Enter'] && !sailing) {
         keys['Enter'] = false;
         sailing = true;
+        startLoopSfx('sfxSailWind');
+        startLoopSfx('sfxWaterLapping');
       }
     }
     // Dive spot — enter scuba minigame
@@ -1313,6 +1359,9 @@ function update(dt) {
         scubaPlayer = { x: 200, y: 100, vx: 0, vy: 0 };
         scubaPearlCount = 0;
         initScubaCollectibles();
+        crossfadeToMusic(SCUBA_MUSIC_ID);
+        playSfx('sfxDiveSplash');
+        startLoopSfx('sfxBubblesSwim');
       }
     }
     // Shell collection
@@ -1534,6 +1583,8 @@ function update(dt) {
   let nearWateringHole = false;
   let nearElephant = false;
   if (currentLevel === 9) {
+    // Start ambient savanna wind if not already playing
+    startLoopSfx('sfxSavannaWind');
     // Cheetah ride mode — override movement speed
     if (ridingCheetah) {
       if (keys['ArrowLeft'] || keys['ArrowRight']) {
@@ -1571,6 +1622,7 @@ function update(dt) {
       if (keys['KeyG']) {
         keys['KeyG'] = false;
         ridingCheetah = false;
+        stopLoopSfx('sfxCheetahSprint');
       }
     }
 
@@ -1593,7 +1645,7 @@ function update(dt) {
           fruitCount++;
           score += 10;
           addPopup(bx, player.y - 40, '+10 Baobab fruit!', '#f59e0b');
-          playChaChing();
+          playSfx('sfxBaobabPluck');
         }
       }
     }
@@ -1621,7 +1673,8 @@ function update(dt) {
           player.onGround = false;
           score += 15;
           addPopup(ex, player.y - 60, '+15 Elephant boost!', '#94a3b8');
-          playMeow();
+          playSfx('sfxElephantTrumpet');
+          playSfx('sfxElephantSpray', 100);
         }
       }
     }
@@ -1636,6 +1689,8 @@ function update(dt) {
       if (!rh.charging && Math.abs(dist) < 200 && Math.abs(dist) > 30) {
         rh.charging = true;
         rh.chargeVx = dist > 0 ? 5 : -5; // charge toward player
+        playSfx('sfxRhinoSnort');
+        playSfx('sfxRhinoCharge', 100);
         rh.chargeTimer = 0;
       }
       if (rh.charging) {
@@ -1665,6 +1720,7 @@ function update(dt) {
           ant.running = true;
           ant.runTimer = 0;
           ant.vx = (Math.random() > 0.5 ? 1 : -1) * (3 + Math.random() * 2);
+          playSfx('sfxAntelopeGallop', 2000);
         }
       }
       if (ant.running) {
@@ -1691,7 +1747,7 @@ function update(dt) {
             safariPhotoCount++;
             score += 30;
             addPopup(player.x, player.y - 40, '+30 Great photo!', '#fbbf24');
-            playChaChing();
+            playSfx('sfxPhotoSuccess');
             // Bonus for all 4 species
             if (safariPhotoCount >= 4) {
               score += 100;
@@ -1705,6 +1761,7 @@ function update(dt) {
           }
         } else {
           addPopup(player.x, player.y - 40, 'Too slow! It walked away...', '#94a3b8');
+          playSfx('sfxPhotoFail');
         }
       }
     }
@@ -1728,6 +1785,7 @@ function update(dt) {
         safariPhotography.active = true;
         safariPhotography.timer = 0;
         safariPhotography.targetAnimal = targetAnimal;
+        playSfx('sfxCameraShutter');
       }
     }
 
@@ -1740,17 +1798,20 @@ function update(dt) {
         cheetahYarnGiven++;
         const dialogueIdx = Math.min(cheetahYarnGiven - 1, CHEETAH_DIALOGUES.length - 1);
         cheetahSpeech = { text: CHEETAH_DIALOGUES[dialogueIdx], timer: 3000 };
+        playSfx('sfxCheetahChirp');
         if (cheetahYarnGiven >= 5) {
           ridingCheetah = true;
           score += 50;
           addPopup(CHEETAH_POS.x, player.y - 40, '+50 Cheetah ride unlocked!', '#f97316');
-          playChaChing();
+          playSfx('sfxCheetahPurr');
+          startLoopSfx('sfxCheetahSprint');
         }
       }
       // Mount/remount cheetah
       if (!ridingCheetah && cheetahYarnGiven >= 5 && keys['KeyG']) {
         keys['KeyG'] = false;
         ridingCheetah = true;
+        startLoopSfx('sfxCheetahSprint');
       }
     }
     if (cheetahSpeech.timer > 0) {
@@ -1765,7 +1826,8 @@ function update(dt) {
         player.onGround = false;
         score += 10;
         addPopup(gx, player.y - 40, '+10 Giraffe lift!', '#fde68a');
-        playMeow();
+        playSfx('sfxGiraffeHum');
+        playSfx('sfxGiraffeLift', 100);
       }
     }
 
@@ -1776,13 +1838,17 @@ function update(dt) {
     }
 
     // Tall grass slowdown
+    let inTallGrass = false;
     for (const scene of level7.scenes) {
       if (scene.type === 'tall_grass' && player.x > scene.x && player.x < scene.x + scene.w) {
+        inTallGrass = true;
         if (!ridingCheetah) {
           player.vx *= 0.6; // slow down in tall grass
         }
       }
     }
+    if (inTallGrass) { startLoopSfx('sfxGrassRustle'); }
+    else { stopLoopSfx('sfxGrassRustle'); }
 
     // Update HUD
     document.getElementById('hudFruit').textContent = fruitCount;
