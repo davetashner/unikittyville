@@ -871,8 +871,12 @@ function updatePrompt(near) {
     el.textContent = `Need ${5 - stickCount} more sticks to build a fire!`;
     el.style.display = 'block';
     setAction(null, '');
+  } else if (near.nearFirePit && campfire.lit && lightShowActive) {
+    el.textContent = 'Light Show mode! Type colors to program the fire.';
+    el.style.display = 'block';
+    setAction(null, '');
   } else if (near.nearFirePit && campfire.lit) {
-    el.textContent = 'Press R to roast a marshmallow!';
+    el.textContent = 'Press R to roast a marshmallow! Press L for Light Show!';
     el.style.display = 'block';
     setAction('KeyR', 'Roast');
   } else if (near.nearHammock) {
