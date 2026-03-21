@@ -1090,6 +1090,28 @@ function updatePrompt(near) {
     el.textContent = 'Press Enter for TopGolf!';
     el.style.display = 'block';
     setAction('Enter', 'Enter');
+  } else if (currentScene === Scene.APOLLO_MISSION) {
+    const am = apolloMission;
+    if (am.celebrateTimer > 0) {
+      el.textContent = 'Apollo Mission Complete! +300 points!';
+    } else if (am.step === 0) {
+      el.textContent = 'Press Space when the boot reaches the green zone!';
+      setAction('Space', 'Step');
+    } else if (am.step === 1) {
+      el.textContent = 'Hold Space to plant the flag!';
+      setAction('Space', 'Plant');
+    } else if (am.step === 2) {
+      el.textContent = 'Left/Right to collect moon rocks! ' + am.rocksCollected + '/5';
+      setAction(null, '');
+    } else if (am.step === 3) {
+      el.textContent = 'Press S to salute the flag!';
+      setAction('KeyS', 'Salute');
+    }
+    el.style.display = 'block';
+  } else if (currentLevel === 13 && Math.abs(player.x - APOLLO_SITE_POS.x) < BUILDING_RANGE && !apolloMission.complete) {
+    el.textContent = 'Press Enter for Apollo Landing Recreation!';
+    el.style.display = 'block';
+    setAction('Enter', 'Enter');
   } else if (currentLevel === 13 && player.x > level13Moon.worldW - 300) {
     el.textContent = 'Press Enter to complete your adventure!';
     el.style.display = 'block';
