@@ -1012,6 +1012,15 @@ function updatePrompt(near) {
     el.style.display = 'block';
     setAction('Space', 'Launch');
     return;
+  } else if (currentScene === Scene.NASA_MUSEUM) {
+    el.textContent = 'Kennedy Space Center Museum — Press Enter to leave';
+    el.style.display = 'block';
+    setAction('Enter', 'Exit');
+    return;
+  } else if (currentLevel === 11 && Math.abs(player.x - NASA_BUILDING_POS.x - NASA_BUILDING_POS.w / 2) < BUILDING_RANGE && currentScene === null) {
+    el.textContent = 'Press Enter to visit the NASA Museum!';
+    el.style.display = 'block';
+    setAction('Enter', 'Enter');
   } else if (currentLevel === 11 && !capeSpaceSuit && Math.abs(player.x - SPACE_SUIT_POS.x) < BUILDING_RANGE) {
     el.textContent = 'Press S to put on Space Suit!';
     el.style.display = 'block';

@@ -2335,3 +2335,189 @@ function drawMetPaintingScene(type, fx, fy, fw, fh) {
     }
   }
 }
+
+// ── NASA Museum — Aircraft & Spacecraft Exhibit ──
+function drawNasaMuseumInterior(cam, W, H) {
+  const cx = cam + W / 2;
+  const t = gameTime;
+
+  // High ceiling hall — dark blue-gray walls
+  ctx.fillStyle = '#1e293b';
+  ctx.fillRect(cam, 0, W, H);
+  // Polished floor
+  const floorGrad = ctx.createLinearGradient(cam, H * 0.75, cam, H);
+  floorGrad.addColorStop(0, '#334155');
+  floorGrad.addColorStop(1, '#1e293b');
+  ctx.fillStyle = floorGrad;
+  ctx.fillRect(cam, H * 0.75, W, H * 0.25);
+  // Floor reflections
+  ctx.fillStyle = 'rgba(255,255,255,0.03)';
+  ctx.fillRect(cam, H * 0.75, W, 3);
+
+  // Banner
+  ctx.fillStyle = '#1e40af';
+  ctx.fillRect(cam, 0, W, 50);
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 22px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText('Kennedy Space Center Visitor Complex', cx, 33);
+
+  // Thin support wires from ceiling
+  ctx.strokeStyle = 'rgba(148, 163, 184, 0.4)';
+  ctx.lineWidth = 1;
+
+  // ── Aircraft 1: Wright Flyer (leftmost) ──
+  const w1x = cam + W * 0.12;
+  const w1y = H * 0.22;
+  ctx.beginPath(); ctx.moveTo(w1x, 0); ctx.lineTo(w1x, w1y); ctx.stroke();
+  // Biplane wings
+  ctx.fillStyle = '#d4a76a';
+  ctx.fillRect(w1x - 30, w1y, 60, 4);
+  ctx.fillRect(w1x - 28, w1y + 12, 56, 4);
+  // Struts
+  ctx.strokeStyle = '#92400e'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(w1x - 20, w1y + 4); ctx.lineTo(w1x - 18, w1y + 12); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(w1x + 20, w1y + 4); ctx.lineTo(w1x + 18, w1y + 12); ctx.stroke();
+  // Body
+  ctx.fillStyle = '#b8860b';
+  ctx.fillRect(w1x - 4, w1y + 5, 20, 5);
+  // Propeller
+  const propAngle = t / 100;
+  ctx.fillStyle = '#78350f';
+  ctx.save(); ctx.translate(w1x + 16, w1y + 7); ctx.rotate(propAngle);
+  ctx.fillRect(-1, -8, 2, 16); ctx.restore();
+  // Label
+  ctx.fillStyle = '#94a3b8'; ctx.font = '9px system-ui';
+  ctx.fillText('Wright Flyer', w1x, w1y + 28);
+
+  // ── Aircraft 2: X-15 (left-center) ──
+  const x15x = cam + W * 0.32;
+  const x15y = H * 0.3;
+  ctx.strokeStyle = 'rgba(148, 163, 184, 0.4)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(x15x, 0); ctx.lineTo(x15x, x15y); ctx.stroke();
+  // Sleek black body
+  ctx.fillStyle = '#1e1b4b';
+  ctx.beginPath();
+  ctx.moveTo(x15x - 35, x15y + 4); ctx.lineTo(x15x + 25, x15y); ctx.lineTo(x15x + 35, x15y + 4);
+  ctx.lineTo(x15x + 25, x15y + 8); ctx.lineTo(x15x - 35, x15y + 8); ctx.closePath(); ctx.fill();
+  // Wings
+  ctx.fillStyle = '#312e81';
+  ctx.beginPath(); ctx.moveTo(x15x - 5, x15y); ctx.lineTo(x15x + 5, x15y - 12); ctx.lineTo(x15x + 15, x15y); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x15x - 5, x15y + 8); ctx.lineTo(x15x + 5, x15y + 20); ctx.lineTo(x15x + 15, x15y + 8); ctx.closePath(); ctx.fill();
+  // Tail fin
+  ctx.beginPath(); ctx.moveTo(x15x - 30, x15y); ctx.lineTo(x15x - 35, x15y - 10); ctx.lineTo(x15x - 25, x15y); ctx.closePath(); ctx.fill();
+  // NASA text
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 5px system-ui';
+  ctx.fillText('NASA', x15x, x15y + 6);
+  ctx.fillStyle = '#94a3b8'; ctx.font = '9px system-ui';
+  ctx.fillText('X-15 Rocket Plane', x15x, x15y + 30);
+
+  // ── Spacecraft 3: Space Shuttle (center, largest) ──
+  const ssx = cx;
+  const ssy = H * 0.18;
+  ctx.strokeStyle = 'rgba(148, 163, 184, 0.4)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(ssx - 15, 0); ctx.lineTo(ssx - 15, ssy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ssx + 15, 0); ctx.lineTo(ssx + 15, ssy); ctx.stroke();
+  // Main body (white)
+  ctx.fillStyle = '#f1f5f9';
+  ctx.beginPath();
+  ctx.moveTo(ssx - 15, ssy + 50); ctx.lineTo(ssx - 12, ssy); ctx.lineTo(ssx, ssy - 15);
+  ctx.lineTo(ssx + 12, ssy); ctx.lineTo(ssx + 15, ssy + 50); ctx.closePath(); ctx.fill();
+  // Nose cone
+  ctx.fillStyle = '#1e1b4b';
+  ctx.beginPath(); ctx.moveTo(ssx - 5, ssy); ctx.lineTo(ssx, ssy - 15); ctx.lineTo(ssx + 5, ssy); ctx.closePath(); ctx.fill();
+  // Wings (delta)
+  ctx.fillStyle = '#e2e8f0';
+  ctx.beginPath(); ctx.moveTo(ssx - 12, ssy + 30); ctx.lineTo(ssx - 40, ssy + 55); ctx.lineTo(ssx - 15, ssy + 50); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(ssx + 12, ssy + 30); ctx.lineTo(ssx + 40, ssy + 55); ctx.lineTo(ssx + 15, ssy + 50); ctx.closePath(); ctx.fill();
+  // Tail
+  ctx.fillStyle = '#1e1b4b';
+  ctx.beginPath(); ctx.moveTo(ssx - 3, ssy + 40); ctx.lineTo(ssx, ssy + 25); ctx.lineTo(ssx + 3, ssy + 40); ctx.closePath(); ctx.fill();
+  // USA flag stripe
+  ctx.fillStyle = '#3b82f6';
+  ctx.fillRect(ssx - 8, ssy + 15, 16, 3);
+  ctx.fillStyle = '#ef4444';
+  ctx.fillRect(ssx - 8, ssy + 19, 16, 3);
+  // Windows
+  ctx.fillStyle = '#60a5fa';
+  ctx.beginPath(); ctx.arc(ssx - 3, ssy + 5, 2, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(ssx + 3, ssy + 5, 2, 0, Math.PI * 2); ctx.fill();
+  // Engines
+  ctx.fillStyle = '#6b7280';
+  ctx.beginPath(); ctx.arc(ssx - 5, ssy + 52, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(ssx + 5, ssy + 52, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(ssx, ssy + 54, 5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#94a3b8'; ctx.font = '10px system-ui';
+  ctx.fillText('Space Shuttle Discovery', ssx, ssy + 72);
+
+  // ── Spacecraft 4: Mercury Capsule (right-center) ──
+  const mcx = cam + W * 0.68;
+  const mcy = H * 0.28;
+  ctx.strokeStyle = 'rgba(148, 163, 184, 0.4)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(mcx, 0); ctx.lineTo(mcx, mcy); ctx.stroke();
+  // Capsule body (cone shape)
+  ctx.fillStyle = '#94a3b8';
+  ctx.beginPath();
+  ctx.moveTo(mcx - 12, mcy + 20); ctx.lineTo(mcx - 6, mcy); ctx.lineTo(mcx + 6, mcy);
+  ctx.lineTo(mcx + 12, mcy + 20); ctx.closePath(); ctx.fill();
+  // Heat shield
+  ctx.fillStyle = '#78716c';
+  ctx.fillRect(mcx - 14, mcy + 20, 28, 5);
+  // Window
+  ctx.fillStyle = '#60a5fa';
+  ctx.beginPath(); ctx.arc(mcx, mcy + 8, 3, 0, Math.PI * 2); ctx.fill();
+  // Antenna
+  ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(mcx, mcy); ctx.lineTo(mcx, mcy - 10); ctx.stroke();
+  ctx.fillStyle = '#94a3b8'; ctx.font = '9px system-ui';
+  ctx.fillText('Mercury Friendship 7', mcx, mcy + 35);
+
+  // ── Aircraft 5: SR-71 Blackbird (rightmost) ──
+  const srx = cam + W * 0.88;
+  const sry = H * 0.24;
+  ctx.strokeStyle = 'rgba(148, 163, 184, 0.4)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(srx, 0); ctx.lineTo(srx, sry); ctx.stroke();
+  // Long sleek black body
+  ctx.fillStyle = '#0f172a';
+  ctx.beginPath();
+  ctx.moveTo(srx - 40, sry + 5); ctx.lineTo(srx + 20, sry + 2); ctx.lineTo(srx + 40, sry + 5);
+  ctx.lineTo(srx + 20, sry + 8); ctx.lineTo(srx - 40, sry + 8); ctx.closePath(); ctx.fill();
+  // Twin engines
+  ctx.beginPath(); ctx.arc(srx + 8, sry + 2, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(srx + 8, sry + 10, 4, 0, Math.PI * 2); ctx.fill();
+  // Wings (swept back)
+  ctx.fillStyle = '#1e293b';
+  ctx.beginPath(); ctx.moveTo(srx - 10, sry); ctx.lineTo(srx + 10, sry - 8); ctx.lineTo(srx + 20, sry + 2); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(srx - 10, sry + 10); ctx.lineTo(srx + 10, sry + 18); ctx.lineTo(srx + 20, sry + 8); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#94a3b8'; ctx.font = '9px system-ui';
+  ctx.fillText('SR-71 Blackbird', srx, sry + 30);
+
+  // Informational displays along the wall
+  const displays = [
+    { x: cam + W * 0.1, label: '1903', desc: 'First Flight' },
+    { x: cam + W * 0.3, label: '1961', desc: 'First American in Space' },
+    { x: cam + W * 0.5, label: '1969', desc: 'Moon Landing' },
+    { x: cam + W * 0.7, label: '1981', desc: 'First Shuttle Launch' },
+    { x: cam + W * 0.9, label: '2020', desc: 'Commercial Crew' },
+  ];
+  for (const d of displays) {
+    ctx.fillStyle = '#1e40af';
+    ctx.fillRect(d.x - 30, H * 0.6, 60, 35);
+    ctx.fillStyle = '#60a5fa';
+    ctx.font = 'bold 12px system-ui';
+    ctx.fillText(d.label, d.x, H * 0.62 + 12);
+    ctx.fillStyle = '#bfdbfe';
+    ctx.font = '8px system-ui';
+    ctx.fillText(d.desc, d.x, H * 0.62 + 25);
+  }
+
+  // Player on museum floor
+  drawKitty(cx, H * 0.85, player.color, 1, player.walkFrame, 'horn', playerEyeColor, playerHornColors);
+
+  // Prompt
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 14px system-ui';
+  ctx.fillText('Kennedy Space Center — Press Enter to leave', cx, H * 0.73);
+
+  ctx.textAlign = 'left';
+}

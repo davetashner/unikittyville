@@ -44,6 +44,7 @@ function draw() {
       [Scene.THIRTY_ROCK]: () => drawThirtyRockInterior(cam, W, H),
       [Scene.GRAND_CENTRAL]: () => drawGrandCentralInterior(cam, W, H),
       [Scene.THE_MET]: () => drawMetMuseumInterior(cam, W, H),
+      [Scene.NASA_MUSEUM]: () => drawNasaMuseumInterior(cam, W, H),
     };
     if (sceneDrawMap[currentScene]) sceneDrawMap[currentScene]();
   } else {
@@ -6031,7 +6032,7 @@ function drawCapeWorld(W, H, cam, cycle, isNight) {
   // Platforms — concrete/metal style
   for (const p of level11Cape.platforms) {
     const px = p.x;
-    if (px + p.w < 0 || px > W) continue;
+    if (px + p.w < cam - 20 || px > cam + W + 20) continue;
     ctx.fillStyle = '#64748b';
     ctx.fillRect(px, p.y, p.w, 10);
     ctx.fillStyle = '#475569';
