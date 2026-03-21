@@ -118,6 +118,11 @@ function draw() {
   if (hotdogMath.active) {
     drawHotdogMathOverlay(W, H);
   }
+
+  // Postcard overlay
+  if (postcardOpen) {
+    drawPostcard(W, H);
+  }
 }
 
 function drawPhotoGallery(W, H) {
@@ -1505,6 +1510,315 @@ function drawMiniHotdog(x, y) {
     ctx.lineTo(x + 5 + i * 3, y + (i % 2 === 0 ? 2 : 6));
   }
   ctx.stroke();
+}
+
+function drawPostcard(W, H) {
+  // Semi-transparent backdrop
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+  ctx.fillRect(0, 0, W, H);
+
+  if (postcardMode === 'write') {
+    drawPostcardWrite(W, H);
+  } else {
+    drawPostcardGallery(W, H);
+  }
+}
+
+function drawPostcardWrite(W, H) {
+  const theme = POSTCARD_THEMES[currentLevel] || POSTCARD_THEMES[1];
+  const levelName = LEVEL_NAMES[currentLevel - 1] || 'Level ' + currentLevel;
+
+  // Postcard dimensions
+  const cardW = Math.min(W * 0.7, 520);
+  const cardH = Math.min(H * 0.75, 340);
+  const cx = (W - cardW) / 2;
+  const cy = (H - cardH) / 2;
+
+  // "Just sent" confirmation screen
+  if (postcardJustSent) {
+    ctx.fillStyle = '#fefce8';
+    ctx.fillRect(cx, cy, cardW, cardH);
+    // Border
+    ctx.strokeStyle = '#d1d5db';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(cx, cy, cardW, cardH);
+
+    ctx.fillStyle = theme.color;
+    ctx.fillRect(cx, cy, cardW, 50);
+
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold ' + Math.round(H * 0.04) + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Postcard Sent!', W / 2, cy + 34);
+
+    ctx.fillStyle = '#4ade80';
+    ctx.font = 'bold ' + Math.round(H * 0.08) + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.fillText('\u2709', W / 2, cy + cardH * 0.5);
+
+    ctx.fillStyle = '#64748b';
+    ctx.font = Math.round(H * 0.03) + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.fillText('Your postcard from ' + levelName + ' is on its way!', W / 2, cy + cardH * 0.7);
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = Math.round(H * 0.025) + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.fillText('Press any key to close', W / 2, cy + cardH - 20);
+    return;
+  }
+
+  // Drop shadow
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+  ctx.fillRect(cx + 4, cy + 4, cardW, cardH);
+
+  // White postcard body
+  ctx.fillStyle = '#fefce8';
+  ctx.fillRect(cx, cy, cardW, cardH);
+
+  // Outer border
+  ctx.strokeStyle = '#d1d5db';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(cx, cy, cardW, cardH);
+
+  // Colored header bar with greeting
+  const headerH = Math.round(cardH * 0.16);
+  ctx.fillStyle = theme.color;
+  ctx.fillRect(cx, cy, cardW, headerH);
+
+  // Greeting text
+  const isDark = ['#1e3a5f', '#c2410c', '#3b82f6', '#6b7280', '#65a30d'].includes(theme.color);
+  ctx.fillStyle = isDark ? '#fff' : '#1e1b4b';
+  ctx.font = 'bold ' + Math.round(headerH * 0.55) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(theme.greeting, W / 2, cy + headerH * 0.7);
+
+  // Stamp in top-right corner
+  const stampSize = Math.round(cardH * 0.14);
+  const stampX = cx + cardW - stampSize - 12;
+  const stampY = cy + headerH + 8;
+  // Stamp border (perforated look)
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(stampX - 2, stampY - 2, stampSize + 4, stampSize + 4);
+  ctx.strokeStyle = '#94a3b8';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3, 3]);
+  ctx.strokeRect(stampX - 2, stampY - 2, stampSize + 4, stampSize + 4);
+  ctx.setLineDash([]);
+  // Stamp illustration (colored square with a star)
+  ctx.fillStyle = theme.color;
+  ctx.fillRect(stampX, stampY, stampSize, stampSize);
+  ctx.fillStyle = '#fef08a';
+  ctx.font = Math.round(stampSize * 0.6) + 'px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('\u2605', stampX + stampSize / 2, stampY + stampSize * 0.7);
+
+  // Small illustration area (colored rectangle representing location)
+  const illusW = Math.round(cardW * 0.28);
+  const illusH = Math.round(cardH * 0.3);
+  const illusX = cx + 16;
+  const illusY = cy + headerH + 12;
+  ctx.fillStyle = theme.color;
+  ctx.globalAlpha = 0.3;
+  ctx.fillRect(illusX, illusY, illusW, illusH);
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = theme.color;
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(illusX, illusY, illusW, illusH);
+  // Level name inside illustration
+  ctx.fillStyle = isDark ? '#e2e8f0' : '#334155';
+  ctx.font = 'bold ' + Math.round(illusH * 0.16) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(levelName, illusX + illusW / 2, illusY + illusH * 0.55);
+
+  // Divider line (vertical) between illustration and writing area
+  const writeX = illusX + illusW + 16;
+  const writeW = cx + cardW - writeX - 16;
+  const writeY = illusY;
+  const writeH = illusH + 20;
+
+  // "To:" and "From:" lines (address side)
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = Math.round(H * 0.022) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('To: Everyone back home', stampX - illusW * 0.3, stampY + stampSize + 20);
+  ctx.fillText('From: ' + playerName, stampX - illusW * 0.3, stampY + stampSize + 38);
+
+  // Writing area — lined paper effect
+  const lineSpacing = Math.round(writeH / 5);
+  const lineY0 = cy + headerH + illusH + 40;
+  const lineX0 = cx + 20;
+  const lineXEnd = cx + cardW - 20;
+  ctx.strokeStyle = '#cbd5e1';
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i < 4; i++) {
+    const ly = lineY0 + i * lineSpacing;
+    ctx.beginPath();
+    ctx.moveTo(lineX0, ly);
+    ctx.lineTo(lineXEnd, ly);
+    ctx.stroke();
+  }
+
+  // Draw typed text on the lines
+  ctx.fillStyle = '#1e293b';
+  ctx.font = Math.round(H * 0.028) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'left';
+  const maxLineChars = Math.floor((lineXEnd - lineX0) / (H * 0.015));
+  const lines = [];
+  let remaining = postcardText;
+  while (remaining.length > 0) {
+    lines.push(remaining.slice(0, maxLineChars));
+    remaining = remaining.slice(maxLineChars);
+  }
+  if (lines.length === 0) lines.push('');
+  for (let i = 0; i < Math.min(lines.length, 4); i++) {
+    ctx.fillText(lines[i], lineX0, lineY0 + i * lineSpacing - 4);
+  }
+
+  // Blinking cursor
+  const cursorLine = Math.min(lines.length - 1, 3);
+  const cursorText = lines[cursorLine] || '';
+  const cursorX = lineX0 + ctx.measureText(cursorText).width + 2;
+  const cursorY = lineY0 + cursorLine * lineSpacing;
+  if (Math.floor(gameTime / 500) % 2 === 0) {
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(cursorX, cursorY - H * 0.025, 2, H * 0.03);
+  }
+
+  // Character count
+  ctx.fillStyle = postcardText.length >= 130 ? '#ef4444' : '#94a3b8';
+  ctx.font = Math.round(H * 0.022) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText(postcardText.length + '/140', cx + cardW - 16, cy + cardH - 12);
+
+  // Instructions
+  ctx.fillStyle = '#64748b';
+  ctx.font = Math.round(H * 0.024) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('Type your message, Enter to send', cx + 16, cy + cardH - 12);
+
+  // Tab hint
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = Math.round(H * 0.02) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Tab: View Gallery | Esc: Close', W / 2, cy + cardH + 20);
+
+  // First postcard bonus hint
+  if (!postcardSentLevels.has(currentLevel)) {
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold ' + Math.round(H * 0.022) + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.fillText('+' + POSTCARD_POINTS + ' pts for first postcard from ' + (LEVEL_NAMES[currentLevel - 1] || 'this level') + '!', W / 2, cy - 10);
+  }
+}
+
+function drawPostcardGallery(W, H) {
+  // Title
+  ctx.fillStyle = '#fbbf24';
+  ctx.font = 'bold ' + Math.round(H * 0.055) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Postcard Collection', W / 2, H * 0.1);
+
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = Math.round(H * 0.025) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.fillText(postcardsSent.length + ' postcard' + (postcardsSent.length !== 1 ? 's' : '') + ' sent | Tab: Write | Esc: Close | Up/Down: Scroll', W / 2, H * 0.15);
+
+  if (postcardsSent.length === 0) {
+    ctx.fillStyle = '#64748b';
+    ctx.font = Math.round(H * 0.035) + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.fillText('No postcards sent yet!', W / 2, H * 0.45);
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = Math.round(H * 0.025) + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.fillText('Press Tab to write your first postcard', W / 2, H * 0.53);
+    return;
+  }
+
+  // Show postcards in a mini-card grid (up to 4 visible at once)
+  const cardW = Math.min(W * 0.42, 320);
+  const cardH = Math.round(H * 0.3);
+  const gapX = Math.round(W * 0.03);
+  const gapY = Math.round(H * 0.04);
+  const cols = 2;
+  const startX = (W - cols * cardW - (cols - 1) * gapX) / 2;
+  const startY = H * 0.2;
+  const visible = postcardsSent.slice(postcardGalleryScroll, postcardGalleryScroll + 4);
+
+  for (let i = 0; i < visible.length; i++) {
+    const p = visible[i];
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const px = startX + col * (cardW + gapX);
+    const py = startY + row * (cardH + gapY);
+    const theme = POSTCARD_THEMES[p.level] || POSTCARD_THEMES[1];
+
+    // Mini postcard card
+    ctx.fillStyle = '#fefce8';
+    ctx.fillRect(px, py, cardW, cardH);
+    ctx.strokeStyle = '#d1d5db';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(px, py, cardW, cardH);
+
+    // Colored header
+    const hH = Math.round(cardH * 0.22);
+    ctx.fillStyle = theme.color;
+    ctx.fillRect(px, py, cardW, hH);
+
+    const isDark = ['#1e3a5f', '#c2410c', '#3b82f6', '#6b7280', '#65a30d'].includes(theme.color);
+    ctx.fillStyle = isDark ? '#fff' : '#1e1b4b';
+    ctx.font = 'bold ' + Math.round(hH * 0.55) + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(theme.greeting, px + cardW / 2, py + hH * 0.7);
+
+    // Mini stamp
+    const sS = Math.round(cardH * 0.12);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(px + cardW - sS - 8, py + hH + 4, sS, sS);
+    ctx.fillStyle = theme.color;
+    ctx.fillRect(px + cardW - sS - 6, py + hH + 6, sS - 4, sS - 4);
+
+    // Message text
+    ctx.fillStyle = '#334155';
+    ctx.font = Math.round(H * 0.024) + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    const maxW = cardW - 24;
+    const text = p.text || '';
+    // Word-wrap to 2 lines
+    const textLines = [];
+    let rem = text;
+    while (rem.length > 0 && textLines.length < 3) {
+      let line = rem;
+      while (ctx.measureText(line).width > maxW && line.length > 0) {
+        line = line.slice(0, -1);
+      }
+      textLines.push(line);
+      rem = rem.slice(line.length);
+    }
+    for (let j = 0; j < textLines.length; j++) {
+      ctx.fillText(textLines[j], px + 12, py + hH + sS + 20 + j * Math.round(H * 0.03));
+    }
+
+    // Level label
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = Math.round(H * 0.018) + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(p.levelName, px + cardW - 10, py + cardH - 8);
+  }
+
+  // Scroll indicators
+  if (postcardGalleryScroll > 0) {
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = Math.round(H * 0.03) + 'px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('\u25B2', W / 2, startY - 8);
+  }
+  if (postcardGalleryScroll + 4 < postcardsSent.length) {
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = Math.round(H * 0.03) + 'px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('\u25BC', W / 2, startY + 2 * (cardH + gapY) + 15);
+  }
+
+  // Unique levels count
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = 'bold ' + Math.round(H * 0.025) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(postcardSentLevels.size + '/' + TOTAL_LEVELS + ' unique level postcards', W / 2, H * 0.93);
 }
 
 function drawSpeechBubbles() {

@@ -89,6 +89,45 @@ const Scene = {
 };
 let currentScene = null;
 
+// ── Postcard Writer ──
+const POSTCARD_THEMES = {
+  1:  { color: '#4ade80', greeting: 'Greetings from the Meadow!' },
+  2:  { color: '#93c5fd', greeting: 'Greetings from the Mountains!' },
+  3:  { color: '#94a3b8', greeting: 'Greetings from New York City!' },
+  4:  { color: '#c2410c', greeting: 'Greetings from Roma!' },
+  5:  { color: '#2dd4bf', greeting: 'Aloha from Hawaii!' },
+  6:  { color: '#3b82f6', greeting: 'Greetings from Oriental, NC!' },
+  7:  { color: '#e2e8f0', greeting: 'Greetings from the Alps!' },
+  8:  { color: '#65a30d', greeting: 'Greetings from Camp!' },
+  9:  { color: '#f59e0b', greeting: 'Greetings from Africa!' },
+  10: { color: '#7dd3fc', greeting: 'Greetings from 30,000 feet!' },
+  11: { color: '#6b7280', greeting: 'Greetings from NASA!' },
+  12: { color: '#1e3a5f', greeting: 'Greetings from Outer Space!' },
+  13: { color: '#c0c0c0', greeting: 'Greetings from the Moon!' },
+};
+const POSTCARD_POINTS = 25;
+let postcardOpen = false;
+let postcardMode = 'write'; // 'write' | 'gallery'
+let postcardText = '';
+let postcardsSent = []; // {level, text, levelName}
+let postcardSentLevels = new Set();
+let postcardGalleryScroll = 0;
+let postcardJustSent = false; // brief flash after sending
+let postcardSentTimer = 0;
+
+function loadPostcards() {
+  try {
+    const data = JSON.parse(localStorage.getItem('unikittyville_postcards') || '[]');
+    postcardsSent = data;
+    postcardSentLevels = new Set(data.map(p => p.level));
+  } catch (e) { /* ignore corrupt data */ }
+}
+function savePostcards() {
+  try {
+    localStorage.setItem('unikittyville_postcards', JSON.stringify(postcardsSent));
+  } catch (e) { /* storage full or unavailable */ }
+}
+
 // ── Fact Notebook ──
 let factNotebook = JSON.parse(localStorage.getItem('factNotebook') || '[]');
 let notebookOpen = false;
@@ -1439,6 +1478,18 @@ function update(dt) {
     }
     return;
   }
+
+  // Postcard "just sent" timer
+  if (postcardJustSent) {
+    postcardSentTimer -= dt;
+    if (postcardSentTimer <= 0) {
+      postcardJustSent = false;
+      postcardOpen = false;
+    }
+  }
+
+  // Block all game input while postcard is open
+  if (postcardOpen) return;
 
   // Tour guide overlay — block normal input while active
   if (tourGuideActive) {
@@ -4515,6 +4566,16 @@ function update(dt) {
   const inScene = currentScene !== null;
   if (!isMobile) {
     hud.controls.style.display = inScene ? 'none' : 'flex';
+  }
+
+  // Postcard toggle — W key when outdoors and W wasn't consumed by a level-specific action
+  // (pool fill on level 8, Grand Central whisper, etc. already consumed KeyW above)
+  if (keys['KeyW'] && currentScene === null) {
+    keys['KeyW'] = false;
+    postcardOpen = true;
+    postcardMode = 'write';
+    postcardText = '';
+    postcardJustSent = false;
   }
 
   // Prompt
