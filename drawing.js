@@ -3907,7 +3907,7 @@ function drawScubaDivingScene(cam, W, H) {
     const boxW = Math.min(maxWidth + padX * 2, Math.max(...lines.map(l => ctx.measureText(l).width)) + padX * 2);
     const boxH = lines.length * lineHeight + padY * 2;
     const bx = cx + npc.x - boxW / 2;
-    const by = npc.y - 50 - boxH;
+    const by = Math.max(50, npc.y - 50 - boxH);
     ctx.fillStyle = 'rgba(255,255,255,0.9)';
     ctx.beginPath(); ctx.roundRect(bx, by, boxW, boxH, 8); ctx.fill();
     ctx.fillStyle = '#1f2937'; ctx.textAlign = 'center';
