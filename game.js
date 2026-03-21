@@ -92,6 +92,7 @@ let drinkingCocoa = false;
 let cocoaDrinkTimer = 0;
 const COCOA_DRINK_DURATION = 2500; // 2.5 seconds to drink
 // Glitter horn effect
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 let glitterParticles = [];
 let lastGlitterScore = 0; // tracks the last 100-point milestone
 // Sledding level
@@ -1028,19 +1029,21 @@ function update(dt) {
     addPopup(player.x, player.y - 60, '+100 ALL YARN BONUS!', '#fbbf24');
     playChaChing();
     // Big glitter celebration from the horn
-    const colors = ['#f472b6', '#a78bfa', '#38bdf8', '#fbbf24', '#4ade80', '#fb923c', '#e879f9'];
-    for (let i = 0; i < 40; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = 2 + Math.random() * 4;
-      glitterParticles.push({
-        x: player.x + player.facing * 8,
-        y: player.y - 48,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - 3,
-        life: 1200 + Math.random() * 800,
-        color: colors[Math.floor(Math.random() * colors.length)],
-        size: 3 + Math.random() * 4
-      });
+    if (!prefersReducedMotion) {
+      const colors = ['#f472b6', '#a78bfa', '#38bdf8', '#fbbf24', '#4ade80', '#fb923c', '#e879f9'];
+      for (let i = 0; i < 40; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 2 + Math.random() * 4;
+        glitterParticles.push({
+          x: player.x + player.facing * 8,
+          y: player.y - 48,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed - 3,
+          life: 1200 + Math.random() * 800,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          size: 3 + Math.random() * 4
+        });
+      }
     }
   }
 
@@ -2016,19 +2019,21 @@ function update(dt) {
   const currentMilestone = Math.floor(score / 100);
   if (currentMilestone > lastGlitterScore && score > 0) {
     lastGlitterScore = currentMilestone;
-    const colors = ['#f472b6', '#a78bfa', '#38bdf8', '#fbbf24', '#4ade80', '#fb923c', '#e879f9'];
-    for (let i = 0; i < 20; i++) {
-      const angle = Math.random() * Math.PI - Math.PI / 2; // mostly upward
-      const speed = 1.5 + Math.random() * 3;
-      glitterParticles.push({
-        x: player.x + player.facing * 8,
-        y: player.y - 48, // horn tip
-        vx: Math.cos(angle) * speed * player.facing,
-        vy: Math.sin(angle) * speed - 2,
-        life: 800 + Math.random() * 600,
-        color: colors[Math.floor(Math.random() * colors.length)],
-        size: 2 + Math.random() * 3
-      });
+    if (!prefersReducedMotion) {
+      const colors = ['#f472b6', '#a78bfa', '#38bdf8', '#fbbf24', '#4ade80', '#fb923c', '#e879f9'];
+      for (let i = 0; i < 20; i++) {
+        const angle = Math.random() * Math.PI - Math.PI / 2; // mostly upward
+        const speed = 1.5 + Math.random() * 3;
+        glitterParticles.push({
+          x: player.x + player.facing * 8,
+          y: player.y - 48, // horn tip
+          vx: Math.cos(angle) * speed * player.facing,
+          vy: Math.sin(angle) * speed - 2,
+          life: 800 + Math.random() * 600,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          size: 2 + Math.random() * 3
+        });
+      }
     }
   }
   // Update glitter particles
