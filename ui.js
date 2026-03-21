@@ -110,7 +110,7 @@ if (isMobile) {
 }
 
 // ── Level Select ──
-const levelColors = ['#86efac','#bae6fd','#fca5a5','#fde68a','#38bdf8','#67e8f9','#ddd6fe','#bbf7d0','#f59e0b'];
+const levelColors = ['#86efac','#bae6fd','#fca5a5','#fde68a','#38bdf8','#67e8f9','#ddd6fe','#bbf7d0','#f59e0b','#7dd3fc','#c084fc','#818cf8','#e2e8f0'];
 
 function buildLevelGrid() {
   const grid = document.getElementById('levelGrid');
@@ -118,7 +118,7 @@ function buildLevelGrid() {
   for (let i = 0; i < TOTAL_LEVELS; i++) {
     const btn = document.createElement('button');
     btn.textContent = LEVEL_NAMES[i];
-    btn.style.cssText = `padding:14px 8px;border-radius:12px;border:2px solid rgba(255,255,255,0.4);font-weight:700;font-size:0.9rem;cursor:pointer;transition:transform 0.15s;background:${levelColors[i]};color:#1e1b4b;`;
+    btn.style.cssText = `padding:14px 8px;border-radius:12px;border:2px solid rgba(255,255,255,0.4);font-weight:700;font-size:0.9rem;cursor:pointer;transition:transform 0.15s;background:${levelColors[i % levelColors.length]};color:#1e1b4b;`;
     btn.addEventListener('click', () => {
       startGameAtLevel(i + 1);
     });
