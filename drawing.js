@@ -383,15 +383,24 @@ function drawLevel2World(W, H, cam) {
 }
 
 function drawPlayerAndUI() {
-  // Draw sled under kitty on sledding level
+  // Draw sled under kitty on sledding level — tilted to match terrain
   if (currentLevel === 2 && sledding) {
-    drawSled(player.x, player.y);
+    const terrainAngle = Math.atan2(
+      sledTerrainY(player.x + 10) - sledTerrainY(player.x - 10), 20
+    );
+    ctx.save();
+    ctx.translate(player.x, player.y);
+    ctx.rotate(terrainAngle);
+    drawSled(0, 0);
+    ctx.restore();
   }
   // Draw cheetah under kitty when riding
   if (currentLevel === 9 && ridingCheetah) {
     drawRidingCheetah(player.x, player.y, player.facing);
   }
-  drawKitty(player.x, player.y - (ridingCheetah ? 15 : 0), player.color, player.facing, player.walkFrame, 'horn');
+  // On sledding level, draw kitty sitting in sled (offset lower into sled)
+  const sledOffset = (currentLevel === 2 && sledding) ? 5 : 0;
+  drawKitty(player.x, player.y - (ridingCheetah ? 15 : sledOffset), player.color, player.facing, player.walkFrame, 'horn');
 
   // Glitter particles from horn
   for (const g of glitterParticles) {
@@ -2137,24 +2146,59 @@ function drawSleddingSky(W, H, cycle, isNight) {
 function drawSleddingWorld(W, H, cam, cycle, isNight) {
   const ww = level2Sled.worldW;
 
-  // Snowy ground
+  // Draw sloped terrain (snow-covered hill)
   ctx.fillStyle = '#f0f4f8';
-  ctx.fillRect(0, GROUND_Y, ww, H);
-  ctx.fillStyle = '#e2e8f0';
-  ctx.fillRect(0, GROUND_Y, ww, 4);
-  // Snow sparkle detail
+  ctx.beginPath();
+  ctx.moveTo(0, H);
+  for (let x = Math.floor(cam); x <= Math.ceil(cam + W) + 10; x += 5) {
+    ctx.lineTo(x, sledTerrainY(x));
+  }
+  ctx.lineTo(Math.ceil(cam + W) + 10, H);
+  ctx.closePath();
+  ctx.fill();
+
+  // Snow surface line
+  ctx.strokeStyle = '#e2e8f0';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  let terrainStarted = false;
+  for (let x = Math.floor(cam); x <= Math.ceil(cam + W) + 10; x += 5) {
+    const y = sledTerrainY(x);
+    if (!terrainStarted) { ctx.moveTo(x, y); terrainStarted = true; }
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // Snow sparkle detail along terrain
   ctx.fillStyle = '#fff';
-  for (let x = 0; x < ww; x += 30) {
-    ctx.fillRect(x + Math.sin(x) * 5, GROUND_Y - 1, 2, 3);
+  for (let x = Math.floor(cam); x < Math.ceil(cam + W); x += 30) {
+    ctx.fillRect(x + Math.sin(x) * 5, sledTerrainY(x) - 1, 2, 3);
   }
 
-  // Background pine trees
+  // Sled tracks behind player (two parallel runner trails)
+  if (sledding && player.x > 150) {
+    ctx.strokeStyle = 'rgba(180, 200, 220, 0.4)';
+    ctx.lineWidth = 2;
+    for (const offset of [-5, 5]) {
+      ctx.beginPath();
+      const trackStart = Math.max(Math.floor(cam), player.x - 300);
+      let trackStarted = false;
+      for (let x = trackStart; x < player.x; x += 5) {
+        const y = sledTerrainY(x) + offset * 0.3;
+        if (!trackStarted) { ctx.moveTo(x, y); trackStarted = true; }
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+  }
+
+  // Background pine trees on terrain
   for (const pine of level2Sled.pines) {
     if (pine.x < cam - 100 || pine.x > cam + W + 100) continue;
-    drawPineTree(pine.x, GROUND_Y, pine.size);
+    drawPineTree(pine.x, pine.y, pine.size);
   }
 
-  // Snow platforms
+  // Snow platforms (terrain features)
   drawSleddingPlatforms();
 
   // Snowballs
@@ -2163,7 +2207,10 @@ function drawSleddingWorld(W, H, cam, cycle, isNight) {
   // Snowmen
   drawSnowmen(cam, W);
 
-  // Train at end
+  // Yarn balls
+  drawSleddingYarnBalls();
+
+  // Train at end (at terrain level)
   drawTrain(ww - 150);
 
   // Falling snowflakes
@@ -2347,8 +2394,37 @@ function drawSnowmen(cam, W) {
   }
 }
 
+function drawSleddingYarnBalls() {
+  for (const yb of level2Sled.yarnBalls) {
+    if (yb.collected) continue;
+    const bob = Math.sin(gameTime / 400 + yb.bobPhase) * 3;
+    const bx = yb.x, by = yb.y + bob;
+    // Glow
+    ctx.globalAlpha = 0.3;
+    ctx.fillStyle = yb.color;
+    ctx.beginPath();
+    ctx.arc(bx, by, 14, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    // Yarn ball
+    ctx.fillStyle = yb.color;
+    ctx.beginPath();
+    ctx.arc(bx, by, 8, 0, Math.PI * 2);
+    ctx.fill();
+    // Yarn lines
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(bx, by, 5, 0.3, 2.5);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(bx - 1, by + 1, 3, 1, 3.5);
+    ctx.stroke();
+  }
+}
+
 function drawTrain(x) {
-  const gy = GROUND_Y;
+  const gy = currentLevel === 2 ? sledTerrainY(x) : GROUND_Y;
   // Railroad tracks
   ctx.fillStyle = '#78350f';
   ctx.fillRect(x - 70, gy - 3, 140, 3);

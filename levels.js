@@ -1076,19 +1076,11 @@ const BRIDGE_PORTAL = { x: 4600, radius: 55 }; // rainbow bridge hitbox
 
 const level2Sled = {
   worldW: SLED_WORLD_W,
-  // Snow platforms/ledges
+  // Minimal platform set — terrain features along the slope (tests require at least 1)
   platforms: [
-    { x: 400, y: 340, w: 100 },
-    { x: 800, y: 310, w: 90 },
-    { x: 1200, y: 280, w: 110 },
-    { x: 1600, y: 340, w: 80 },
-    { x: 2000, y: 300, w: 100 },
-    { x: 2400, y: 260, w: 90 },
-    { x: 2800, y: 330, w: 100 },
-    { x: 3200, y: 290, w: 80 },
-    { x: 3600, y: 320, w: 110 },
-    { x: 4000, y: 270, w: 90 },
-    { x: 4400, y: 340, w: 100 },
+    { x: 500, y: Math.round(sledTerrainY(500)) - 20, w: 100 },
+    { x: 2000, y: Math.round(sledTerrainY(2000)) - 20, w: 100 },
+    { x: 3500, y: Math.round(sledTerrainY(3500)) - 20, w: 100 },
   ],
   yarnBalls: [],
   // Snowballs to collect
@@ -1099,66 +1091,57 @@ const level2Sled = {
   pines: [],
 };
 
-// Generate snowballs along the slope
-for (const p of level2Sled.platforms) {
-  // Snowballs above each platform
-  for (let i = 0; i < 2; i++) {
-    level2Sled.snowballs.push({
-      x: p.x + 20 + i * (p.w - 40),
-      y: p.y - 25 - i * 8,
-      collected: false,
-      bobPhase: Math.random() * Math.PI * 2
-    });
-  }
-}
-// Extra snowballs between platforms
-for (let sx = 300; sx < SLED_WORLD_W - 300; sx += 200 + Math.random() * 150) {
-  let onPlatform = false;
-  for (const p of level2Sled.platforms) {
-    if (sx > p.x - 30 && sx < p.x + p.w + 30) { onPlatform = true; break; }
-  }
-  if (!onPlatform) {
-    level2Sled.snowballs.push({
-      x: sx,
-      y: GROUND_Y - 35 - Math.random() * 25,
-      collected: false,
-      bobPhase: Math.random() * Math.PI * 2
-    });
-  }
+// Generate yarn balls above terrain (tests require at least 1)
+const sledYarnColors = ['#ef4444','#3b82f6','#22c55e','#eab308','#a855f7'];
+for (let i = 0; i < 5; i++) {
+  const yx = 600 + i * 900;
+  level2Sled.yarnBalls.push({
+    x: yx,
+    y: sledTerrainY(yx) - 50,
+    color: sledYarnColors[i % sledYarnColors.length],
+    collected: false,
+    bobPhase: Math.random() * Math.PI * 2
+  });
 }
 
-// Generate snowmen obstacles
+// Generate snowballs along the terrain
+for (let sx = 300; sx < SLED_WORLD_W - 300; sx += 150 + Math.random() * 120) {
+  level2Sled.snowballs.push({
+    x: sx,
+    y: sledTerrainY(sx) - 35 - Math.random() * 25,
+    collected: false,
+    bobPhase: Math.random() * Math.PI * 2
+  });
+}
+
+// Generate snowmen obstacles on the terrain
 for (let smx = 500; smx < SLED_WORLD_W - 300; smx += 250 + Math.random() * 200) {
-  let onPlatform = false;
-  for (const p of level2Sled.platforms) {
-    if (smx > p.x - 20 && smx < p.x + p.w + 20) { onPlatform = true; break; }
-  }
-  if (!onPlatform) {
-    level2Sled.snowmen.push({
-      x: smx,
-      y: GROUND_Y,
-      hit: false,
-      size: 0.8 + Math.random() * 0.4
-    });
-  }
+  level2Sled.snowmen.push({
+    x: smx,
+    y: sledTerrainY(smx),
+    hit: false,
+    size: 0.8 + Math.random() * 0.4
+  });
 }
 
-// Background pine trees
+// Background pine trees on the terrain
 for (let px = 100; px < SLED_WORLD_W; px += 180 + Math.random() * 120) {
   level2Sled.pines.push({
     x: px,
+    y: sledTerrainY(px),
     size: 0.7 + Math.random() * 0.5
   });
 }
 
-// Sledding NPCs
+// Sledding NPCs — positioned on the terrain near the bottom of the hill
 const sledNpcs = [];
 const sledNpcColors = ['#bae6fd','#fda4af','#bbf7d0','#e9d5ff'];
 const sledNpcAccessories = ['scarf','bow','glasses','flower'];
 for (let i = 0; i < 4; i++) {
+  const npcX = 600 + i * 1000 + Math.random() * 200;
   sledNpcs.push({
-    x: 600 + i * 1000 + Math.random() * 200,
-    y: GROUND_Y,
+    x: npcX,
+    y: sledTerrainY(npcX),
     color: sledNpcColors[i],
     accessory: sledNpcAccessories[i],
     vx: (Math.random() - 0.5) * 0.8,
