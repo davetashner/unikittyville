@@ -5301,6 +5301,277 @@ function drawCapeLaunchScene(cam, W, H) {
   ctx.textAlign = 'left';
 }
 
+// ── Level 12: Space Flight Drawing ──
+
+function drawSpaceSky(W, H, cycle, isNight, cam) {
+  // Always dark in space
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#030712');
+  grad.addColorStop(0.5, '#0a0f1a');
+  grad.addColorStop(1, '#111827');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Parallax star field — 3 layers
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  for (let i = 0; i < 60; i++) {
+    const sx = ((i * 173 + 50) - cam * 0.05) % W;
+    const sy = (i * 67 + 20) % H;
+    ctx.beginPath();
+    ctx.arc(sx < 0 ? sx + W : sx, sy, 0.8, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  for (let i = 0; i < 40; i++) {
+    const sx = ((i * 211 + 80) - cam * 0.15) % W;
+    const sy = (i * 97 + 30) % H;
+    ctx.beginPath();
+    ctx.arc(sx < 0 ? sx + W : sx, sy, 1.2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.fillStyle = 'rgba(255,255,255,0.8)';
+  for (let i = 0; i < 20; i++) {
+    const sx = ((i * 157 + 120) - cam * 0.3) % W;
+    const sy = (i * 113 + 10) % H;
+    ctx.beginPath();
+    ctx.arc(sx < 0 ? sx + W : sx, sy, 1.5 + Math.sin(gameTime / 500 + i) * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Nebula clouds in background
+  const nebulaColors = ['rgba(139, 92, 246, 0.08)', 'rgba(236, 72, 153, 0.06)', 'rgba(59, 130, 246, 0.07)'];
+  const nebulaPositions = [
+    { x: 1000, y: 150, r: 120 },
+    { x: 3500, y: 250, r: 100 },
+    { x: 5500, y: 100, r: 140 },
+  ];
+  for (let n = 0; n < nebulaPositions.length; n++) {
+    const nb = nebulaPositions[n];
+    const nx = nb.x - cam * 0.2;
+    if (nx < -200 || nx > W + 200) continue;
+    const nebGrad = ctx.createRadialGradient(nx, nb.y, 0, nx, nb.y, nb.r);
+    nebGrad.addColorStop(0, nebulaColors[n]);
+    nebGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = nebGrad;
+    ctx.fillRect(nx - nb.r, nb.y - nb.r, nb.r * 2, nb.r * 2);
+  }
+}
+
+function drawSpaceWorld(W, H, cam, cycle, isNight) {
+  const ww = level12Space.worldW;
+  const t = gameTime;
+
+  // Earth behind (shrinking as player moves right)
+  const earthProgress = Math.min(1, cam / (ww - W)); // 0 at start, 1 at end
+  const earthSize = 80 * (1 - earthProgress * 0.7);
+  const earthX = 60 - cam * 0.1;
+  const earthY = H / 2 + 50;
+  if (earthSize > 5) {
+    // Earth glow
+    const earthGlow = ctx.createRadialGradient(earthX, earthY, earthSize * 0.8, earthX, earthY, earthSize * 1.5);
+    earthGlow.addColorStop(0, 'rgba(59, 130, 246, 0.15)');
+    earthGlow.addColorStop(1, 'transparent');
+    ctx.fillStyle = earthGlow;
+    ctx.beginPath();
+    ctx.arc(earthX, earthY, earthSize * 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    // Earth body
+    ctx.fillStyle = '#2563eb';
+    ctx.beginPath();
+    ctx.arc(earthX, earthY, earthSize, 0, Math.PI * 2);
+    ctx.fill();
+    // Continents
+    ctx.fillStyle = '#22c55e';
+    ctx.beginPath();
+    ctx.arc(earthX - earthSize * 0.2, earthY - earthSize * 0.1, earthSize * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(earthX + earthSize * 0.25, earthY + earthSize * 0.15, earthSize * 0.25, 0, Math.PI * 2);
+    ctx.fill();
+    // Ice caps
+    ctx.fillStyle = '#e2e8f0';
+    ctx.beginPath();
+    ctx.arc(earthX, earthY - earthSize * 0.85, earthSize * 0.2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Moon ahead (growing as player approaches)
+  const moonSize = 20 + earthProgress * 80;
+  const moonX = W - 80 + cam * 0.05;
+  const moonY = H / 2 - 30;
+  // Moon glow
+  const moonGlow = ctx.createRadialGradient(moonX, moonY, moonSize * 0.8, moonX, moonY, moonSize * 1.5);
+  moonGlow.addColorStop(0, 'rgba(226, 232, 240, 0.1)');
+  moonGlow.addColorStop(1, 'transparent');
+  ctx.fillStyle = moonGlow;
+  ctx.beginPath();
+  ctx.arc(moonX, moonY, moonSize * 1.5, 0, Math.PI * 2);
+  ctx.fill();
+  // Moon body
+  ctx.fillStyle = '#d1d5db';
+  ctx.beginPath();
+  ctx.arc(moonX, moonY, moonSize, 0, Math.PI * 2);
+  ctx.fill();
+  // Craters
+  ctx.fillStyle = '#9ca3af';
+  for (let c = 0; c < 4; c++) {
+    const craterAngle = c * 1.5 + 0.5;
+    const craterDist = moonSize * 0.4;
+    ctx.beginPath();
+    ctx.arc(
+      moonX + Math.cos(craterAngle) * craterDist,
+      moonY + Math.sin(craterAngle) * craterDist,
+      moonSize * 0.12, 0, Math.PI * 2
+    );
+    ctx.fill();
+  }
+
+  // Draw asteroids
+  for (const ast of level12Space.asteroids) {
+    const ax = ast.x - cam;
+    if (ax < -ast.radius * 2 || ax > W + ast.radius * 2) continue;
+    if (ast.hit) continue;
+    ast.rotation += ast.rotSpeed;
+    ctx.save();
+    ctx.translate(ax, ast.y);
+    ctx.rotate(ast.rotation);
+    // Rocky shape
+    ctx.fillStyle = '#78716c';
+    ctx.beginPath();
+    for (let v = 0; v < ast.vertices.length; v++) {
+      const vert = ast.vertices[v];
+      const vx = Math.cos(vert.angle) * vert.r;
+      const vy = Math.sin(vert.angle) * vert.r;
+      if (v === 0) ctx.moveTo(vx, vy);
+      else ctx.lineTo(vx, vy);
+    }
+    ctx.closePath();
+    ctx.fill();
+    // Shading
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.beginPath();
+    ctx.arc(2, 2, ast.radius * 0.6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Draw aliens
+  for (const alien of level12Space.aliens) {
+    const ax = alien.x - cam;
+    if (ax < -20 || ax > W + 20) continue;
+    if (alien.collected) continue;
+    const bob = Math.sin(t / 400 + alien.bobPhase) * 5;
+    const ay = alien.y + bob;
+    // Alien body — cute blob
+    ctx.fillStyle = alien.color;
+    ctx.beginPath();
+    ctx.ellipse(ax, ay, alien.size, alien.size * 0.8, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Eyes
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(ax - 3, ay - 2, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(ax + 3, ay - 2, 3, 0, Math.PI * 2);
+    ctx.fill();
+    // Pupils
+    ctx.fillStyle = '#1f2937';
+    ctx.beginPath();
+    ctx.arc(ax - 2, ay - 2, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(ax + 4, ay - 2, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    // Smile
+    ctx.strokeStyle = '#1f2937';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(ax, ay + 1, 3, 0.1, Math.PI - 0.1);
+    ctx.stroke();
+    // Waving arm
+    const wave = Math.sin(t / 300 + alien.bobPhase) * 0.3;
+    ctx.strokeStyle = alien.color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(ax + alien.size, ay);
+    ctx.lineTo(ax + alien.size + 6, ay - 5 + wave * 10);
+    ctx.stroke();
+    // Sparkle effect
+    ctx.fillStyle = '#fbbf24';
+    ctx.globalAlpha = 0.5 + Math.sin(t / 200 + alien.bobPhase) * 0.5;
+    ctx.beginPath();
+    ctx.arc(ax + alien.size + 2, ay - alien.size + 2, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  // Draw spaceship (player)
+  const px = player.x - cam;
+  const py = player.y;
+
+  // Invulnerability flash
+  if (spaceInvulnTimer > 0 && Math.floor(gameTime / 100) % 2 === 0) {
+    // Skip drawing during flash frames for visual feedback
+  } else {
+    // Thrust trail
+    ctx.fillStyle = '#f59e0b';
+    for (let i = 0; i < 5; i++) {
+      const trailX = px - 20 - i * 6 - ((i * 37 + gameTime) % 4);
+      const trailY = py + ((i * 23 + gameTime) % 8) - 4;
+      const trailR = 4 - i * 0.6;
+      ctx.globalAlpha = 0.7 - i * 0.12;
+      ctx.beginPath();
+      ctx.arc(trailX, trailY, trailR, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    // Ship body
+    ctx.fillStyle = '#e2e8f0';
+    ctx.beginPath();
+    ctx.moveTo(px + 20, py);
+    ctx.lineTo(px - 10, py - 12);
+    ctx.lineTo(px - 15, py);
+    ctx.lineTo(px - 10, py + 12);
+    ctx.closePath();
+    ctx.fill();
+    // Cockpit
+    ctx.fillStyle = '#60a5fa';
+    ctx.beginPath();
+    ctx.ellipse(px + 5, py, 7, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Wings
+    ctx.fillStyle = '#64748b';
+    ctx.beginPath();
+    ctx.moveTo(px - 5, py - 5);
+    ctx.lineTo(px - 12, py - 18);
+    ctx.lineTo(px - 8, py - 5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(px - 5, py + 5);
+    ctx.lineTo(px - 12, py + 18);
+    ctx.lineTo(px - 8, py + 5);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // HUD: aliens collected
+  ctx.fillStyle = '#a78bfa';
+  ctx.font = 'bold 14px system-ui';
+  ctx.textAlign = 'left';
+  ctx.fillText('Aliens: ' + collectedAlienCount + '/' + MAX_SPACE_ALIENS, 10, 70);
+
+  // Approach Moon prompt
+  if (player.x > ww - 600) {
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 16px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('Press Enter to land on the Moon!', W / 2, 30);
+    ctx.textAlign = 'left';
+  }
+}
+
 // ── Level Registry ──
 // Central registry mapping level numbers to their data and draw functions.
 // Defined here (at the bottom of drawing.js) because all level data from
@@ -5415,6 +5686,16 @@ const levelRegistry = {
     musicId: 'musicCapeCanaveral',
     drawSky: drawCapeSky,
     drawWorld: drawCapeWorld,
+  },
+  12: {
+    name: 'Space Flight',
+    worldW: level12Space.worldW,
+    platforms: level12Space.platforms,
+    yarnBalls: level12Space.yarnBalls,
+    npcs: spaceNpcs,
+    musicId: 'musicSpace',
+    drawSky: drawSpaceSky,
+    drawWorld: drawSpaceWorld,
   },
 };
 

@@ -59,7 +59,9 @@ section('Platform Data');
 for (var i = 1; i <= TOTAL_LEVELS; i++) {
   var plats = levelRegistry[i].platforms;
   var worldW = levelRegistry[i].worldW;
-  assert('Level ' + i + ' has at least 1 platform', plats.length >= 1);
+  // Flying levels (10, 12) have no platforms — skip minimum check for them
+  var isFlyingLevel = (i === 10 || i === 12);
+  assert('Level ' + i + ' has at least 1 platform (or is flying level)', isFlyingLevel || plats.length >= 1);
   for (var j = 0; j < plats.length; j++) {
     var p = plats[j];
     assert('Level ' + i + ' plat[' + j + '] has valid x', typeof p.x === 'number' && p.x >= 0);
