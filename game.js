@@ -222,11 +222,13 @@ function playChaChing() {
   chaChingSound.play().catch(() => {});
 }
 
+let nextMeowCooldown = 9000 + Math.random() * 6000;
 function playMeow() {
   if (muted) return;
   const now = performance.now();
-  if (now - lastMeowTime < 3000) return;
+  if (now - lastMeowTime < nextMeowCooldown) return;
   lastMeowTime = now;
+  nextMeowCooldown = 9000 + Math.random() * 6000; // 9-15s random interval
   const sound = meowSounds[Math.floor(Math.random() * meowSounds.length)];
   sound.volume = getSfxVolume();
   sound.currentTime = 0;
