@@ -274,6 +274,11 @@ let lastMeowTime = 0;
 let lastChaChingTime = 0;
 let currentLevel = 1;
 let levelTransition = { active: false, timer: 0, toLevel: 0 };
+
+// Tour Guide Mode — educational introductions per level
+let tourGuideActive = false;
+let tourGuideStep = 0; // 0, 1, or 2 (which fact is showing)
+const tourGuideSeen = new Set(); // levels already introduced this session
 const meowSounds = [];
 let chaChingSound = null;
 
@@ -638,6 +643,13 @@ function completeTransition() {
   stopLoopSfx('sfxGrassRustle');
   stopLoopSfx('sfxSavannaWind');
   stopLoopSfx('sfxFlightWind');
+
+  // Activate tour guide for first visit to each level
+  if (!tourGuideSeen.has(levelTransition.toLevel)) {
+    tourGuideActive = true;
+    tourGuideStep = 0;
+    tourGuideSeen.add(levelTransition.toLevel);
+  }
 }
 
 function getCurrentPlatforms() { return levelRegistry[currentLevel].platforms; }
@@ -829,6 +841,22 @@ function update(dt) {
     levelTransition.timer += dt;
     if (levelTransition.timer > TIMING.LEVEL_TRANSITION) {
       completeTransition();
+    }
+    return;
+  }
+
+  // Tour guide overlay — block normal input while active
+  if (tourGuideActive) {
+    if (keys['Space']) {
+      keys['Space'] = false;
+      tourGuideStep++;
+      if (tourGuideStep >= 3) {
+        tourGuideActive = false;
+      }
+    }
+    if (keys['Enter']) {
+      keys['Enter'] = false;
+      tourGuideActive = false;
     }
     return;
   }

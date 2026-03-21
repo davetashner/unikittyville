@@ -60,6 +60,11 @@ function draw() {
   if (photoGalleryOpen && currentLevel === 9) {
     drawPhotoGallery(W, H);
   }
+
+  // Tour guide overlay
+  if (tourGuideActive) {
+    drawTourGuide(W, H);
+  }
 }
 
 function drawPhotoGallery(W, H) {
@@ -6924,6 +6929,184 @@ function drawTopGolfInterior(cam, W, H) {
   ctx.fillText('Golf Score: ' + golfScore, cx, cy + 110);
 
   ctx.textAlign = 'left';
+}
+
+// ── Tour Guide Facts ──
+const tourGuideFacts = {
+  1: [
+    "Welcome home! This peaceful meadow is where every adventure begins.",
+    "Did you know meadows are one of the most biodiverse habitats on Earth?",
+    "Bees, butterflies, and birds all depend on meadow wildflowers!"
+  ],
+  2: [
+    "Hold on tight! Mountains like these were carved by glaciers over millions of years.",
+    "Snow crystals are hexagonal \u2014 every snowflake has 6 sides!",
+    "The fastest sled speed ever recorded was over 80 mph!"
+  ],
+  3: [
+    "Welcome to New York City \u2014 the Big Apple! Over 8 million people live here.",
+    "NYC has 800+ languages spoken \u2014 the most linguistically diverse city on Earth!",
+    "Central Park was designed in 1858 and has 843 acres of green space."
+  ],
+  4: [
+    "Benvenuto a Roma! This city is over 2,700 years old.",
+    "The Colosseum could hold 50,000 spectators \u2014 that\u2019s a full football stadium!",
+    "Roman engineers built roads so well that some are still used today!"
+  ],
+  5: [
+    "Aloha! Hawaii is the only US state made entirely of volcanic islands.",
+    "Mauna Kea, measured from the ocean floor, is taller than Mount Everest!",
+    "The Hawaiian alphabet has only 12 letters: A, E, I, O, U, H, K, L, M, N, P, W."
+  ],
+  6: [
+    "Welcome to Oriental, NC \u2014 the Sailing Capital of North Carolina!",
+    "The Neuse River here is one of the widest rivers in America.",
+    "The USS Oriental sank here in 1862 during the Civil War."
+  ],
+  7: [
+    "Welcome to the Alps \u2014 65 million years in the making!",
+    "The Alps span 8 countries and have 48 peaks above 4,000 meters.",
+    "Swiss chocolate was invented in 1819 \u2014 over 200 years of sweetness!"
+  ],
+  8: [
+    "Time for camping! Forests produce oxygen and filter our water.",
+    "The tradition of roasting marshmallows goes back to ancient Egypt!",
+    "Bigfoot sightings have been reported in forests across North America since the 1800s."
+  ],
+  9: [
+    "Welcome to the African savanna \u2014 home to the world\u2019s most iconic wildlife!",
+    "The Great Migration moves 1.5 million wildebeest across the Serengeti each year.",
+    "Elephants can communicate through vibrations in the ground felt through their feet!"
+  ],
+  10: [
+    "You\u2019re flying across the Atlantic Ocean \u2014 3,000 miles of open water!",
+    "The Atlantic Ocean is growing about 1 inch wider every year.",
+    "Amelia Earhart was the first woman to fly solo across the Atlantic in 1932."
+  ],
+  11: [
+    "Welcome to Cape Canaveral \u2014 America\u2019s gateway to space!",
+    "Over 3,000 rocket launches have happened here since 1950.",
+    "The Saturn V rocket that took astronauts to the Moon was 363 feet tall \u2014 taller than the Statue of Liberty!"
+  ],
+  12: [
+    "You\u2019re in outer space! There is no sound in space \u2014 it\u2019s completely silent.",
+    "The International Space Station orbits Earth every 90 minutes!",
+    "Light from the Sun takes about 8 minutes to reach Earth."
+  ],
+  13: [
+    "You\u2019ve landed on the Moon! Only 12 humans have ever walked here.",
+    "The Moon has no atmosphere, so footprints last millions of years!",
+    "Moon dust smells like spent gunpowder, according to astronauts."
+  ]
+};
+
+function drawTourGuide(W, H) {
+  const facts = tourGuideFacts[currentLevel];
+  if (!facts) return;
+
+  // Semi-transparent overlay
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Speech bubble dimensions
+  const bubbleW = Math.min(500, W - 40);
+  const bubbleH = 140;
+  const bubbleX = (W - bubbleW) / 2;
+  const bubbleY = H / 2 - bubbleH / 2 - 20;
+
+  // Speech bubble background
+  ctx.fillStyle = '#fff';
+  ctx.strokeStyle = '#7c3aed';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.roundRect(bubbleX, bubbleY, bubbleW, bubbleH, 16);
+  ctx.fill();
+  ctx.stroke();
+
+  // Speech bubble tail (pointing down toward guide kitty)
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.moveTo(W / 2 - 12, bubbleY + bubbleH);
+  ctx.lineTo(W / 2, bubbleY + bubbleH + 18);
+  ctx.lineTo(W / 2 + 12, bubbleY + bubbleH);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#7c3aed';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(W / 2 - 12, bubbleY + bubbleH);
+  ctx.lineTo(W / 2, bubbleY + bubbleH + 18);
+  ctx.lineTo(W / 2 + 12, bubbleY + bubbleH);
+  ctx.stroke();
+  // Cover the bubble border where tail meets bubble
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(W / 2 - 11, bubbleY + bubbleH - 2, 22, 4);
+
+  // Fact text — word-wrap inside bubble
+  ctx.fillStyle = '#1e1b4b';
+  ctx.font = 'bold 15px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  const factText = facts[tourGuideStep];
+  const maxTextW = bubbleW - 40;
+  const words = factText.split(' ');
+  const lines = [];
+  let line = '';
+  for (const word of words) {
+    const test = line ? line + ' ' + word : word;
+    if (ctx.measureText(test).width > maxTextW) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = test;
+    }
+  }
+  if (line) lines.push(line);
+  const lineH = 22;
+  const textStartY = bubbleY + (bubbleH - lines.length * lineH) / 2;
+  for (let i = 0; i < lines.length; i++) {
+    ctx.fillText(lines[i], W / 2, textStartY + i * lineH);
+  }
+
+  // Guide kitty below the speech bubble
+  const guideX = W / 2;
+  const guideY = bubbleY + bubbleH + 65;
+  drawKitty(guideX, guideY, '#7c3aed', 1, 0, 'horn', '#4c1d95', ['#fbbf24', '#ec4899', '#8b5cf6']);
+
+  // Small flag the guide holds
+  ctx.fillStyle = '#7c3aed';
+  ctx.fillRect(guideX + 14, guideY - 48, 2, 30);
+  ctx.fillStyle = '#fbbf24';
+  ctx.beginPath();
+  ctx.moveTo(guideX + 16, guideY - 48);
+  ctx.lineTo(guideX + 30, guideY - 42);
+  ctx.lineTo(guideX + 16, guideY - 36);
+  ctx.closePath();
+  ctx.fill();
+
+  // Dot indicators (1/3, 2/3, 3/3)
+  const dotY = guideY + 20;
+  for (let i = 0; i < 3; i++) {
+    ctx.beginPath();
+    ctx.arc(W / 2 - 16 + i * 16, dotY, 5, 0, Math.PI * 2);
+    ctx.fillStyle = i === tourGuideStep ? '#7c3aed' : '#d1d5db';
+    ctx.fill();
+  }
+
+  // Controls hint
+  ctx.fillStyle = '#6b7280';
+  ctx.font = '13px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  const hintY = dotY + 18;
+  if (isMobile) {
+    ctx.fillText('Tap to continue \u2022 Double-tap to skip', W / 2, hintY);
+  } else {
+    ctx.fillText('Space: Next  \u2022  Enter: Skip', W / 2, hintY);
+  }
+
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
 }
 
 const levelRegistry = {

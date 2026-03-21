@@ -353,6 +353,24 @@ window.addEventListener('keyup', e => { keys[e.code] = false; });
   );
 })();
 
+// Tour guide: canvas tap to advance, double-tap to skip (mobile)
+let tourGuideTapTime = 0;
+canvas.addEventListener('touchstart', function(e) {
+  if (!tourGuideActive) return;
+  e.preventDefault();
+  const now = Date.now();
+  if (now - tourGuideTapTime < 350) {
+    // Double-tap: skip all
+    keys['Enter'] = true;
+    setTimeout(() => { keys['Enter'] = false; }, 50);
+  } else {
+    // Single tap: next fact
+    keys['Space'] = true;
+    setTimeout(() => { keys['Space'] = false; }, 50);
+  }
+  tourGuideTapTime = now;
+}, { passive: false });
+
 // ── Mobile Fullscreen + Orientation Lock ──
 if (isMobile) {
   canvas.addEventListener('touchstart', function requestFS() {
@@ -435,6 +453,12 @@ function startGameAtLevel(lvl) {
   player.y = GROUND_Y;
   player.vy = 0;
   player.onGround = true;
+  // Activate tour guide for starting level
+  if (!tourGuideSeen.has(lvl)) {
+    tourGuideActive = true;
+    tourGuideStep = 0;
+    tourGuideSeen.add(lvl);
+  }
   startLevelMusic(lvl);
   requestAnimationFrame(loop);
 }
@@ -474,6 +498,12 @@ function startGame() {
   player.color = selectedFurColor;
   playerEyeColor = selectedEyeColor;
   playerHornColors = hornGradientFromColor(selectedHornColor);
+  // Activate tour guide for level 1
+  if (!tourGuideSeen.has(1)) {
+    tourGuideActive = true;
+    tourGuideStep = 0;
+    tourGuideSeen.add(1);
+  }
   // Start music (requires user gesture, which the click/enter provides)
   startLevelMusic(1);
   requestAnimationFrame(loop);
