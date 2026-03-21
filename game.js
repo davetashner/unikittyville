@@ -21,6 +21,8 @@ const POINTS = {
   SAFARI_PHOTO: 30, SAFARI_PHOTO_DUP: 5, SAFARI_COLLECTION: 100,
   CHEETAH_RIDE: 50, GIRAFFE_LIFT: 10,
   TELEGRAM_BASE: 30,
+
+  BUG_CORRECT: 15, BUG_WRONG: 5,
 };
 
 // ── Timing durations (ms) ──
@@ -518,6 +520,152 @@ function checkAchievements() {
   // (awarded inline when exiting scuba scene)
 
   saveAchievements();
+  }
+
+// ── Bug Catcher minigame (level 1) ──
+const BUG_NET_POS = { x: 2520 }; // near the flower garden at x=2450
+let hasBugNet = false;
+let bugCatcherActive = false;
+let bugCatcherRound = 0; // 0-4 (5 rounds total)
+let bugCatcherBugs = []; // array of bug objects
+let bugCatcherRule = null; // { text, matchFn }
+let bugCatcherCorrect = 0;
+let bugCatcherWrong = 0;
+let bugCatcherRoundComplete = false;
+let bugCatcherRoundTimer = 0;
+let bugCatcherFinished = false;
+const BUG_COLORS = ['red', 'blue', 'green', 'yellow'];
+const BUG_SIZES = ['big', 'small'];
+const BUG_PATTERNS = ['spots', 'stripes', 'plain'];
+const BUG_TYPES = ['butterfly', 'beetle', 'ladybug', 'caterpillar'];
+const BUG_COLOR_HEX = { red: '#ef4444', blue: '#3b82f6', green: '#22c55e', yellow: '#facc15' };
+
+const BUG_CATCHER_RULES = [
+  { text: 'Find RED bugs!', matchFn: b => b.color === 'red' },
+  { text: 'Find BIG bugs!', matchFn: b => b.size === 'big' },
+  { text: 'Find RED AND SMALL bugs!', matchFn: b => b.color === 'red' && b.size === 'small' },
+  { text: 'Find bugs with SPOTS OR STRIPES!', matchFn: b => b.pattern === 'spots' || b.pattern === 'stripes' },
+  { text: 'Find bugs that are NOT BLUE!', matchFn: b => b.color !== 'blue' },
+];
+
+function generateBugCatcherBugs() {
+  const bugs = [];
+  for (let i = 0; i < 10; i++) {
+    bugs.push({
+      x: 100 + Math.random() * 760,
+      y: 80 + Math.random() * 300,
+      vx: (Math.random() - 0.5) * 2,
+      vy: (Math.random() - 0.5) * 1.5,
+      color: BUG_COLORS[Math.floor(Math.random() * BUG_COLORS.length)],
+      size: BUG_SIZES[Math.floor(Math.random() * BUG_SIZES.length)],
+      pattern: BUG_PATTERNS[Math.floor(Math.random() * BUG_PATTERNS.length)],
+      type: BUG_TYPES[Math.floor(Math.random() * BUG_TYPES.length)],
+      caught: false,
+      wobble: Math.random() * Math.PI * 2,
+    });
+  }
+  // Ensure at least 2 matching bugs for current rule
+  const rule = BUG_CATCHER_RULES[bugCatcherRound];
+  let matchCount = bugs.filter(b => rule.matchFn(b)).length;
+  let idx = 0;
+  while (matchCount < 2 && idx < bugs.length) {
+    // Force some bugs to match
+    if (!rule.matchFn(bugs[idx])) {
+      if (bugCatcherRound === 0) bugs[idx].color = 'red';
+      else if (bugCatcherRound === 1) bugs[idx].size = 'big';
+      else if (bugCatcherRound === 2) { bugs[idx].color = 'red'; bugs[idx].size = 'small'; }
+      else if (bugCatcherRound === 3) bugs[idx].pattern = Math.random() < 0.5 ? 'spots' : 'stripes';
+      else if (bugCatcherRound === 4) { if (bugs[idx].color === 'blue') bugs[idx].color = 'red'; }
+      if (rule.matchFn(bugs[idx])) matchCount++;
+    }
+    idx++;
+  }
+  return bugs;
+}
+
+function startBugCatcherRound() {
+  bugCatcherRule = BUG_CATCHER_RULES[bugCatcherRound];
+  bugCatcherBugs = generateBugCatcherBugs();
+  bugCatcherRoundComplete = false;
+  bugCatcherRoundTimer = 0;
+}
+
+function updateBugCatcher(dt) {
+  if (!bugCatcherActive || bugCatcherFinished) return;
+
+  // Advance round after brief pause
+  if (bugCatcherRoundComplete) {
+    bugCatcherRoundTimer += dt;
+    if (bugCatcherRoundTimer > 1500) {
+      bugCatcherRound++;
+      if (bugCatcherRound >= 5) {
+        bugCatcherFinished = true;
+        bugCatcherActive = false;
+        const bonus = Math.max(0, bugCatcherCorrect * 15 - bugCatcherWrong * 5);
+        score += bonus;
+        addPopup(player.x, player.y - 60, `+${bonus} Bug Catcher Complete!`, '#a78bfa');
+        playChaChing();
+        return;
+      }
+      startBugCatcherRound();
+    }
+    return;
+  }
+
+  // Move bugs with wandering AI
+  for (const bug of bugCatcherBugs) {
+    if (bug.caught) continue;
+    bug.wobble += 0.05;
+    // Wandering: slight random direction changes
+    bug.vx += (Math.random() - 0.5) * 0.1;
+    bug.vy += (Math.random() - 0.5) * 0.08;
+    // Clamp speed
+    bug.vx = Math.max(-2.5, Math.min(2.5, bug.vx));
+    bug.vy = Math.max(-2, Math.min(2, bug.vy));
+    bug.x += bug.vx;
+    bug.y += bug.vy;
+    // Bounce off screen edges
+    if (bug.x < 30) { bug.x = 30; bug.vx = Math.abs(bug.vx); }
+    if (bug.x > 930) { bug.x = 930; bug.vx = -Math.abs(bug.vx); }
+    if (bug.y < 60) { bug.y = 60; bug.vy = Math.abs(bug.vy); }
+    if (bug.y > 420) { bug.y = 420; bug.vy = -Math.abs(bug.vy); }
+  }
+
+  // Catch bug with Space (collision with player)
+  if (keys['Space']) {
+    keys['Space'] = false;
+    const cam = Math.max(0, Math.min(getCurrentWorldW() - canvas.width, player.x - canvas.width / 2));
+    const playerScreenX = player.x - cam;
+    const playerScreenY = player.y - 20; // center of player
+    for (const bug of bugCatcherBugs) {
+      if (bug.caught) continue;
+      const dx = bug.x - playerScreenX;
+      const dy = bug.y - playerScreenY;
+      const catchRadius = bug.size === 'big' ? 35 : 28;
+      if (dx * dx + dy * dy < catchRadius * catchRadius) {
+        bug.caught = true;
+        if (bugCatcherRule.matchFn(bug)) {
+          bugCatcherCorrect++;
+          score += 15;
+          addPopup(player.x, player.y - 40, '+15 Correct!', '#4ade80');
+          playChaChing();
+        } else {
+          bugCatcherWrong++;
+          score = Math.max(0, score - 5);
+          addPopup(player.x, player.y - 40, '-5 Wrong bug!', '#ef4444');
+        }
+        break; // only catch one at a time
+      }
+    }
+  }
+
+  // Check if all matching bugs caught = round complete
+  const uncaughtMatches = bugCatcherBugs.filter(b => !b.caught && bugCatcherRule.matchFn(b));
+  if (uncaughtMatches.length === 0) {
+    bugCatcherRoundComplete = true;
+    bugCatcherRoundTimer = 0;
+    addPopup(player.x, player.y - 60, `Round ${bugCatcherRound + 1} complete!`, '#fbbf24');
+  }
 }
 
 let popups = []; // floating score popups
@@ -904,6 +1052,16 @@ function completeTransition() {
     rockPositions: [], rockPlayerX: 0, bootY: 0, complete: false,
     celebrateTimer: 0, stepTimer: 0,
   };
+
+  // Reset bug catcher (keep hasBugNet and bugCatcherFinished across level switches)
+  bugCatcherActive = false;
+  bugCatcherRound = 0;
+  bugCatcherBugs = [];
+  bugCatcherRule = null;
+  bugCatcherCorrect = 0;
+  bugCatcherWrong = 0;
+  bugCatcherRoundComplete = false;
+  bugCatcherRoundTimer = 0;
   // Stop any looping SFX from previous level
   stopLoopSfx('sfxSailWind');
   stopLoopSfx('sfxWaterLapping');
@@ -2169,6 +2327,33 @@ function update(dt) {
         break;
       }
     }
+  }
+
+  // Bug net pickup (level 1 — near flower garden)
+  let nearBugNet = false;
+  if (currentLevel === 1 && !hasBugNet && Math.abs(player.x - BUG_NET_POS.x) < INTERACT_RANGE) {
+    nearBugNet = true;
+    if (keys['Space']) {
+      keys['Space'] = false;
+      hasBugNet = true;
+      addPopup(BUG_NET_POS.x, GROUND_Y - 60, 'Got Bug Net!', '#a78bfa');
+    }
+  }
+
+  // Bug catcher activation (level 1 — B key when you have the net)
+  if (currentLevel === 1 && hasBugNet && !bugCatcherActive && !bugCatcherFinished && keys['KeyB']) {
+    keys['KeyB'] = false;
+    bugCatcherActive = true;
+    bugCatcherRound = 0;
+    bugCatcherCorrect = 0;
+    bugCatcherWrong = 0;
+    bugCatcherFinished = false;
+    startBugCatcherRound();
+  }
+
+  // Update bug catcher minigame
+  if (bugCatcherActive) {
+    updateBugCatcher(dt);
   }
 
   // Pizza shop entry (level 2 only)
@@ -3896,7 +4081,8 @@ function update(dt) {
     nearBigfoot, nearDigSite, nearWaterPump, nearPool, nearCampCamper, nearGeometry,
     nearSailboat, nearDiveSpot, nearBaobab, nearCheetah, nearSafariJeep,
     nearWateringHole, nearElephant, nearHospital,
-    nearFao, nearEmpire, nearThirtyRock, nearGrandCentral, nearMet
+    nearFao, nearEmpire, nearThirtyRock, nearGrandCentral, nearMet,
+    nearBugNet
   });
 }
 

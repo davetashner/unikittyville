@@ -92,6 +92,11 @@ function draw() {
   if (geometryActive && currentLevel === 8) {
     drawGeometryOverlay(W, H);
   }
+
+  // Bug catcher overlay (level 1)
+  if (bugCatcherActive && currentLevel === 1) {
+    drawBugCatcherOverlay(W, H);
+  }
 }
 
 function drawPhotoGallery(W, H) {
@@ -829,6 +834,182 @@ function drawGeometryOverlay(W, H) {
   }
 }
 
+
+function drawBugCatcherOverlay(W, H) {
+  // Semi-transparent backdrop
+  ctx.fillStyle = 'rgba(0, 20, 0, 0.75)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Grassy field background
+  ctx.fillStyle = '#166534';
+  ctx.fillRect(0, H - 60, W, 60);
+  ctx.fillStyle = '#15803d';
+  for (let gx = 0; gx < W; gx += 20) {
+    ctx.fillRect(gx, H - 60 - Math.random() * 5, 3, 8);
+  }
+
+  // Rule text at top
+  if (bugCatcherRule) {
+    ctx.font = 'bold ' + Math.round(H * 0.055) + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    // Background bar for rule text
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(0, 0, W, H * 0.1);
+    ctx.fillStyle = '#fde68a';
+    ctx.fillText(bugCatcherRule.text, W / 2, H * 0.07);
+  }
+
+  // Round indicator
+  ctx.font = 'bold ' + Math.round(H * 0.035) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.fillStyle = '#a78bfa';
+  ctx.textAlign = 'left';
+  ctx.fillText('Round ' + (bugCatcherRound + 1) + '/5', 15, H * 0.15);
+
+  // Score
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#4ade80';
+  ctx.fillText('Correct: ' + bugCatcherCorrect, W - 15, H * 0.15);
+  ctx.fillStyle = '#ef4444';
+  ctx.fillText('Wrong: ' + bugCatcherWrong, W - 15, H * 0.21);
+
+  // Draw bugs
+  for (const bug of bugCatcherBugs) {
+    if (bug.caught) continue;
+    drawBug(bug);
+  }
+
+  // Instructions at bottom
+  ctx.font = Math.round(H * 0.03) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.fillText('Move near a bug and press Space to catch it!', W / 2, H - 15);
+
+  // Round complete message
+  if (bugCatcherRoundComplete) {
+    ctx.font = 'bold ' + Math.round(H * 0.06) + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.fillStyle = '#fbbf24';
+    ctx.textAlign = 'center';
+    ctx.fillText('Round Complete!', W / 2, H / 2);
+  }
+}
+
+function drawBug(bug) {
+  const r = bug.size === 'big' ? 12 : 7;
+  const hex = BUG_COLOR_HEX[bug.color];
+
+  ctx.save();
+  ctx.translate(bug.x, bug.y);
+
+  if (bug.type === 'butterfly') {
+    // Wings
+    const wingFlap = Math.sin(bug.wobble * 3) * 0.3;
+    ctx.fillStyle = hex;
+    ctx.globalAlpha = 0.8;
+    // Left wing
+    ctx.beginPath();
+    ctx.ellipse(-r * 0.8, -2, r * 0.9, r * 0.6, -0.3 + wingFlap, 0, Math.PI * 2);
+    ctx.fill();
+    // Right wing
+    ctx.beginPath();
+    ctx.ellipse(r * 0.8, -2, r * 0.9, r * 0.6, 0.3 - wingFlap, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    // Body
+    ctx.fillStyle = darkenHex(hex);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, r * 0.2, r * 0.6, 0, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (bug.type === 'beetle') {
+    // Shell
+    ctx.fillStyle = hex;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, r, r * 0.7, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Shell line
+    ctx.strokeStyle = darkenHex(hex);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, -r * 0.7);
+    ctx.lineTo(0, r * 0.7);
+    ctx.stroke();
+    // Head
+    ctx.fillStyle = '#1f2937';
+    ctx.beginPath();
+    ctx.arc(-r * 0.9, 0, r * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (bug.type === 'ladybug') {
+    // Body
+    ctx.fillStyle = hex;
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.fill();
+    // Head
+    ctx.fillStyle = '#1f2937';
+    ctx.beginPath();
+    ctx.arc(-r * 0.8, 0, r * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+    // Default spots (part of ladybug look)
+    ctx.fillStyle = '#1f2937';
+    ctx.beginPath(); ctx.arc(r * 0.2, -r * 0.3, r * 0.2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(r * 0.3, r * 0.3, r * 0.2, 0, Math.PI * 2); ctx.fill();
+  } else if (bug.type === 'caterpillar') {
+    // Body segments
+    ctx.fillStyle = hex;
+    for (let s = 0; s < 4; s++) {
+      const sx = s * r * 0.5 - r * 0.75;
+      const sy = Math.sin(bug.wobble + s * 0.5) * 2;
+      ctx.beginPath();
+      ctx.arc(sx, sy, r * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Head
+    ctx.fillStyle = darkenHex(hex);
+    ctx.beginPath();
+    ctx.arc(r * 0.5, 0, r * 0.35, 0, Math.PI * 2);
+    ctx.fill();
+    // Eyes
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(r * 0.55, -r * 0.15, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(r * 0.55, r * 0.15, 2, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // Pattern indicators
+  if (bug.pattern === 'spots') {
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    const dotR = r * 0.15;
+    ctx.beginPath(); ctx.arc(r * 0.3, -r * 0.2, dotR, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(-r * 0.2, r * 0.3, dotR, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(r * 0.1, r * 0.1, dotR, 0, Math.PI * 2); ctx.fill();
+  } else if (bug.pattern === 'stripes') {
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+    ctx.lineWidth = 1;
+    for (let si = -1; si <= 1; si++) {
+      ctx.beginPath();
+      ctx.moveTo(si * r * 0.4, -r * 0.5);
+      ctx.lineTo(si * r * 0.4, r * 0.5);
+      ctx.stroke();
+    }
+  }
+
+  // Size indicator for big bugs — tiny crown
+  if (bug.size === 'big') {
+    ctx.fillStyle = '#fbbf24';
+    ctx.fillRect(-3, -r - 5, 6, 3);
+    ctx.fillRect(-4, -r - 8, 2, 4);
+    ctx.fillRect(-1, -r - 8, 2, 4);
+    ctx.fillRect(2, -r - 8, 2, 4);
+  }
+
+  ctx.restore();
+}
+
+function darkenHex(hex) {
+  const r = Math.max(0, parseInt(hex.slice(1,3), 16) - 50);
+  const g = Math.max(0, parseInt(hex.slice(3,5), 16) - 50);
+  const b = Math.max(0, parseInt(hex.slice(5,7), 16) - 50);
+  return '#' + [r, g, b].map(c => c.toString(16).padStart(2, '0')).join('');
+}
+
 function drawSpeechBubbles() {
   for (const bubble of activeSpeechBubbles) {
     const npc = bubble.npc;
@@ -990,8 +1171,49 @@ function drawLevel1World(W, H, cam) {
   drawPlatforms();
   drawYarnBalls();
   drawHouse();
+  // Bug net pickup (near flower garden)
+  if (!hasBugNet) {
+    drawBugNetPickup(BUG_NET_POS.x);
+  }
   for (const npc of npcs) drawKitty(npc.x, npc.y, npc.color, npc.facing, npc.walkFrame, npc.accessory);
   drawPlayerAndUI();
+}
+
+function drawBugNetPickup(x) {
+  const gy = GROUND_Y;
+  // Handle (stick)
+  ctx.strokeStyle = '#92400e';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(x, gy - 5);
+  ctx.lineTo(x, gy - 35);
+  ctx.stroke();
+  // Net ring
+  ctx.strokeStyle = '#7c3aed';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(x, gy - 42, 10, 0, Math.PI * 2);
+  ctx.stroke();
+  // Net mesh
+  ctx.strokeStyle = 'rgba(124,58,237,0.4)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(x - 7, gy - 38);
+  ctx.lineTo(x, gy - 28);
+  ctx.lineTo(x + 7, gy - 38);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x - 4, gy - 35);
+  ctx.lineTo(x + 4, gy - 35);
+  ctx.stroke();
+  // Sparkle
+  const sparkle = Math.sin(gameTime / 300) * 0.5 + 0.5;
+  ctx.globalAlpha = sparkle;
+  ctx.fillStyle = '#fbbf24';
+  ctx.beginPath();
+  ctx.arc(x + 8, gy - 48, 3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
 }
 
 function drawLevel2World(W, H, cam) {
