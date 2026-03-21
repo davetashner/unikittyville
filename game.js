@@ -20,6 +20,7 @@ const POINTS = {
   FRUIT: 10, ELEPHANT_BOOST: 15, RHINO_HIT: 15,
   SAFARI_PHOTO: 30, SAFARI_PHOTO_DUP: 5, SAFARI_COLLECTION: 100,
   CHEETAH_RIDE: 50, GIRAFFE_LIFT: 10,
+  LIGHT_SHOW_CHALLENGE: 40, LIGHT_SHOW_BONUS: 150,
   TELEGRAM_BASE: 30,
 
   BUG_CORRECT: 15, BUG_WRONG: 5,
@@ -1159,6 +1160,27 @@ const BIGFOOT_DRINK_DURATION = 3000;
 let campPool = { dug: false, filled: false, digging: false, digProgress: 0, filling: false, fillProgress: 0 };
 let leprechaunGold = 0;
 let leprechaunSpeech = { text: '', timer: 0 };
+// Campfire Light Show minigame
+let lightShowActive = false;
+let lightShowProgram = '';     // string of color codes: R, B, G, Y, W
+let lightShowRepeat = false;   // whether X (repeat x3) was added
+let lightShowRunning = false;
+let lightShowStep = 0;
+let lightShowTimer = 0;
+let lightShowChallenge = 0;    // 0-4 (which challenge)
+let lightShowChallengesCompleted = [false, false, false, false, false];
+let lightShowFeedback = { text: '', timer: 0, color: '#fff' };
+const LIGHT_SHOW_STEP_MS = 500; // ms per color step when running
+const LIGHT_SHOW_TARGETS = [
+  { desc: 'Make the fire go: Red, Blue, Red, Blue', pattern: 'RBRB' },
+  { desc: 'Make the fire go: Red, Green, Blue', pattern: 'RGB' },
+  { desc: 'Make a rainbow: R, Y, G, B, W', pattern: 'RYGBW' },
+  { desc: 'Use REPEAT: make Red, Blue loop 3 times', pattern: 'RBRBRBRBRBRB', needsRepeat: true, basePattern: 'RBRB' },
+  { desc: 'Free mode: create your own light show!', pattern: null },
+];
+const LIGHT_SHOW_COLORS = {
+  R: '#ef4444', B: '#3b82f6', G: '#22c55e', Y: '#facc15', W: '#ffffff'
+};
 // Camp camper (end of campground level)
 let campCamperPlayerX = 0;
 let campCamperSleeping = false;
@@ -2144,16 +2166,16 @@ function update(dt) {
     return;
   }
 
-  // Movement (blocked during fuel calculator overlay)
+  // Movement (blocked during light show and fuel calculator overlay)
   player.vx = 0;
   const effectiveMoveSpeed = currentLevel === 13 ? MOON_MOVE_SPEED : MOVE_SPEED;
-  if (!fuelCalcActive && keys['ArrowLeft']) { player.vx = -effectiveMoveSpeed; player.facing = -1; }
-  if (!fuelCalcActive && keys['ArrowRight']) { player.vx = effectiveMoveSpeed; player.facing = 1; }
+  if (!lightShowActive && !fuelCalcActive && keys['ArrowLeft']) { player.vx = -effectiveMoveSpeed; player.facing = -1; }
+  if (!lightShowActive && !fuelCalcActive && keys['ArrowRight']) { player.vx = effectiveMoveSpeed; player.facing = 1; }
   if (keys['ArrowUp']) { player.vx += 0; } // up on land is no-op for now
   if (keys['ArrowDown']) { player.vx += 0; }
 
-  // Jump
-  if (!fuelCalcActive && keys['Space'] && player.onGround) {
+  // Jump (blocked during light show and fuel calculator)
+  if (!lightShowActive && !fuelCalcActive && keys['Space'] && player.onGround) {
     player.vy = currentLevel === 13 ? MOON_JUMP_VEL : JUMP_VEL;
     player.onGround = false;
     playMeow();
@@ -2804,12 +2826,22 @@ function update(dt) {
         addPopup(FIRE_PIT_POS.x, player.y - 40, '+' + POINTS.CAMPFIRE_BUILD + ' Campfire built!', '#f97316');
         playChaChing();
       }
-      // Roast marshmallow near lit campfire
-      if (campfire.lit && !roasting.active && !roasting.done && keys['KeyR']) {
+      // Roast marshmallow near lit campfire (not during light show)
+      if (campfire.lit && !lightShowActive && !roasting.active && !roasting.done && keys['KeyR']) {
         keys['KeyR'] = false;
         roasting.active = true;
         roasting.progress = 0;
         roasting.done = false;
+      }
+      // Enter light show mode (L key near lit campfire)
+      if (campfire.lit && !lightShowActive && !roasting.active && keys['KeyL']) {
+        keys['KeyL'] = false;
+        lightShowActive = true;
+        lightShowProgram = '';
+        lightShowRepeat = false;
+        lightShowRunning = false;
+        lightShowStep = 0;
+        lightShowTimer = 0;
       }
       // Geometry minigame — press G near fire pit with 5+ sticks
       if (stickCount >= 5 && !geometryActive && !geometryAllComplete) nearGeometry = true;
@@ -2846,6 +2878,10 @@ function update(dt) {
         addPopup(FIRE_PIT_POS.x, player.y - 40, 'Burnt marshmallow!', '#ef4444');
         setTimeout(() => { roasting.done = false; }, 500);
       }
+    }
+    // Light show minigame update
+    if (lightShowActive) {
+      updateLightShowMinigame(dt);
     }
     // Hammock nap
     if (Math.abs(player.x - HAMMOCK_POS.x) < 50) {
@@ -4319,4 +4355,129 @@ function updatePizzaMinigame(dt) {
   // HUD updates still needed
   hud.score.textContent = score;
   hud.pizza.textContent = pizzaMaking.pizzaCount;
+}
+
+function updateLightShowMinigame(dt) {
+  // Feedback timer
+  if (lightShowFeedback.timer > 0) {
+    lightShowFeedback.timer -= dt;
+  }
+
+  // If running the program, animate through steps
+  if (lightShowRunning) {
+    lightShowTimer += dt;
+    const expanded = lightShowRepeat ? (lightShowProgram + lightShowProgram + lightShowProgram) : lightShowProgram;
+    if (lightShowTimer >= LIGHT_SHOW_STEP_MS) {
+      lightShowTimer -= LIGHT_SHOW_STEP_MS;
+      lightShowStep++;
+      if (lightShowStep >= expanded.length) {
+        // Finished running — check result
+        lightShowRunning = false;
+        lightShowStep = -1;
+        checkLightShowResult(expanded);
+      }
+    }
+    // Escape to stop early
+    if (keys['Escape']) {
+      keys['Escape'] = false;
+      lightShowRunning = false;
+      lightShowStep = -1;
+    }
+    return; // no editing while running
+  }
+
+  // Exit light show (Escape)
+  if (keys['Escape']) {
+    keys['Escape'] = false;
+    lightShowActive = false;
+    return;
+  }
+
+  // Add color letters
+  const colorKeys = { KeyR: 'R', KeyB: 'B', KeyG: 'G', KeyY: 'Y', KeyW: 'W' };
+  for (const [code, letter] of Object.entries(colorKeys)) {
+    if (keys[code]) {
+      keys[code] = false;
+      if (lightShowProgram.length < 12) {
+        lightShowProgram += letter;
+      }
+    }
+  }
+
+  // X = toggle repeat
+  if (keys['KeyX']) {
+    keys['KeyX'] = false;
+    lightShowRepeat = !lightShowRepeat;
+  }
+
+  // Backspace = delete last
+  if (keys['Backspace']) {
+    keys['Backspace'] = false;
+    lightShowProgram = lightShowProgram.slice(0, -1);
+  }
+
+  // Space or Enter = run program
+  if ((keys['Space'] || keys['Enter']) && lightShowProgram.length > 0) {
+    keys['Space'] = false;
+    keys['Enter'] = false;
+    lightShowRunning = true;
+    lightShowStep = 0;
+    lightShowTimer = 0;
+  }
+
+  // N = next challenge
+  if (keys['KeyN']) {
+    keys['KeyN'] = false;
+    if (lightShowChallenge < 4) {
+      lightShowChallenge++;
+      lightShowProgram = '';
+      lightShowRepeat = false;
+      lightShowFeedback = { text: '', timer: 0, color: '#fff' };
+    }
+  }
+}
+
+function checkLightShowResult(expanded) {
+  const challenge = LIGHT_SHOW_TARGETS[lightShowChallenge];
+
+  // Free mode (challenge 5) — always awards points
+  if (challenge.pattern === null) {
+    if (!lightShowChallengesCompleted[lightShowChallenge] && expanded.length >= 2) {
+      lightShowChallengesCompleted[lightShowChallenge] = true;
+      score += POINTS.LIGHT_SHOW_CHALLENGE;
+      lightShowFeedback = { text: '+' + POINTS.LIGHT_SHOW_CHALLENGE + ' Beautiful light show!', timer: 3000, color: '#fbbf24' };
+      playChaChing();
+      checkLightShowAllComplete();
+    } else if (lightShowChallengesCompleted[lightShowChallenge]) {
+      lightShowFeedback = { text: 'Great show! Already completed.', timer: 2000, color: '#86efac' };
+    } else {
+      lightShowFeedback = { text: 'Add at least 2 colors!', timer: 2000, color: '#fca5a5' };
+    }
+    return;
+  }
+
+  // Check if expanded matches the target
+  if (expanded === challenge.pattern) {
+    if (!lightShowChallengesCompleted[lightShowChallenge]) {
+      lightShowChallengesCompleted[lightShowChallenge] = true;
+      score += POINTS.LIGHT_SHOW_CHALLENGE;
+      lightShowFeedback = { text: '+' + POINTS.LIGHT_SHOW_CHALLENGE + ' Pattern matched!', timer: 3000, color: '#86efac' };
+      addPopup(FIRE_PIT_POS.x, player.y - 40, '+' + POINTS.LIGHT_SHOW_CHALLENGE + ' Light Show!', '#fbbf24');
+      playChaChing();
+      checkLightShowAllComplete();
+    } else {
+      lightShowFeedback = { text: 'Already completed! Press N for next.', timer: 2000, color: '#86efac' };
+    }
+  } else {
+    lightShowFeedback = { text: 'Not quite! Try again.', timer: 2000, color: '#fca5a5' };
+  }
+}
+
+function checkLightShowAllComplete() {
+  if (lightShowChallengesCompleted.every(c => c)) {
+    score += POINTS.LIGHT_SHOW_BONUS;
+    addPopup(FIRE_PIT_POS.x, player.y - 60, '+' + POINTS.LIGHT_SHOW_BONUS + ' All challenges complete!', '#a78bfa');
+    playChaChing();
+  }
+  hud.score.textContent = score;
 }

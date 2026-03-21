@@ -102,6 +102,11 @@ function draw() {
   if (tourGuideActive) {
     drawTourGuide(W, H);
   }
+
+  // Light show overlay (campground level)
+  if (lightShowActive && currentLevel === 8) {
+    drawLightShowOverlay(W, H);
+  }
 }
 
 function drawPhotoGallery(W, H) {
@@ -1013,6 +1018,155 @@ function darkenHex(hex) {
   const g = Math.max(0, parseInt(hex.slice(3,5), 16) - 50);
   const b = Math.max(0, parseInt(hex.slice(5,7), 16) - 50);
   return '#' + [r, g, b].map(c => c.toString(16).padStart(2, '0')).join('');
+}
+
+function drawLightShowOverlay(W, H) {
+  const challenge = LIGHT_SHOW_TARGETS[lightShowChallenge];
+  const panelW = Math.round(W * 0.7);
+  const panelH = Math.round(H * 0.55);
+  const px = Math.round((W - panelW) / 2);
+  const py = Math.round(H * 0.05);
+  const font = '"Segoe UI", system-ui, sans-serif';
+
+  // Semi-transparent backdrop
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Panel background
+  ctx.fillStyle = 'rgba(30, 27, 75, 0.92)';
+  ctx.beginPath(); ctx.roundRect(px, py, panelW, panelH, 12); ctx.fill();
+  ctx.strokeStyle = '#6366f1';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.roundRect(px, py, panelW, panelH, 12); ctx.stroke();
+
+  // Title
+  ctx.fillStyle = '#fbbf24';
+  ctx.font = 'bold ' + Math.round(H * 0.045) + 'px ' + font;
+  ctx.textAlign = 'center';
+  ctx.fillText('Campfire Light Show', W / 2, py + H * 0.06);
+
+  // Challenge number & progress
+  ctx.fillStyle = '#a5b4fc';
+  ctx.font = Math.round(H * 0.028) + 'px ' + font;
+  const completed = lightShowChallengesCompleted.filter(c => c).length;
+  ctx.fillText('Challenge ' + (lightShowChallenge + 1) + '/5  (' + completed + ' completed)', W / 2, py + H * 0.1);
+
+  // Challenge description
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = 'bold ' + Math.round(H * 0.032) + 'px ' + font;
+  ctx.fillText(challenge.desc, W / 2, py + H * 0.15);
+
+  // Completed checkmark
+  if (lightShowChallengesCompleted[lightShowChallenge]) {
+    ctx.fillStyle = '#4ade80';
+    ctx.font = 'bold ' + Math.round(H * 0.028) + 'px ' + font;
+    ctx.fillText('\u2713 Completed!', W / 2, py + H * 0.19);
+  }
+
+  // Target pattern (show colored circles)
+  if (challenge.pattern) {
+    const targetY = py + H * 0.24;
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = Math.round(H * 0.024) + 'px ' + font;
+    ctx.fillText('Target:', W / 2, targetY - H * 0.015);
+
+    const displayTarget = challenge.needsRepeat ? challenge.basePattern : challenge.pattern;
+    const tCircleR = Math.round(H * 0.018);
+    const tGap = Math.round(tCircleR * 2.8);
+    const tStartX = W / 2 - ((displayTarget.length - 1) * tGap) / 2;
+    for (let i = 0; i < displayTarget.length; i++) {
+      const c = displayTarget[i];
+      ctx.fillStyle = LIGHT_SHOW_COLORS[c] || '#fff';
+      ctx.beginPath(); ctx.arc(tStartX + i * tGap, targetY + tCircleR, tCircleR, 0, Math.PI * 2); ctx.fill();
+      // Letter label
+      ctx.fillStyle = c === 'Y' || c === 'W' ? '#1e1b4b' : '#fff';
+      ctx.font = 'bold ' + Math.round(tCircleR * 1.1) + 'px ' + font;
+      ctx.textAlign = 'center';
+      ctx.fillText(c, tStartX + i * tGap, targetY + tCircleR + Math.round(tCircleR * 0.4));
+    }
+    if (challenge.needsRepeat) {
+      ctx.fillStyle = '#c084fc';
+      ctx.font = 'bold ' + Math.round(H * 0.022) + 'px ' + font;
+      ctx.textAlign = 'center';
+      ctx.fillText('REPEAT x3', tStartX + displayTarget.length * tGap + tGap * 0.5, targetY + tCircleR + Math.round(tCircleR * 0.4));
+    }
+  }
+
+  // Your program
+  const progY = py + H * 0.33;
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = Math.round(H * 0.024) + 'px ' + font;
+  ctx.textAlign = 'center';
+  ctx.fillText('Your program:', W / 2, progY);
+
+  const circleR = Math.round(H * 0.022);
+  const circleGap = Math.round(circleR * 2.8);
+  if (lightShowProgram.length > 0) {
+    const expanded = lightShowRepeat ? (lightShowProgram + lightShowProgram + lightShowProgram) : lightShowProgram;
+    // Show the base program circles
+    const pStartX = W / 2 - ((lightShowProgram.length - 1) * circleGap) / 2;
+    for (let i = 0; i < lightShowProgram.length; i++) {
+      const c = lightShowProgram[i];
+      const isActive = lightShowRunning && lightShowStep >= 0 && !lightShowRepeat && lightShowStep === i;
+      // Glow for active step
+      if (isActive) {
+        ctx.globalAlpha = 0.4;
+        ctx.fillStyle = LIGHT_SHOW_COLORS[c] || '#fff';
+        ctx.beginPath(); ctx.arc(pStartX + i * circleGap, progY + circleR + H * 0.02, circleR + 5, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+      ctx.fillStyle = LIGHT_SHOW_COLORS[c] || '#fff';
+      ctx.beginPath(); ctx.arc(pStartX + i * circleGap, progY + circleR + H * 0.02, circleR, 0, Math.PI * 2); ctx.fill();
+      // Letter
+      ctx.fillStyle = c === 'Y' || c === 'W' ? '#1e1b4b' : '#fff';
+      ctx.font = 'bold ' + Math.round(circleR * 1.1) + 'px ' + font;
+      ctx.fillText(c, pStartX + i * circleGap, progY + circleR + H * 0.02 + Math.round(circleR * 0.4));
+    }
+    // Repeat indicator
+    if (lightShowRepeat) {
+      ctx.fillStyle = '#c084fc';
+      ctx.font = 'bold ' + Math.round(H * 0.022) + 'px ' + font;
+      ctx.textAlign = 'center';
+      ctx.fillText('REPEAT x3', pStartX + lightShowProgram.length * circleGap + circleGap * 0.5, progY + circleR + H * 0.02 + Math.round(circleR * 0.4));
+    }
+  } else {
+    ctx.fillStyle = '#4b5563';
+    ctx.font = 'italic ' + Math.round(H * 0.026) + 'px ' + font;
+    ctx.fillText('(type R, B, G, Y, W to add colors)', W / 2, progY + H * 0.04);
+  }
+
+  // Running indicator
+  if (lightShowRunning) {
+    const runY = progY + H * 0.1;
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold ' + Math.round(H * 0.032) + 'px ' + font;
+    ctx.textAlign = 'center';
+    const dots = '.'.repeat(1 + Math.floor(gameTime / 400) % 3);
+    ctx.fillText('Running' + dots, W / 2, runY);
+  }
+
+  // Feedback message
+  if (lightShowFeedback.timer > 0) {
+    const fbY = py + H * 0.45;
+    const alpha = Math.min(1, lightShowFeedback.timer / 500);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = lightShowFeedback.color;
+    ctx.font = 'bold ' + Math.round(H * 0.035) + 'px ' + font;
+    ctx.textAlign = 'center';
+    ctx.fillText(lightShowFeedback.text, W / 2, fbY);
+    ctx.globalAlpha = 1;
+  }
+
+  // Controls help
+  const helpY = py + panelH - H * 0.035;
+  ctx.fillStyle = '#6b7280';
+  ctx.font = Math.round(H * 0.02) + 'px ' + font;
+  ctx.textAlign = 'center';
+  if (lightShowRunning) {
+    ctx.fillText('Esc: stop', W / 2, helpY);
+  } else {
+    ctx.fillText('R/B/G/Y/W: add color   X: repeat x3   Backspace: delete   Space: run   N: next   Esc: exit', W / 2, helpY);
+  }
 }
 
 function drawSpeechBubbles() {
