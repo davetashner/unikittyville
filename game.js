@@ -109,7 +109,7 @@ const CENTRAL_PARK_POS = { x: 2200, w: 160 };
 const HOSPITAL_POS = { x: 1800, w: 120 };
 
 // Hospital delivery minigame
-let hospitalStage = 'idle'; // 'idle' | 'prep' | 'vitals' | 'breathing' | 'delivery' | 'celebrate' | 'color_pick'
+let hospitalStage = 'idle'; // 'idle' | 'prep' | 'vitals' | 'breathing' | 'delivery' | 'celebrate' | 'color_pick' | 'name_pick'
 let hospitalProgress = 0;
 let hospitalPrepStations = 0; // 0-3, stations prepared
 let hospitalVitalsZone = 0; // current heartbeat position (oscillates)
@@ -118,6 +118,8 @@ let hospitalBreathingHits = 0; // successful rhythm hits
 let hospitalDeliveryPower = 0; // delivery push power
 let hospitalDelivered = false; // has Kit been delivered this session?
 let kitFurColor = '#fda4af'; // baby Kit's chosen fur color (default pink)
+let kitName = 'Kit'; // baby's name (default Kit)
+let kitNameInput = ''; // typing buffer for name input
 let hasStroller = false; // does player have the stroller?
 let kitParkBonus = false; // has player taken Kit to Central Park?
 let picnic = { active: false, fed: 0, feeding: false, feedTimer: 0 }; // park picnic with Kit
@@ -1072,23 +1074,30 @@ function update(dt) {
         if (keys['Digit' + (i + 1)]) {
           keys['Digit' + (i + 1)] = false;
           kitFurColor = kitColors[i];
-          hasStroller = true;
-          currentScene = null;
-          player.y = GROUND_Y;
-          player.vy = 0;
-          player.onGround = true;
-          addPopup(player.x, player.y - 40, 'Kit says meow!', kitFurColor);
+          hospitalStage = 'name_pick';
+          kitNameInput = '';
           break;
         }
       }
       if (keys['Enter']) {
         keys['Enter'] = false;
+        hospitalStage = 'name_pick';
+        kitNameInput = '';
+      }
+    }
+
+    // Stage 7: NAME PICK — Name the baby
+    else if (hospitalStage === 'name_pick') {
+      // Name input is handled by keydown listener (kitNameTyping)
+      if (keys['Enter']) {
+        keys['Enter'] = false;
+        kitName = kitNameInput.trim() || 'Kit';
         hasStroller = true;
         currentScene = null;
         player.y = GROUND_Y;
         player.vy = 0;
         player.onGround = true;
-        addPopup(player.x, player.y - 40, 'Kit says meow!', kitFurColor);
+        addPopup(player.x, player.y - 40, kitName + ' says meow!', kitFurColor);
       }
     }
 
@@ -1210,7 +1219,7 @@ function update(dt) {
           picnic.feedTimer = 0;
           picnic.fed++;
           score += 30;
-          addPopup(player.x, player.y - 40, '+30 Kit loves it!', '#f472b6');
+          addPopup(player.x, player.y - 40, '+30 ' + kitName + ' loves it!', '#f472b6');
           playChaChing();
           if (picnic.fed >= 3) {
             score += 100;

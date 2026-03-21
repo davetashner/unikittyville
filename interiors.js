@@ -560,12 +560,12 @@ function drawParkInterior(cam, W, H) {
     if (picnic.active) {
       const foods = ['Sandwich', 'Apple', 'Juice'];
       ctx.fillStyle = '#fbbf24'; ctx.font = 'bold 14px system-ui';
-      ctx.fillText('Picnic with Kit!', cx, cy - 100);
+      ctx.fillText('Picnic with ' + kitName + '!', cx, cy - 100);
       ctx.fillStyle = '#fff'; ctx.font = '12px system-ui';
-      ctx.fillText('Press F to feed Kit (' + picnic.fed + '/3)', cx, cy + 130);
+      ctx.fillText('Press F to feed ' + kitName + ' (' + picnic.fed + '/3)', cx, cy + 130);
       if (picnic.feeding) {
         ctx.fillStyle = '#f472b6';
-        ctx.fillText('Kit is eating the ' + foods[picnic.fed] + '...', cx, cy + 145);
+        ctx.fillText(kitName + ' is eating the ' + foods[picnic.fed] + '...', cx, cy + 145);
         // Feeding progress bar
         const pct = picnic.feedTimer / 800;
         ctx.fillStyle = '#1f2937';
@@ -575,12 +575,12 @@ function drawParkInterior(cam, W, H) {
       }
     } else if (kitParkBonus) {
       ctx.fillStyle = '#f472b6'; ctx.font = '12px system-ui';
-      ctx.fillText('Kit had a wonderful picnic!', cx, cy + 130);
+      ctx.fillText(kitName + ' had a wonderful picnic!', cx, cy + 130);
       ctx.font = '13px system-ui'; ctx.fillStyle = 'rgba(255,255,255,0.8)';
       ctx.fillText('Press Enter to leave', cx, cy + 150);
     } else {
       ctx.fillStyle = '#f472b6'; ctx.font = '12px system-ui';
-      ctx.fillText('Press P for a picnic with Kit!', cx, cy + 130);
+      ctx.fillText('Press P for a picnic with ' + kitName + '!', cx, cy + 130);
       ctx.font = '13px system-ui'; ctx.fillStyle = 'rgba(255,255,255,0.8)';
       ctx.fillText('Press Enter to leave', cx, cy + 150);
     }
@@ -1520,8 +1520,8 @@ function drawHospitalInterior(cam, W, H) {
   // ── Stage-specific visuals ──
 
   // ── Step progress indicator (top of screen) ──
-  const stages = ['Prep Room', 'Vitals', 'Breathing', 'Deliver!', 'Celebrate', 'Name Kit'];
-  const stageIndex = { prep: 0, vitals: 1, breathing: 2, delivery: 3, celebrate: 4, color_pick: 5 };
+  const stages = ['Prep Room', 'Vitals', 'Breathing', 'Deliver!', 'Celebrate', 'Color', 'Name'];
+  const stageIndex = { prep: 0, vitals: 1, breathing: 2, delivery: 3, celebrate: 4, color_pick: 5, name_pick: 6 };
   const curIdx = stageIndex[hospitalStage] || 0;
 
   // Progress bar background
@@ -1775,11 +1775,53 @@ function drawHospitalInterior(cam, W, H) {
     ctx.fillStyle = '#fff';
     ctx.font = '14px system-ui';
     ctx.textAlign = 'center';
-    ctx.fillText('Baby Kit', cx, cy + 45);
+    ctx.fillText('Baby ' + kitName, cx, cy + 45);
 
     ctx.font = '12px system-ui';
     ctx.fillStyle = 'rgba(255,255,255,0.8)';
     ctx.fillText('Press 1-8 to pick a color, Enter to confirm', cx, cy + 140);
+  }
+
+  // NAME PICK STAGE
+  else if (hospitalStage === 'name_pick') {
+    // Preview baby Kit with chosen color
+    drawBabyKit(cx, cy - 30, kitFurColor);
+
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 16px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText("Name your baby!", cx, cy - 130);
+
+    // Name input box
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.roundRect(cx - 100, cy + 10, 200, 36, 8);
+    ctx.fill();
+    ctx.strokeStyle = '#c084fc';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Typed name (or placeholder)
+    if (kitNameInput.length > 0) {
+      ctx.fillStyle = '#1f2937';
+      ctx.font = '18px system-ui';
+      ctx.fillText(kitNameInput, cx, cy + 34);
+    } else {
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '18px system-ui';
+      ctx.fillText('Kit', cx, cy + 34);
+    }
+
+    // Blinking cursor
+    if (Math.floor(gameTime / 500) % 2 === 0) {
+      const textW = ctx.measureText(kitNameInput || 'Kit').width;
+      ctx.fillStyle = kitNameInput.length > 0 ? '#1f2937' : '#94a3b8';
+      ctx.fillRect(cx + textW / 2 + 2, cy + 18, 2, 20);
+    }
+
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.font = '12px system-ui';
+    ctx.fillText('Type a name, then press Enter', cx, cy + 140);
   }
 
   ctx.textAlign = 'left';

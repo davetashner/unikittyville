@@ -304,6 +304,14 @@ window.addEventListener('orientationchange', () => { setTimeout(resize, 100); })
 window.addEventListener('keydown', e => {
   if (!e.repeat) keys[e.code] = true;
   if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'ArrowDown') e.preventDefault();
+  // Baby name typing in hospital name_pick stage
+  if (hospitalStage === 'name_pick' && !e.repeat) {
+    if (e.key === 'Backspace') {
+      kitNameInput = kitNameInput.slice(0, -1);
+    } else if (e.key.length === 1 && kitNameInput.length < 12 && /[a-zA-Z ]/.test(e.key)) {
+      kitNameInput += e.key;
+    }
+  }
 });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 
@@ -641,6 +649,9 @@ function updatePrompt(near) {
       setAction(null, '');
     } else if (hospitalStage === 'color_pick') {
       el.textContent = 'Press 1-8 to choose Kit\'s color, Enter to confirm';
+      setAction('Enter', 'Confirm');
+    } else if (hospitalStage === 'name_pick') {
+      el.textContent = 'Type a name for your baby, then press Enter';
       setAction('Enter', 'Confirm');
     }
     el.style.display = 'block';
