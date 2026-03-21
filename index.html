@@ -352,6 +352,7 @@
 <audio id="musicAlps" src="assets/music/alps.mp3" loop preload="auto"></audio>
 <audio id="musicSledding" src="assets/music/sledding.mp3" loop preload="auto"></audio>
 <audio id="musicChalet" src="assets/music/chalet.mp3" loop preload="auto"></audio>
+<audio id="musicOriental" src="assets/music/oriental.mp3" loop preload="auto"></audio>
 <audio id="musicCampground" src="assets/music/campground.mp3" loop preload="auto"></audio>
 <audio id="meow1" src="assets/sfx/kitty-meow-01.mp3" preload="auto"></audio>
 <audio id="meow2" src="assets/sfx/kitty-meow-02.mp3" preload="auto"></audio>
@@ -363,6 +364,13 @@
   <label for="nameInput">Name your kitty:</label>
   <input type="text" id="nameInput" placeholder="Sparkle" maxlength="16" autofocus>
   <button id="startBtn">Play!</button>
+  <button id="levelSelectBtn" style="margin-top:12px;font-size:1rem;padding:10px 32px;background:linear-gradient(135deg,#38bdf8,#818cf8);color:#fff;border:none;border-radius:12px;cursor:pointer;font-weight:600;letter-spacing:1px;transition:transform 0.15s,box-shadow 0.15s;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">Level Select</button>
+</div>
+
+<div id="levelSelectScreen" style="display:none;position:fixed;inset:0;background:linear-gradient(135deg,#a78bfa 0%,#818cf8 50%,#38bdf8 100%);flex-direction:column;justify-content:center;align-items:center;z-index:100;">
+  <h2 style="font-size:2rem;color:#fff;text-shadow:2px 2px 0 #7c3aed;margin-bottom:1.5rem;">Choose a Level</h2>
+  <div id="levelGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;max-width:500px;padding:0 20px;"></div>
+  <button id="levelSelectBack" style="margin-top:1.5rem;font-size:1rem;padding:10px 32px;background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.3);border-radius:12px;cursor:pointer;font-weight:600;touch-action:manipulation;">Back</button>
 </div>
 
 <canvas id="game"></canvas>
@@ -377,17 +385,18 @@
   <span>Score: <b id="hudScore">0</b></span>
   <span class="hud-item" data-levels="1">Fish: <b id="hudFish">0</b></span>
   <span class="hud-item" data-levels="1">Bacon: <b id="hudBacon">0</b></span>
-  <span class="hud-item" data-levels="1,3,4,5,7">Yarn: <b id="hudYarn">0</b></span>
+  <span class="hud-item" data-levels="1,3,4,5,6,8">Yarn: <b id="hudYarn">0</b></span>
   <span class="hud-item" data-levels="3">Pizza: <b id="hudPizza">0</b></span>
   <span class="hud-item" data-levels="3">Hot Dogs: <b id="hudHotdog">0</b></span>
   <span class="hud-item" data-levels="4">Gelato: <b id="hudGelato">0</b></span>
   <span class="hud-item" data-levels="1">Honey: <b id="hudHoney">0</b></span>
   <span class="hud-item" data-levels="5">Tiki: <b id="hudTiki">0</b></span>
   <span class="hud-item" data-levels="5">Coconuts: <b id="hudCoconut">0</b></span>
-  <span class="hud-item" data-levels="6">Diamonds: <b id="hudDiamond">0</b></span>
+  <span class="hud-item" data-levels="7">Diamonds: <b id="hudDiamond">0</b></span>
   <span class="hud-item" data-levels="2">Snowballs: <b id="hudSnowball">0</b></span>
-  <span class="hud-item" data-levels="7">Sticks: <b id="hudStick">0</b></span>
-  <span class="hud-item" data-levels="7">S'mores: <b id="hudSmore">0</b></span>
+  <span class="hud-item" data-levels="8">Sticks: <b id="hudStick">0</b></span>
+  <span class="hud-item" data-levels="8">S'mores: <b id="hudSmore">0</b></span>
+  <span class="hud-item" data-levels="6">Shells: <b id="hudShell">0</b></span>
 </div>
 <div id="controls">
   <span>Arrow Keys: Move</span>

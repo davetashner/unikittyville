@@ -150,7 +150,53 @@ const npcDialogs = {
     "The beach sand is warm between my paw beans!",
     "I tried to befriend the volcano. It's the strong, silent type.",
   ],
-  6: [ // Alps
+  6: [ // Oriental NC
+    "Welcome to the Sailing Capital of North Carolina!",
+    "There are more boats here than people! How cool is that?",
+    "The Neuse River is SO wide! I can barely see the other side!",
+    "I tried to name all the sailboats in the harbor. Lost count at 200.",
+    "The shrimp boats come in at sunset. It's SO beautiful!",
+    "A pelican just swooped right past my horn! Rude. But impressive.",
+    "The pine trees smell like Christmas AND the beach combined!",
+    "I saw a dolphin! It did a flip! I tried to do one too. Don't ask.",
+    "This town is named after a shipwreck. The USS Oriental! How dramatic!",
+    "There are only 880 people here but 3000 boats. The boats outvoted everyone!",
+    "The harbor is so calm — no waves at all! Perfect for napping on a dock.",
+    "A crab just walked sideways across my path. We had a moment.",
+    "I tried fishing off the dock. The fish here are HUGE!",
+    "The sunset turns the whole river golden. My horn matched perfectly!",
+    "I heard there's amazing stuff underwater around here. Wanna dive?",
+    "The wooden docks creak in the best way. Very atmospheric!",
+    "A seagull stole my shell! Well, I have more. Take THAT, seagull!",
+    "The Intracoastal Waterway goes RIGHT through here! Fancy!",
+    "I tried sailing once. The wind and I had... creative differences.",
+    "The oysters here build their own little reef cities! Tiny architects!",
+    "Every sunset here looks like a painting. My fur turns golden!",
+    "A blue heron was standing so still I thought it was a statue!",
+    "The boat masts look like a forest of metal trees at night!",
+    "I made friends with a river otter this morning. Her name is Sandy.",
+  ],
+  61: [ // Scuba diving mercats
+    "Welcome to our underwater kingdom! I'm Coral — purr-lease enjoy your visit!",
+    "The USS Oriental wreck is over there! It sank in 1862! Ancient history!",
+    "My starfish hair clip? Thanks! I found it on the reef! Isn't it sparkly?",
+    "We mercats protect these waters. Also we chase shiny things. Cat instincts!",
+    "The seagrass meadows are our favorite napping spots! So swishy!",
+    "I tried to befriend a crab but it pinched my tail! Some cats never learn!",
+    "See those oyster reefs? Thousands of tiny creatures live in each one!",
+    "My tail changes color in the moonlight. Tonight it'll be extra sparkly!",
+    "We mercats can purr AND bubble at the same time! It's our superpower!",
+    "A sea turtle just swam by! They're always so chill. Life goals!",
+    "The seahorses here are my cousins! ...Sort of. We share the cat ears thing.",
+    "I once rode a dolphin through the channel! Best. Day. Ever!",
+    "The water here is where the river meets the sea — brackish and beautiful!",
+    "My friend Bubbles collects pearls. She has 847. Yes, she counted.",
+    "Watch for the jellyfish! They're pretty but they DON'T like cuddles!",
+    "The shipwreck has a whole garden of sea life growing on it now!",
+    "At night, the bioluminescence makes the water glow. Magical!",
+    "I taught a school of fish to swim in the shape of a cat face! Took weeks.",
+  ],
+  7: [ // Alps
     "These mountains make my horn look tiny!",
     "I'm basically a mountain goat with better style!",
     "Diamond hunting is my new favorite hobby!",
@@ -176,7 +222,7 @@ const npcDialogs = {
     "I tried to catch a snowflake on my horn. Caught twelve!",
     "The Alps sunset turns everything pink and purple. My colors!",
   ],
-  7: [ // Campground
+  8: [ // Campground
     "Nothing beats the smell of a campfire!",
     "I saw Bigfoot over there... he seems friendly!",
     "S'mores are the best invention since yarn balls!",
@@ -734,6 +780,113 @@ for (let i = 0; i < 4; i++) {
     color: hawaiiNpcColors[i],
     accessory: hawaiiNpcAccessories[i],
     vx: (Math.random() - 0.5) * 1.2,
+    walkFrame: 0, walkTimer: 0,
+    facing: 1,
+    idleTimer: Math.random() * 200
+  });
+}
+
+// ── Level 6: Oriental NC ──
+const levelOriental = {
+  worldW: ORIENTAL_WORLD_W,
+  platforms: [
+    // Dock area platforms
+    { x: 150, y: 360, w: 90 },
+    { x: 350, y: 320, w: 80 },
+    { x: 550, y: 280, w: 70 },
+    { x: 750, y: 240, w: 80 },
+    // Marina section
+    { x: 1000, y: 370, w: 100 },
+    { x: 1200, y: 330, w: 70 },
+    { x: 1400, y: 290, w: 80 },
+    { x: 1600, y: 250, w: 70 },
+    // Waterfront
+    { x: 1850, y: 360, w: 80 },
+    { x: 2050, y: 320, w: 70 },
+    { x: 2250, y: 280, w: 80 },
+    { x: 2450, y: 240, w: 70 },
+    // Harbor
+    { x: 2700, y: 370, w: 100 },
+    { x: 2900, y: 330, w: 70 },
+    { x: 3100, y: 290, w: 80 },
+    { x: 3300, y: 250, w: 70 },
+    // Pier area
+    { x: 3550, y: 360, w: 80 },
+    { x: 3750, y: 320, w: 70 },
+    { x: 3950, y: 280, w: 80 },
+    // Sailboat & dive area
+    { x: 4150, y: 370, w: 100 },
+    { x: 4400, y: 330, w: 80 },
+    { x: 4600, y: 290, w: 70 },
+    { x: 4800, y: 360, w: 90 },
+    { x: 5000, y: 320, w: 80 },
+  ],
+  yarnBalls: [],
+  scenes: [
+    // Sailboats in harbor
+    { type: 'sailboat_docked', x: 300 },
+    { type: 'sailboat_docked', x: 900 },
+    { type: 'sailboat_docked', x: 1800 },
+    { type: 'sailboat_docked', x: 2600 },
+    { type: 'sailboat_docked', x: 3400 },
+    // Shrimp boats
+    { type: 'shrimp_boat', x: 1500 },
+    { type: 'shrimp_boat', x: 3000 },
+    // Pine trees along shore
+    { type: 'pine_tree', x: 200 },
+    { type: 'pine_tree', x: 700 },
+    { type: 'pine_tree', x: 1300 },
+    { type: 'pine_tree', x: 2100 },
+    { type: 'pine_tree', x: 2800 },
+    { type: 'pine_tree', x: 3600 },
+    { type: 'pine_tree', x: 4500 },
+    // Wooden docks
+    { type: 'dock', x: 500 },
+    { type: 'dock', x: 1700 },
+    { type: 'dock', x: 3200 },
+    // Pelicans
+    { type: 'pelican', x: 600 },
+    { type: 'pelican', x: 2300 },
+    { type: 'pelican', x: 4000 },
+    // Shells to collect
+    { type: 'shell', x: 400, collected: false },
+    { type: 'shell', x: 1100, collected: false },
+    { type: 'shell', x: 2000, collected: false },
+    { type: 'shell', x: 3100, collected: false },
+    { type: 'shell', x: 3800, collected: false },
+    // Sailboat you can board
+    { type: 'sailboat_ride', x: 4200 },
+    // Dive spot marker
+    { type: 'dive_buoy', x: 4800 },
+    // Transition to Alps
+    { type: 'oriental_dock_end', x: 5050 },
+  ],
+};
+
+// Init Oriental yarn balls
+for (const p of levelOriental.platforms) {
+  if (p.y < 300) {
+    levelOriental.yarnBalls.push({
+      x: p.x + p.w / 2,
+      y: p.y - 14,
+      color: yarnColors[levelOriental.yarnBalls.length % yarnColors.length],
+      collected: false,
+      bobPhase: Math.random() * Math.PI * 2
+    });
+  }
+}
+
+// Oriental NPCs
+const orientalNpcs = [];
+const orientalNpcColors = ['#67e8f9','#fda4af','#d9f99d','#c4b5fd'];
+const orientalNpcAccessories = ['scarf','flower','glasses','bow'];
+for (let i = 0; i < 4; i++) {
+  orientalNpcs.push({
+    x: 500 + i * 1100 + Math.random() * 200,
+    y: GROUND_Y,
+    color: orientalNpcColors[i],
+    accessory: orientalNpcAccessories[i],
+    vx: (Math.random() - 0.5) * 1.0,
     walkFrame: 0, walkTimer: 0,
     facing: 1,
     idleTimer: Math.random() * 200

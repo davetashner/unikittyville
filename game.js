@@ -235,7 +235,7 @@ function applyVolume() {
 
 // ── Music system with crossfade ──
 const FADE_DURATION = 1200; // ms
-const levelMusic = { 1: 'musicMeadow', 2: 'musicSledding', 3: 'musicNYC', 4: 'musicRome', 5: 'musicHawaii', 6: 'musicAlps', 7: 'musicChalet', 8: 'musicCampground' };
+const levelMusic = { 1: 'musicMeadow', 2: 'musicSledding', 3: 'musicNYC', 4: 'musicRome', 5: 'musicHawaii', 6: 'musicOriental', 7: 'musicAlps', 8: 'musicChalet', 9: 'musicCampground' };
 let currentMusicId = null;
 let musicFade = null; // { out: AudioElement, in: AudioElement, timer: 0 }
 
@@ -328,6 +328,8 @@ function completeTransition() {
   camperPhone = { ringing: false, answered: false, ringTimer: 0, callTimer: 0, dialogue: '' };
   drinkingCocoa = false;
   cocoaDrinkTimer = 0;
+  sailing = false;
+  scubaDiving = false;
   insideCampCamper = false;
   campCamperPlayerX = 0;
   campCamperSleeping = false;
@@ -338,18 +340,43 @@ function completeTransition() {
 }
 
 function getCurrentPlatforms() {
-  return currentLevel === 1 ? platforms : currentLevel === 2 ? level2Sled.platforms : currentLevel === 3 ? level2.platforms : currentLevel === 4 ? level3.platforms : currentLevel === 5 ? level4.platforms : currentLevel === 7 ? level6.platforms : level5.platforms;
+  return currentLevel === 1 ? platforms : currentLevel === 2 ? level2Sled.platforms : currentLevel === 3 ? level2.platforms : currentLevel === 4 ? level3.platforms : currentLevel === 5 ? level4.platforms : currentLevel === 6 ? levelOriental.platforms : currentLevel === 8 ? level6.platforms : level5.platforms;
 }
 
 function getCurrentYarnBalls() {
-  return currentLevel === 1 ? yarnBalls : currentLevel === 2 ? level2Sled.yarnBalls : currentLevel === 3 ? level2.yarnBalls : currentLevel === 4 ? level3.yarnBalls : currentLevel === 5 ? level4.yarnBalls : currentLevel === 7 ? level6.yarnBalls : level5.yarnBalls;
+  return currentLevel === 1 ? yarnBalls : currentLevel === 2 ? level2Sled.yarnBalls : currentLevel === 3 ? level2.yarnBalls : currentLevel === 4 ? level3.yarnBalls : currentLevel === 5 ? level4.yarnBalls : currentLevel === 6 ? levelOriental.yarnBalls : currentLevel === 8 ? level6.yarnBalls : level5.yarnBalls;
 }
 
 function getCurrentWorldW() {
-  return currentLevel === 1 ? WORLD_W : currentLevel === 2 ? level2Sled.worldW : currentLevel === 3 ? level2.worldW : currentLevel === 4 ? level3.worldW : currentLevel === 5 ? level4.worldW : currentLevel === 7 ? level6.worldW : level5.worldW;
+  return currentLevel === 1 ? WORLD_W : currentLevel === 2 ? level2Sled.worldW : currentLevel === 3 ? level2.worldW : currentLevel === 4 ? level3.worldW : currentLevel === 5 ? level4.worldW : currentLevel === 6 ? levelOriental.worldW : currentLevel === 8 ? level6.worldW : level5.worldW;
 }
 
-// ── Level 5: Alps ──
+// ── Level 6: Oriental NC ──
+let sailing = false;
+let sailAngle = 0; // visual sail angle
+const SAIL_SPEED = 3.5;
+const ORIENTAL_WORLD_W = 5200;
+const SAILBOAT_POS = { x: 4200 };
+const DIVE_SPOT_POS = { x: 4800 };
+let shellCount = 0;
+// Scuba diving minigame
+let scubaDiving = false;
+let scubaPlayer = { x: 200, y: 200, vx: 0, vy: 0 };
+const SCUBA_WORLD_W = 1200;
+const SCUBA_WORLD_H = 500;
+const SCUBA_BUOYANCY = -0.15;
+const SCUBA_SWIM_FORCE = 0.4;
+const SCUBA_DRAG = 0.96;
+let scubaCollectibles = [];
+let scubaPearlCount = 0;
+// Level select
+let levelSelectUnlocked = true; // permanently unlocked for dev/debug
+let gameCompleted = false;
+let showLevelSelect = false;
+const LEVEL_NAMES = ['Meadow', 'Sledding', 'NYC', 'Rome', 'Hawaii', 'Oriental', 'Alps', 'Campground'];
+const TOTAL_LEVELS = 8;
+
+// ── Level 7: Alps ──
 // The Alps is a downhill skiing level — the kitty starts at the top-left
 // and skis right/downhill, dodging trees, jumping cornices, collecting diamonds.
 let skiing = false;
@@ -358,7 +385,7 @@ let alpsScrollX = 0;
 const ALPS_WORLD_W = 6000;
 const ALPS_SPEED = 3.5; // auto-scroll speed while skiing
 
-// ── Level 7: Campground ──
+// ── Level 8: Campground ──
 let stickCount = 0;
 let smoreCount = 0;
 let campfire = { built: false, lit: false };
@@ -391,6 +418,27 @@ const BIGFOOT_POS = { x: 3000 };
 const DIG_SITE_POS = { x: 3800 };
 const WATER_PUMP_POS = { x: 4100 };
 
+
+// ── Scuba diving mercats and collectibles ──
+const scubaMercats = [
+  { x: 300, y: 250, name: 'Coral', tailColor: '#f472b6', facing: 1, walkFrame: 0, walkTimer: 0, vx: 0, idleTimer: 100 },
+  { x: 650, y: 150, name: 'Bubbles', tailColor: '#1e1b4b', facing: -1, walkFrame: 0, walkTimer: 0, vx: 0, idleTimer: 100 },
+  { x: 950, y: 300, name: 'Marina', tailColor: '#38bdf8', facing: 1, walkFrame: 0, walkTimer: 0, vx: 0, idleTimer: 100 },
+];
+
+function initScubaCollectibles() {
+  scubaCollectibles = [
+    { x: 150, y: 150, type: 'Pearl', color: '#e9d5ff', collected: false },
+    { x: 400, y: 300, type: 'Pearl', color: '#e9d5ff', collected: false },
+    { x: 550, y: 100, type: 'Shell', color: '#fda4af', collected: false },
+    { x: 700, y: 350, type: 'Pearl', color: '#e9d5ff', collected: false },
+    { x: 850, y: 200, type: 'Shell', color: '#fda4af', collected: false },
+    { x: 1050, y: 280, type: 'Pearl', color: '#e9d5ff', collected: false },
+    { x: 200, y: 380, type: 'Shell', color: '#fda4af', collected: false },
+    { x: 1100, y: 120, type: 'Pearl', color: '#e9d5ff', collected: false },
+  ];
+}
+initScubaCollectibles();
 
 // ── Canvas Setup ──
 const canvas = document.getElementById('game');
@@ -493,6 +541,92 @@ function update(dt) {
       keys['Enter'] = false;
       insideCampCamper = false;
       campCamperPlayerX = 0;
+      player.y = GROUND_Y;
+      player.vy = 0;
+      player.onGround = true;
+    }
+    return;
+  }
+
+  // Scuba diving minigame
+  if (scubaDiving) {
+    // Swimming physics — buoyancy + 4-directional movement
+    if (keys['ArrowLeft']) scubaPlayer.vx -= SCUBA_SWIM_FORCE;
+    if (keys['ArrowRight']) scubaPlayer.vx += SCUBA_SWIM_FORCE;
+    if (keys['ArrowUp']) scubaPlayer.vy -= SCUBA_SWIM_FORCE;
+    if (keys['ArrowDown']) scubaPlayer.vy += SCUBA_SWIM_FORCE;
+    // Gentle buoyancy (float upward when not pressing down)
+    scubaPlayer.vy += SCUBA_BUOYANCY;
+    // Drag for underwater feel
+    scubaPlayer.vx *= SCUBA_DRAG;
+    scubaPlayer.vy *= SCUBA_DRAG;
+    scubaPlayer.x += scubaPlayer.vx;
+    scubaPlayer.y += scubaPlayer.vy;
+    // Boundaries
+    scubaPlayer.x = Math.max(20, Math.min(SCUBA_WORLD_W - 20, scubaPlayer.x));
+    scubaPlayer.y = Math.max(20, Math.min(SCUBA_WORLD_H - 40, scubaPlayer.y));
+    // Facing direction
+    if (scubaPlayer.vx > 0.3) player.facing = 1;
+    if (scubaPlayer.vx < -0.3) player.facing = -1;
+    // Walk animation for swimming
+    player.walkTimer += dt;
+    if (player.walkTimer > 200) { player.walkTimer = 0; player.walkFrame = (player.walkFrame + 1) % 4; }
+    // Collect pearls/shells
+    for (const c of scubaCollectibles) {
+      if (c.collected) continue;
+      const dx = scubaPlayer.x - c.x;
+      const dy = scubaPlayer.y - c.y;
+      if (dx * dx + dy * dy < 625) {
+        c.collected = true;
+        scubaPearlCount++;
+        score += 15;
+        addPopup(player.x, player.y - 40, '+15 ' + c.type + '!', c.color);
+        playChaChing();
+      }
+    }
+    // Talk to mercats (Q key)
+    for (const mc of scubaMercats) {
+      if (Math.abs(scubaPlayer.x - mc.x) < 50 && Math.abs(scubaPlayer.y - mc.y) < 50) {
+        if (keys['KeyQ']) {
+          keys['KeyQ'] = false;
+          const alreadyTalking = activeSpeechBubbles.some(b => b.npc === mc);
+          if (!alreadyTalking) {
+            const dialogs = npcDialogs[61]; // 61 = scuba sub-level dialogs
+            const text = dialogs[Math.floor(Math.random() * dialogs.length)];
+            activeSpeechBubbles.push({ npc: mc, text, life: 4000 });
+          }
+        }
+      }
+    }
+    // Update mercat speech bubbles
+    for (let i = activeSpeechBubbles.length - 1; i >= 0; i--) {
+      activeSpeechBubbles[i].life -= dt;
+      if (activeSpeechBubbles[i].life <= 0) activeSpeechBubbles.splice(i, 1);
+    }
+    // Exit scuba — press Enter
+    if (keys['Enter']) {
+      keys['Enter'] = false;
+      scubaDiving = false;
+      score += 50;
+      addPopup(player.x, player.y - 40, '+50 Great dive!', '#38bdf8');
+      playChaChing();
+    }
+    // HUD updates during scuba
+    document.getElementById('hudScore').textContent = score;
+    return;
+  }
+
+  // Sailing experience
+  if (sailing) {
+    // Player-controlled sailing on the Neuse River
+    if (keys['ArrowLeft']) sailAngle -= 0.03;
+    if (keys['ArrowRight']) sailAngle += 0.03;
+    sailAngle = Math.max(-0.6, Math.min(0.6, sailAngle));
+    // Exit sailing
+    if (keys['Enter']) {
+      keys['Enter'] = false;
+      sailing = false;
+      player.x = SAILBOAT_POS.x;
       player.y = GROUND_Y;
       player.vy = 0;
       player.onGround = true;
@@ -721,7 +855,7 @@ function update(dt) {
       keys['Enter'] = false;
       insideChalet = false;
       drinkingCocoa = false;
-      switchToLevel(7); // onward to the campground!
+      switchToLevel(8); // onward to the campground!
     }
     return;
   }
@@ -1073,7 +1207,7 @@ function update(dt) {
         surfing = true;
       }
     }
-    // Airport → Alps
+    // Airport → Oriental
     if (Math.abs(player.x - AIRPORT_POS.x) < 55) {
       nearAirport = true;
       if (keys['Enter']) {
@@ -1083,9 +1217,9 @@ function update(dt) {
     }
   }
 
-  // Alps interactions (level 5)
+  // Alps interactions (level 7)
   let nearChalet = false;
-  if (currentLevel === 6) {
+  if (currentLevel === 7) {
     // Auto-ski: push player right continuously
     player.vx = Math.max(player.vx, ALPS_SPEED);
 
@@ -1127,12 +1261,57 @@ function update(dt) {
         keys['Enter'] = false;
         insideChalet = true;
         marshmallowAngle = Math.PI / 5; // reset aim
-        crossfadeToLevel(7); // chalet music
+        crossfadeToLevel(8); // chalet music
       }
     }
   }
 
-  // Campground interactions (level 7)
+  // Oriental interactions (level 6)
+  let nearSailboat = false;
+  let nearDiveSpot = false;
+  if (currentLevel === 6 && !scubaDiving) {
+    // Sailboat boarding
+    if (Math.abs(player.x - SAILBOAT_POS.x) < 55) {
+      nearSailboat = true;
+      if (keys['Enter'] && !sailing) {
+        keys['Enter'] = false;
+        sailing = true;
+      }
+    }
+    // Dive spot — enter scuba minigame
+    if (Math.abs(player.x - DIVE_SPOT_POS.x) < 55) {
+      nearDiveSpot = true;
+      if (keys['Enter']) {
+        keys['Enter'] = false;
+        scubaDiving = true;
+        scubaPlayer = { x: 200, y: 100, vx: 0, vy: 0 };
+        scubaPearlCount = 0;
+        initScubaCollectibles();
+      }
+    }
+    // Shell collection
+    for (const s of levelOriental.scenes) {
+      if (s.type === 'shell' && !s.collected && Math.abs(player.x - s.x) < 40) {
+        if (keys['KeyC']) {
+          keys['KeyC'] = false;
+          s.collected = true;
+          shellCount++;
+          score += 10;
+          addPopup(s.x, player.y - 40, '+10 Shell!', '#fda4af');
+          playChaChing();
+        }
+      }
+    }
+    // End of Oriental → Alps
+    if (player.x > ORIENTAL_WORLD_W - 150) {
+      if (keys['Enter']) {
+        keys['Enter'] = false;
+        switchToLevel(7);
+      }
+    }
+  }
+
+  // Campground interactions (level 8)
   let nearStick = false;
   let nearFirePit = false;
   let nearHammock = false;
@@ -1141,7 +1320,7 @@ function update(dt) {
   let nearWaterPump = false;
   let nearPool = false;
   let nearCampCamper = false;
-  if (currentLevel === 7) {
+  if (currentLevel === 8) {
     // Stick collection
     for (let i = 0; i < STICK_POSITIONS.length; i++) {
       if (level6.sticksCollected[i]) continue;
@@ -1387,7 +1566,7 @@ function update(dt) {
   }
 
   // NPC AI
-  const activeNpcs = currentLevel === 1 ? npcs : currentLevel === 2 ? sledNpcs : currentLevel === 3 ? nycNpcs : currentLevel === 4 ? romeNpcs : currentLevel === 5 ? hawaiiNpcs : currentLevel === 7 ? campNpcs : alpsNpcs;
+  const activeNpcs = currentLevel === 1 ? npcs : currentLevel === 2 ? sledNpcs : currentLevel === 3 ? nycNpcs : currentLevel === 4 ? romeNpcs : currentLevel === 5 ? hawaiiNpcs : currentLevel === 6 ? orientalNpcs : currentLevel === 8 ? campNpcs : alpsNpcs;
   const worldW = getCurrentWorldW();
   for (const npc of activeNpcs) {
     npc.idleTimer -= dt / 16;
@@ -1408,7 +1587,7 @@ function update(dt) {
 
   // NPC talk — Q key to chat with nearby NPCs
   let nearNpc = false;
-  if (!insideChalet && !insideHouse && !insideCamper && !insideWindmill && !insidePizza && !insidePark && !insidePantheon && !swimming && !surfing && !swimmingInPool && !insideCampCamper) {
+  if (!insideChalet && !insideHouse && !insideCamper && !insideWindmill && !insidePizza && !insidePark && !insidePantheon && !swimming && !surfing && !swimmingInPool && !insideCampCamper && !scubaDiving && !sailing) {
     for (const npc of activeNpcs) {
       if (Math.abs(player.x - npc.x) < NPC_TALK_RANGE) {
         nearNpc = true;
@@ -1474,7 +1653,7 @@ function update(dt) {
   document.getElementById('hudFish').textContent = fishCount;
   document.getElementById('hudBacon').textContent = baconCount;
   document.getElementById('hudYarn').textContent = yarnCount;
-  document.getElementById('hudLevel').textContent = currentLevel === 1 ? 'Meadow' : currentLevel === 2 ? 'Sledding' : currentLevel === 3 ? 'NYC' : currentLevel === 4 ? 'Rome' : currentLevel === 5 ? 'Hawaii' : currentLevel === 7 ? 'Campground' : 'Alps';
+  document.getElementById('hudLevel').textContent = LEVEL_NAMES[currentLevel - 1] || 'Unknown';
   document.getElementById('hudPizza').textContent = pizzaMaking.pizzaCount;
   document.getElementById('hudHotdog').textContent = hotdogCount;
   document.getElementById('hudGelato').textContent = gelatoCount;
@@ -1485,6 +1664,7 @@ function update(dt) {
   document.getElementById('hudSnowball').textContent = snowballCount;
   document.getElementById('hudStick').textContent = stickCount;
   document.getElementById('hudSmore').textContent = smoreCount;
+  document.getElementById('hudShell').textContent = shellCount;
 
   // Show/hide HUD items based on current level
   for (const el of document.querySelectorAll('.hud-item')) {
@@ -1493,13 +1673,13 @@ function update(dt) {
   }
 
   // Hide controls during interior/mini-game scenes (always hidden on mobile)
-  const inScene = insideHouse || insideCamper || insideWindmill || insidePizza || insidePark || insidePantheon || swimming || surfing || insideChalet || swimmingInPool || insideCampCamper;
+  const inScene = insideHouse || insideCamper || insideWindmill || insidePizza || insidePark || insidePantheon || swimming || surfing || insideChalet || swimmingInPool || insideCampCamper || scubaDiving || sailing;
   if (!isMobile) {
     document.getElementById('controls').style.display = inScene ? 'none' : 'flex';
   }
 
   // Prompt
-  updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf, nearAirport, nearChalet, nearTrain, nearNpc, nearStick, nearFirePit, nearHammock, nearBigfoot, nearDigSite, nearWaterPump, nearPool, nearCampCamper);
+  updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf, nearAirport, nearChalet, nearTrain, nearNpc, nearStick, nearFirePit, nearHammock, nearBigfoot, nearDigSite, nearWaterPump, nearPool, nearCampCamper, nearSailboat, nearDiveSpot);
 }
 
 function getGroundLevel(x) {
