@@ -36,6 +36,8 @@ function draw() {
       [Scene.SCUBA_DIVING]: () => drawScubaDivingScene(cam, W, H),
       [Scene.SAILING]: () => drawSailingScene(cam, W, H),
       [Scene.CAPE_LAUNCH]: () => drawCapeLaunchScene(cam, W, H),
+      [Scene.SMOOTHIE_SHOP]: () => drawSmoothieShopInterior(cam, W, H),
+      [Scene.TOPGOLF]: () => drawTopGolfInterior(cam, W, H),
     };
     if (sceneDrawMap[currentScene]) sceneDrawMap[currentScene]();
   } else {
@@ -5575,7 +5577,429 @@ function drawSpaceWorld(W, H, cam, cycle, isNight) {
 // ── Level Registry ──
 // Central registry mapping level numbers to their data and draw functions.
 // Defined here (at the bottom of drawing.js) because all level data from
-// levels.js and all draw functions from drawing.js are in scope.
+// ── Level 13: Moon Drawing ──
+
+function drawMoonSky(W, H, cycle, isNight, cam) {
+  // Always dark on the Moon — no atmosphere
+  ctx.fillStyle = '#030712';
+  ctx.fillRect(0, 0, W, H);
+
+  // Stars
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  for (let i = 0; i < 80; i++) {
+    const sx = (i * 137 + 50) % W;
+    const sy = (i * 89 + 20) % (H * 0.6);
+    ctx.beginPath();
+    ctx.arc(sx, sy, 0.8 + (i % 3) * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Earth — large, beautiful, in the sky
+  const earthX = W * 0.75;
+  const earthY = 80;
+  const earthR = 40;
+  // Glow
+  const glow = ctx.createRadialGradient(earthX, earthY, earthR, earthX, earthY, earthR * 2);
+  glow.addColorStop(0, 'rgba(59, 130, 246, 0.2)');
+  glow.addColorStop(1, 'transparent');
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(earthX, earthY, earthR * 2, 0, Math.PI * 2);
+  ctx.fill();
+  // Earth body
+  ctx.fillStyle = '#2563eb';
+  ctx.beginPath();
+  ctx.arc(earthX, earthY, earthR, 0, Math.PI * 2);
+  ctx.fill();
+  // Continents
+  ctx.fillStyle = '#22c55e';
+  ctx.beginPath();
+  ctx.arc(earthX - 10, earthY - 5, 12, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(earthX + 12, earthY + 8, 10, 0, Math.PI * 2);
+  ctx.fill();
+  // Ice caps
+  ctx.fillStyle = '#f1f5f9';
+  ctx.beginPath();
+  ctx.arc(earthX, earthY - earthR * 0.8, 8, 0, Math.PI * 2);
+  ctx.fill();
+  // Atmosphere ring
+  ctx.strokeStyle = 'rgba(96, 165, 250, 0.3)';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(earthX, earthY, earthR + 3, 0, Math.PI * 2);
+  ctx.stroke();
+}
+
+function drawMoonWorld(W, H, cam, cycle, isNight) {
+  const ww = level13Moon.worldW;
+  const t = gameTime;
+
+  // Lunar ground
+  ctx.fillStyle = '#6b7280';
+  ctx.fillRect(-cam, GROUND_Y, ww + 200, H - GROUND_Y + 10);
+  // Surface texture
+  ctx.fillStyle = '#9ca3af';
+  ctx.fillRect(-cam, GROUND_Y, ww + 200, 3);
+
+  // Craters
+  for (const scene of level13Moon.scenes) {
+    if (scene.type !== 'crater') continue;
+    const cx = scene.x - cam;
+    if (cx < -scene.r * 2 || cx > W + scene.r * 2) continue;
+    ctx.fillStyle = '#4b5563';
+    ctx.beginPath();
+    ctx.ellipse(cx, GROUND_Y + 5, scene.r, scene.r * 0.3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Rim
+    ctx.strokeStyle = '#9ca3af';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.ellipse(cx, GROUND_Y + 3, scene.r + 2, scene.r * 0.3 + 2, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // Rocks
+  for (const scene of level13Moon.scenes) {
+    if (scene.type !== 'rock') continue;
+    const rx = scene.x - cam;
+    if (rx < -20 || rx > W + 20) continue;
+    ctx.fillStyle = '#78716c';
+    ctx.beginPath();
+    ctx.moveTo(rx - 8, GROUND_Y);
+    ctx.lineTo(rx - 5, GROUND_Y - 12);
+    ctx.lineTo(rx + 3, GROUND_Y - 15);
+    ctx.lineTo(rx + 10, GROUND_Y - 8);
+    ctx.lineTo(rx + 8, GROUND_Y);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Smoothie Shop building
+  const ssScene = level13Moon.scenes.find(s => s.type === 'smoothie_shop');
+  if (ssScene) {
+    const sx = ssScene.x - cam;
+    if (sx > -150 && sx < W + 150) {
+      // Futuristic dome
+      ctx.fillStyle = '#818cf8';
+      ctx.beginPath();
+      ctx.arc(sx, GROUND_Y - 40, 60, Math.PI, 0);
+      ctx.lineTo(sx + 60, GROUND_Y);
+      ctx.lineTo(sx - 60, GROUND_Y);
+      ctx.closePath();
+      ctx.fill();
+      // Glass panels
+      ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+      ctx.lineWidth = 1;
+      for (let i = -2; i <= 2; i++) {
+        ctx.beginPath();
+        ctx.moveTo(sx + i * 20, GROUND_Y);
+        ctx.lineTo(sx + i * 8, GROUND_Y - 55);
+        ctx.stroke();
+      }
+      // Door
+      ctx.fillStyle = '#4f46e5';
+      ctx.fillRect(sx - 12, GROUND_Y - 30, 24, 30);
+      // Sign
+      ctx.fillStyle = '#fbbf24';
+      ctx.font = 'bold 11px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText('Smoothie Shop', sx, GROUND_Y - 65);
+      // Glow
+      ctx.fillStyle = 'rgba(129, 140, 248, 0.15)';
+      ctx.beginPath();
+      ctx.arc(sx, GROUND_Y - 20, 70, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.textAlign = 'left';
+    }
+  }
+
+  // TopGolf dome
+  const tgScene = level13Moon.scenes.find(s => s.type === 'topgolf');
+  if (tgScene) {
+    const tx = tgScene.x - cam;
+    if (tx > -180 && tx < W + 180) {
+      // Large dome
+      ctx.fillStyle = '#059669';
+      ctx.beginPath();
+      ctx.arc(tx, GROUND_Y - 50, 70, Math.PI, 0);
+      ctx.lineTo(tx + 70, GROUND_Y);
+      ctx.lineTo(tx - 70, GROUND_Y);
+      ctx.closePath();
+      ctx.fill();
+      // Illuminated panels
+      ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+      ctx.lineWidth = 1;
+      for (let i = -3; i <= 3; i++) {
+        ctx.beginPath();
+        ctx.moveTo(tx + i * 18, GROUND_Y);
+        ctx.lineTo(tx + i * 7, GROUND_Y - 65);
+        ctx.stroke();
+      }
+      // Door
+      ctx.fillStyle = '#047857';
+      ctx.fillRect(tx - 15, GROUND_Y - 35, 30, 35);
+      // Sign
+      ctx.fillStyle = '#fbbf24';
+      ctx.font = 'bold 11px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText('TopGolf', tx, GROUND_Y - 75);
+      // Flag
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(tx + 50, GROUND_Y - 60, 2, 30);
+      ctx.beginPath();
+      ctx.moveTo(tx + 52, GROUND_Y - 60);
+      ctx.lineTo(tx + 65, GROUND_Y - 55);
+      ctx.lineTo(tx + 52, GROUND_Y - 50);
+      ctx.closePath();
+      ctx.fill();
+      ctx.textAlign = 'left';
+    }
+  }
+
+  // Platforms — lunar rock style
+  for (const p of level13Moon.platforms) {
+    const px = p.x - cam;
+    if (px + p.w < 0 || px > W) continue;
+    ctx.fillStyle = '#9ca3af';
+    ctx.fillRect(px, p.y, p.w, 8);
+    ctx.fillStyle = '#6b7280';
+    ctx.fillRect(px, p.y + 8, p.w, 4);
+  }
+
+  // Yarn balls
+  for (const yb of level13Moon.yarnBalls) {
+    const yx = yb.x - cam;
+    if (yx < -15 || yx > W + 15) continue;
+    if (yb.collected) continue;
+    const bob = Math.sin(t / 300 + yb.bobPhase) * 3;
+    ctx.fillStyle = yb.color;
+    ctx.beginPath();
+    ctx.arc(yx, yb.y + bob, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(yx, yb.y + bob, 5, 0, Math.PI);
+    ctx.stroke();
+  }
+
+  // NPCs (includes aliens from space flight)
+  for (const npc of level13Moon.npcs) {
+    const nx = npc.x - cam;
+    if (nx < -30 || nx > W + 30) continue;
+    drawKitty(npc.x, npc.y, npc.color, npc.facing, npc.walkFrame, npc.accessory);
+  }
+
+  // Interaction prompts
+  if (Math.abs(player.x - SMOOTHIE_SHOP_POS.x) < BUILDING_RANGE) {
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 14px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('Press Enter for Smoothies!', SMOOTHIE_SHOP_POS.x - cam, GROUND_Y - 80);
+    ctx.textAlign = 'left';
+  }
+  if (Math.abs(player.x - TOPGOLF_POS.x) < BUILDING_RANGE) {
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 14px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('Press Enter for TopGolf!', TOPGOLF_POS.x - cam, GROUND_Y - 90);
+    ctx.textAlign = 'left';
+  }
+
+  // Game completion area at end of level
+  if (player.x > ww - 300) {
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 18px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('You reached the Moon! Congratulations!', W / 2, 30);
+    ctx.font = '14px system-ui';
+    ctx.fillText('Press Enter to complete your adventure!', W / 2, 55);
+    ctx.textAlign = 'left';
+  }
+}
+
+// Smoothie Shop Interior
+function drawSmoothieShopInterior(cam, W, H) {
+  const cx = W / 2;
+  const cy = H / 2;
+
+  // Background — futuristic purple interior
+  ctx.fillStyle = '#312e81';
+  ctx.fillRect(cx - 220, cy - 140, 440, 300);
+  // Floor
+  ctx.fillStyle = '#4338ca';
+  ctx.fillRect(cx - 220, cy + 20, 440, 140);
+
+  // Glowing fruit containers
+  const fruits = [
+    { name: 'Strawberry', color: '#ef4444', x: cx - 150 },
+    { name: 'Mango', color: '#f59e0b', x: cx - 70 },
+    { name: 'Blueberry', color: '#6366f1', x: cx + 10 },
+    { name: 'Banana', color: '#fbbf24', x: cx + 90 },
+  ];
+  for (const fruit of fruits) {
+    // Container
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    ctx.fillRect(fruit.x - 20, cy - 80, 40, 50);
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(fruit.x - 20, cy - 80, 40, 50);
+    // Fruit
+    ctx.fillStyle = fruit.color;
+    ctx.beginPath();
+    ctx.arc(fruit.x, cy - 55, 10, 0, Math.PI * 2);
+    ctx.fill();
+    // Label
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '9px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText(fruit.name, fruit.x, cy - 25);
+  }
+
+  // Yogurt dispenser
+  ctx.fillStyle = '#f8fafc';
+  ctx.fillRect(cx + 150, cy - 70, 30, 40);
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = '8px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText('Yogurt', cx + 165, cy - 75);
+
+  // Blender
+  ctx.fillStyle = '#94a3b8';
+  ctx.fillRect(cx - 10, cy - 20, 20, 30);
+  ctx.fillStyle = smoothieBlending ? '#a78bfa' : '#e2e8f0';
+  ctx.fillRect(cx - 8, cy - 15, 16, 20);
+
+  // Current smoothie ingredients display
+  ctx.fillStyle = '#fbbf24';
+  ctx.font = 'bold 14px system-ui';
+  ctx.fillText('Smoothie Shop', cx, cy - 110);
+
+  // Instructions
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = '12px system-ui';
+  ctx.fillText('C = Add Fruit | Y = Yogurt | B = Blend | Enter = Exit', cx, cy + 130);
+
+  // Ingredient status
+  ctx.font = '11px system-ui';
+  const ingText = 'Fruits: ' + smoothieIngredients + '/3 | Yogurt: ' + (smoothieYogurt ? 'Yes' : 'No');
+  ctx.fillText(ingText, cx, cy + 50);
+
+  // Blending progress
+  if (smoothieBlending) {
+    const pct = smoothieProgress / 2000;
+    ctx.fillStyle = '#1f2937';
+    ctx.fillRect(cx - 50, cy + 60, 100, 10);
+    ctx.fillStyle = '#a78bfa';
+    ctx.fillRect(cx - 50, cy + 60, 100 * pct, 10);
+    ctx.fillText('Blending...', cx, cy + 85);
+  }
+
+  // Smoothie count
+  ctx.fillStyle = '#fbbf24';
+  ctx.font = 'bold 12px system-ui';
+  ctx.fillText('Smoothies made: ' + smoothieCount, cx, cy + 105);
+
+  ctx.textAlign = 'left';
+}
+
+// TopGolf Interior
+function drawTopGolfInterior(cam, W, H) {
+  const cx = W / 2;
+  const cy = H / 2;
+
+  // Dark backdrop with lunar landscape visible through dome
+  ctx.fillStyle = '#030712';
+  ctx.fillRect(cx - 250, cy - 150, 500, 320);
+
+  // Lunar landscape through dome
+  ctx.fillStyle = '#374151';
+  ctx.fillRect(cx - 250, cy + 50, 500, 120);
+
+  // Targets at varying distances
+  const targets = [
+    { x: cx + 50, label: 'Close', pts: 20, color: '#22c55e' },
+    { x: cx + 130, label: 'Medium', pts: 30, color: '#f59e0b' },
+    { x: cx + 220, label: 'Far', pts: 50, color: '#ef4444' },
+  ];
+  for (const tgt of targets) {
+    // Target post
+    ctx.fillStyle = tgt.color;
+    ctx.fillRect(tgt.x - 1, cy, 2, 50);
+    // Target ring
+    ctx.strokeStyle = tgt.color;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(tgt.x, cy + 10, 12, 0, Math.PI * 2);
+    ctx.stroke();
+    // Points label
+    ctx.fillStyle = '#fff';
+    ctx.font = '10px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText(tgt.pts + 'pts', tgt.x, cy - 5);
+  }
+
+  // Player tee area
+  ctx.fillStyle = '#065f46';
+  ctx.fillRect(cx - 200, cy + 50, 80, 20);
+
+  // Aim line
+  if (!golfBall.active) {
+    ctx.strokeStyle = '#fbbf24';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(cx - 160, cy + 50);
+    const aimLen = 60;
+    ctx.lineTo(
+      cx - 160 + Math.cos(golfAngle) * aimLen,
+      cy + 50 - Math.sin(golfAngle) * aimLen
+    );
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Power bar
+    if (golfCharging) {
+      ctx.fillStyle = '#1f2937';
+      ctx.fillRect(cx - 200, cy + 80, 80, 8);
+      ctx.fillStyle = '#fbbf24';
+      ctx.fillRect(cx - 200, cy + 80, 80 * golfPower, 8);
+    }
+  }
+
+  // Golf ball in flight
+  if (golfBall.active) {
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(golfBall.x, golfBall.y, 4, 0, Math.PI * 2);
+    ctx.fill();
+    // Trail
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.beginPath();
+    ctx.arc(golfBall.x - golfBall.vx * 2, golfBall.y - golfBall.vy * 2, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Title and instructions
+  ctx.fillStyle = '#fbbf24';
+  ctx.font = 'bold 14px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText('TopGolf on the Moon!', cx, cy - 130);
+
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = '12px system-ui';
+  ctx.fillText('Up/Down = Aim | Space = Shoot | Enter = Exit', cx, cy + 140);
+
+  // Score
+  ctx.fillStyle = '#fbbf24';
+  ctx.font = 'bold 12px system-ui';
+  ctx.fillText('Golf Score: ' + golfScore, cx, cy + 110);
+
+  ctx.textAlign = 'left';
+}
+
 const levelRegistry = {
   1: {
     name: 'Meadow',
@@ -5696,6 +6120,16 @@ const levelRegistry = {
     musicId: 'musicSpace',
     drawSky: drawSpaceSky,
     drawWorld: drawSpaceWorld,
+  },
+  13: {
+    name: 'Moon',
+    worldW: level13Moon.worldW,
+    platforms: level13Moon.platforms,
+    yarnBalls: level13Moon.yarnBalls,
+    npcs: moonNpcs,
+    musicId: 'musicMoon',
+    drawSky: drawMoonSky,
+    drawWorld: drawMoonWorld,
   },
 };
 

@@ -604,6 +604,28 @@ function updatePrompt(near) {
     el.textContent = 'Press Enter to board the rocket!';
     el.style.display = 'block';
     setAction('Enter', 'Board');
+  } else if (currentScene === Scene.SMOOTHIE_SHOP) {
+    el.textContent = 'C = Fruit | Y = Yogurt | B = Blend | Enter = Exit';
+    el.style.display = 'block';
+    setAction('KeyC', 'Fruit');
+    return;
+  } else if (currentScene === Scene.TOPGOLF) {
+    el.textContent = 'Up/Down = Aim | Space = Shoot | Enter = Exit';
+    el.style.display = 'block';
+    setAction('Space', 'Shoot');
+    return;
+  } else if (currentLevel === 13 && Math.abs(player.x - SMOOTHIE_SHOP_POS.x) < BUILDING_RANGE) {
+    el.textContent = 'Press Enter for Smoothie Shop!';
+    el.style.display = 'block';
+    setAction('Enter', 'Enter');
+  } else if (currentLevel === 13 && Math.abs(player.x - TOPGOLF_POS.x) < BUILDING_RANGE) {
+    el.textContent = 'Press Enter for TopGolf!';
+    el.style.display = 'block';
+    setAction('Enter', 'Enter');
+  } else if (currentLevel === 13 && player.x > level13Moon.worldW - 300) {
+    el.textContent = 'Press Enter to complete your adventure!';
+    el.style.display = 'block';
+    setAction('Enter', 'Finish');
   } else if (currentLevel === 1 && Math.abs(player.x - BRIDGE_PORTAL.x) < 60) {
     el.textContent = 'Press Enter to go sledding!';
     el.style.display = 'block';
