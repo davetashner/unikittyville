@@ -408,6 +408,43 @@ function drawPlayerAndUI() {
     drawStroller(player.x - player.facing * 25, player.y, kitFurColor);
   }
 
+  // Draw named parrot on player's shoulder (safari + cape levels)
+  if (parrotState === 'named' && (currentLevel === 9 || currentLevel === 11) && currentScene === null) {
+    const px = player.x + player.facing * 8;
+    const py = player.y - 35 + Math.sin(gameTime / 400) * 1.5;
+    // Body
+    ctx.fillStyle = '#22c55e';
+    ctx.beginPath(); ctx.ellipse(px, py, 4, 5, 0, 0, Math.PI * 2); ctx.fill();
+    // Head
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath(); ctx.arc(px, py - 6, 3.5, 0, Math.PI * 2); ctx.fill();
+    // Beak
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath();
+    ctx.moveTo(px + player.facing * 3, py - 7);
+    ctx.lineTo(px + player.facing * 7, py - 5.5);
+    ctx.lineTo(px + player.facing * 3, py - 5);
+    ctx.closePath(); ctx.fill();
+    // Eye
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(px + player.facing * 1, py - 6.5, 1.5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.arc(px + player.facing * 1.3, py - 6.5, 0.7, 0, Math.PI * 2); ctx.fill();
+    // Tail
+    ctx.fillStyle = '#3b82f6';
+    ctx.beginPath();
+    ctx.moveTo(px - player.facing * 2, py + 3);
+    ctx.lineTo(px - player.facing * 6, py + 9);
+    ctx.lineTo(px - player.facing * 1, py + 8);
+    ctx.closePath(); ctx.fill();
+    // Name
+    if (parrotName) {
+      ctx.fillStyle = '#fbbf24'; ctx.font = 'bold 8px system-ui'; ctx.textAlign = 'center';
+      ctx.fillText(parrotName, px, py - 12);
+      ctx.textAlign = 'left';
+    }
+  }
+
   // Glitter particles from horn
   for (const g of glitterParticles) {
     const alpha = Math.min(1, g.life / 400);
@@ -5147,10 +5184,9 @@ function drawWateringHole(cam, W) {
 }
 
 function drawWateringHoleScene(cam, W, H) {
-  // Swimming scene — similar to fountain swimming
   const cx = cam + W / 2;
   const cy = GROUND_Y - 80;
-  // Background
+  // Background — savanna sky
   ctx.fillStyle = '#87CEEB';
   ctx.fillRect(cam, 0, W, H);
   // Water
@@ -5168,6 +5204,117 @@ function drawWateringHoleScene(cam, W, H) {
   // Shore
   ctx.fillStyle = '#c8a96e';
   ctx.fillRect(cam, cy + 25, W, 8);
+
+  // Friendly crocodile (emerges from right side of water)
+  if (crocVisible) {
+    const crocX = cx + 120;
+    const crocY = cy + 55;
+    const bobY = Math.sin(gameTime / 800) * 3;
+    // Snout poking out of water
+    ctx.fillStyle = '#4a7c59';
+    ctx.beginPath();
+    ctx.ellipse(crocX, crocY + bobY, 25, 12, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Head bump
+    ctx.beginPath();
+    ctx.ellipse(crocX - 15, crocY - 5 + bobY, 15, 10, -0.2, 0, Math.PI * 2);
+    ctx.fill();
+    // Eyes (big friendly cartoon eyes)
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(crocX - 20, crocY - 10 + bobY, 6, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(crocX - 10, crocY - 10 + bobY, 6, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#1a1a1a';
+    ctx.beginPath(); ctx.arc(crocX - 19, crocY - 10 + bobY, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(crocX - 9, crocY - 10 + bobY, 3, 0, Math.PI * 2); ctx.fill();
+    // Friendly smile
+    ctx.strokeStyle = '#2d5a3d';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(crocX - 5, crocY + 2 + bobY, 10, 0.2, Math.PI - 0.2);
+    ctx.stroke();
+    // Nostrils
+    ctx.fillStyle = '#2d5a3d';
+    ctx.beginPath(); ctx.arc(crocX + 8, crocY - 2 + bobY, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(crocX + 12, crocY - 2 + bobY, 2, 0, Math.PI * 2); ctx.fill();
+    // Speech bubble
+    if (crocSpeech.timer > 0) {
+      ctx.font = '11px system-ui';
+      const textW = ctx.measureText(crocSpeech.text).width;
+      const bw = Math.min(textW + 16, 200);
+      const bx = crocX - bw / 2;
+      const by = crocY - 40 + bobY;
+      ctx.fillStyle = 'rgba(255,255,255,0.95)';
+      ctx.beginPath(); ctx.roundRect(bx, by - 12, bw, 20, 6); ctx.fill();
+      ctx.fillStyle = '#1a1a1a';
+      ctx.textAlign = 'center';
+      ctx.fillText(crocSpeech.text, crocX, by + 3);
+      ctx.textAlign = 'left';
+    }
+  }
+
+  // Parrot (arriving or on shoulder)
+  if (parrotState === 'arriving' || parrotState === 'shoulder' || parrotState === 'named') {
+    const targetX = cx - 10;
+    const targetY = cy + 25;
+    let px, py;
+    if (parrotState === 'arriving') {
+      const t = Math.min(1, parrotArrivalTimer / 1500);
+      px = cam + W + 30 - (W + 60) * t * t; // fly in from right
+      py = cy - 40 + t * 65;
+    } else {
+      px = targetX;
+      py = targetY + Math.sin(gameTime / 400) * 2;
+    }
+    // Parrot body
+    ctx.fillStyle = '#22c55e'; // green body
+    ctx.beginPath(); ctx.ellipse(px, py, 6, 8, 0, 0, Math.PI * 2); ctx.fill();
+    // Head
+    ctx.fillStyle = '#ef4444'; // red head
+    ctx.beginPath(); ctx.arc(px, py - 9, 5, 0, Math.PI * 2); ctx.fill();
+    // Beak
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath();
+    ctx.moveTo(px + 4, py - 10);
+    ctx.lineTo(px + 9, py - 8);
+    ctx.lineTo(px + 4, py - 7);
+    ctx.closePath();
+    ctx.fill();
+    // Eye
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(px + 1, py - 10, 2.5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.arc(px + 1.5, py - 10, 1.2, 0, Math.PI * 2); ctx.fill();
+    // Tail feathers
+    ctx.fillStyle = '#3b82f6'; // blue tail
+    ctx.beginPath();
+    ctx.moveTo(px - 3, py + 6);
+    ctx.lineTo(px - 8, py + 16);
+    ctx.lineTo(px - 2, py + 14);
+    ctx.lineTo(px + 2, py + 16);
+    ctx.lineTo(px + 1, py + 6);
+    ctx.closePath();
+    ctx.fill();
+    // Wing (flapping when arriving)
+    if (parrotState === 'arriving') {
+      const wing = Math.sin(gameTime / 80) * 8;
+      ctx.fillStyle = '#16a34a';
+      ctx.beginPath();
+      ctx.moveTo(px - 5, py - 3);
+      ctx.lineTo(px - 15, py - 5 + wing);
+      ctx.lineTo(px - 5, py + 3);
+      ctx.closePath();
+      ctx.fill();
+    }
+    // Name label
+    if (parrotState === 'named' && parrotName) {
+      ctx.fillStyle = '#fbbf24';
+      ctx.font = 'bold 10px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText(parrotName, px, py - 18);
+      ctx.textAlign = 'left';
+    }
+  }
+
   // Player splashing
   drawKitty(cx, cy + 45, player.color, player.facing, player.walkFrame, 'horn', playerEyeColor, playerHornColors);
   // Splash effects
@@ -5179,7 +5326,10 @@ function drawWateringHoleScene(cam, W, H) {
   }
   // Instructions
   ctx.fillStyle = '#fff'; ctx.font = 'bold 14px system-ui'; ctx.textAlign = 'center';
-  ctx.fillText('Splashing in the watering hole! Press S to get out', cx, cy - 10);
+  let promptText = 'Splashing in the watering hole! Press S to get out';
+  if (parrotState === 'shoulder') promptText = 'A parrot is on your shoulder! Press N to name it | S to exit';
+  ctx.fillText(promptText, cx, cy - 10);
+  ctx.textAlign = 'left';
 }
 
 function drawCheetahSpeech(x, gy) {
