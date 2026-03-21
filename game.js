@@ -20,6 +20,7 @@ const POINTS = {
   FRUIT: 10, ELEPHANT_BOOST: 15, RHINO_HIT: 15,
   SAFARI_PHOTO: 30, SAFARI_PHOTO_DUP: 5, SAFARI_COLLECTION: 100,
   CHEETAH_RIDE: 50, GIRAFFE_LIFT: 10,
+  HOTDOG_MATH: 25,
 };
 
 // ── Timing durations (ms) ──
@@ -111,6 +112,18 @@ let pizzaMaking = { active: false, progress: 0, stage: 'idle', pizzaCount: 0 };
 const PIZZA_SHOP = { x: 1000, w: 80 };
 let hotdogCount = 0;
 const HOTDOG_POSITIONS = [600, 2000, 3400];
+// Hot Dog Math minigame state
+const HOTDOG_MATH_PRICES = [1.50, 2.75, 3.25, 4.10, 6.50];
+let hotdogMath = {
+  active: false,
+  round: 0,       // 0-4 (5 rounds)
+  price: 0,       // current round price
+  paid: 0,        // amount paid so far (in cents to avoid float issues)
+  complete: false, // all 5 rounds done
+  feedback: '',    // feedback message (correct/overpaid)
+  feedbackTimer: 0,
+  vendorX: 0,     // which vendor triggered the minigame
+};
 const CENTRAL_PARK_POS = { x: 2200, w: 160 };
 const HOSPITAL_POS = { x: 1800, w: 120 };
 const FAO_SCHWARZ_POS = { x: 700, w: 100 };
@@ -580,6 +593,13 @@ function completeTransition() {
   activeSpeechBubbles = [];
   pizzaMaking.stage = 'idle';
   pizzaMaking.progress = 0;
+  // Reset hot dog math minigame
+  hotdogMath.active = false;
+  hotdogMath.round = 0;
+  hotdogMath.paid = 0;
+  hotdogMath.complete = false;
+  hotdogMath.feedback = '';
+  hotdogMath.feedbackTimer = 0;
   // Reset hospital minigame stage (but keep delivery/stroller/color state)
   hospitalStage = 'idle';
   hospitalProgress = 0;
@@ -1555,11 +1575,11 @@ function update(dt) {
     return;
   }
 
-  // Movement
+  // Movement (blocked during hotdog math)
   player.vx = 0;
   const effectiveMoveSpeed = currentLevel === 13 ? MOON_MOVE_SPEED : MOVE_SPEED;
-  if (keys['ArrowLeft']) { player.vx = -effectiveMoveSpeed; player.facing = -1; }
-  if (keys['ArrowRight']) { player.vx = effectiveMoveSpeed; player.facing = 1; }
+  if (!hotdogMath.active && keys['ArrowLeft']) { player.vx = -effectiveMoveSpeed; player.facing = -1; }
+  if (!hotdogMath.active && keys['ArrowRight']) { player.vx = effectiveMoveSpeed; player.facing = 1; }
   if (keys['ArrowUp']) { player.vx += 0; } // up on land is no-op for now
   if (keys['ArrowDown']) { player.vx += 0; }
 
@@ -1848,21 +1868,30 @@ function update(dt) {
     metPaintingIndex = 0;
   }
 
-  // Hot dog stands (level 2 — buy for 10 points)
+  // Hot dog stands (level 3 — math minigame with H key)
   let nearHotdog = false;
-  if (currentLevel === 3) {
+  if (currentLevel === 3 && !hotdogMath.active) {
     for (const hx of HOTDOG_POSITIONS) {
       if (Math.abs(player.x - hx) < INTERACT_RANGE) {
         nearHotdog = true;
-        if (keys['KeyC'] && score >= POINTS.HOTDOG_COST) {
-          keys['KeyC'] = false;
-          score -= POINTS.HOTDOG_COST;
-          hotdogCount++;
-          addPopup(player.x, player.y - 40, 'Hot Dog! -10pts', '#fbbf24');
+        if (keys['KeyH'] && !hotdogMath.complete) {
+          keys['KeyH'] = false;
+          hotdogMath.active = true;
+          hotdogMath.round = 0;
+          hotdogMath.price = HOTDOG_MATH_PRICES[0];
+          hotdogMath.paid = 0;
+          hotdogMath.feedback = '';
+          hotdogMath.feedbackTimer = 0;
+          hotdogMath.vendorX = hx;
         }
         break;
       }
     }
+  }
+
+  // Hot dog math minigame update
+  if (hotdogMath.active) {
+    updateHotdogMath();
   }
 
   // Central Park entry (level 2)
@@ -3094,6 +3123,9 @@ function update(dt) {
     if (popups[i].life <= 0) popups.splice(i, 1);
   }
 
+  // Hot dog math feedback timer
+  updateHotdogMathFeedback(dt);
+
   // Glitter horn effect — spray when crossing a 100-point milestone
   const currentMilestone = Math.floor(score / 100);
   if (currentMilestone > lastGlitterScore && score > 0) {
@@ -3190,6 +3222,79 @@ function getGroundLevel(x) {
 
 function addPopup(x, y, text, color) {
   popups.push({ x, y, text, color, life: TIMING.POPUP_LIFE });
+}
+
+function updateHotdogMath() {
+  // Show feedback for a moment before advancing
+  if (hotdogMath.feedbackTimer > 0) return;
+
+  const priceCents = Math.round(hotdogMath.price * 100);
+
+  // Coin/bill key inputs
+  const coinKeys = [
+    { code: 'Digit1', value: 100, label: '$1' },
+    { code: 'Digit5', value: 500, label: '$5' },
+    { code: 'KeyQ', value: 25, label: '25\u00a2' },
+    { code: 'KeyD', value: 10, label: '10\u00a2' },
+    { code: 'KeyN', value: 5, label: '5\u00a2' },
+    { code: 'KeyP', value: 1, label: '1\u00a2' },
+  ];
+
+  for (const ck of coinKeys) {
+    if (keys[ck.code]) {
+      keys[ck.code] = false;
+      hotdogMath.paid += ck.value;
+      playChaChing();
+      break;
+    }
+  }
+
+  // Check if paid enough
+  if (hotdogMath.paid >= priceCents) {
+    const overpay = hotdogMath.paid - priceCents;
+    hotdogCount++;
+    score += POINTS.HOTDOG_MATH;
+    hud.score.textContent = score;
+    hud.hotdog.textContent = hotdogCount;
+
+    if (overpay === 0) {
+      hotdogMath.feedback = 'Exact change! +' + POINTS.HOTDOG_MATH + ' Math Bonus!';
+    } else {
+      const changeDollars = (overpay / 100).toFixed(2);
+      hotdogMath.feedback = 'Overpaid! Change: $' + changeDollars +
+        ' ($' + (hotdogMath.paid / 100).toFixed(2) + ' - $' + hotdogMath.price.toFixed(2) +
+        ' = $' + changeDollars + ') +' + POINTS.HOTDOG_MATH + ' pts!';
+    }
+    hotdogMath.feedbackTimer = 2500;
+    addPopup(player.x, player.y - 40, '+' + POINTS.HOTDOG_MATH + ' Math Bonus!', '#22c55e');
+  }
+
+  // Escape to cancel
+  if (keys['Escape']) {
+    keys['Escape'] = false;
+    hotdogMath.active = false;
+    hotdogMath.paid = 0;
+  }
+}
+
+function updateHotdogMathFeedback(dt) {
+  if (!hotdogMath.active || hotdogMath.feedbackTimer <= 0) return;
+  hotdogMath.feedbackTimer -= dt;
+  if (hotdogMath.feedbackTimer <= 0) {
+    hotdogMath.feedbackTimer = 0;
+    // Advance to next round
+    hotdogMath.round++;
+    if (hotdogMath.round >= HOTDOG_MATH_PRICES.length) {
+      // All rounds complete
+      hotdogMath.active = false;
+      hotdogMath.complete = true;
+      addPopup(player.x, player.y - 60, 'All 5 hot dogs bought!', '#fbbf24');
+    } else {
+      hotdogMath.price = HOTDOG_MATH_PRICES[hotdogMath.round];
+      hotdogMath.paid = 0;
+      hotdogMath.feedback = '';
+    }
+  }
 }
 
 function updatePizzaMinigame(dt) {
