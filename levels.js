@@ -2002,6 +2002,8 @@ const ROCKET_POS = { x: 3800, y: GROUND_Y };
 const SPACE_SUIT_POS = { x: 2000 };
 // NASA buildings
 const NASA_BUILDING_POS = { x: 1200, w: 180 };
+// Mission Control building (separate from museum)
+const MISSION_CONTROL_POS = { x: 2600, w: 160 };
 
 const level11Cape = {
   worldW: CAPE_WORLD_W,
@@ -2026,6 +2028,7 @@ const level11Cape = {
     { type: 'palm_tree', x: 1800 },
     { type: 'palm_tree', x: 4400 },
     { type: 'nasa_building', x: NASA_BUILDING_POS.x },
+    { type: 'mission_control', x: MISSION_CONTROL_POS.x },
     { type: 'rocket', x: ROCKET_POS.x },
     { type: 'space_suit', x: SPACE_SUIT_POS.x },
   ],
