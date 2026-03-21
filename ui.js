@@ -304,6 +304,14 @@ window.addEventListener('orientationchange', () => { setTimeout(resize, 100); })
 window.addEventListener('keydown', e => {
   if (!e.repeat) keys[e.code] = true;
   if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'ArrowDown') e.preventDefault();
+  // Baby name typing in hospital name_pick stage
+  if (hospitalStage === 'name_pick' && !e.repeat) {
+    if (e.key === 'Backspace') {
+      kitNameInput = kitNameInput.slice(0, -1);
+    } else if (e.key.length === 1 && kitNameInput.length < 12 && /[a-zA-Z ]/.test(e.key)) {
+      kitNameInput += e.key;
+    }
+  }
 });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 
@@ -608,9 +616,19 @@ function updatePrompt(near) {
     return;
   }
   if (currentScene === Scene.PARK) {
-    el.textContent = 'Relaxing in Central Park... Press Enter to leave';
-    el.style.display = 'block';
-    setAction('Enter', 'Exit');
+    if (hasStroller && picnic.active) {
+      el.textContent = picnic.feeding ? 'Kit is eating...' : 'Press F to feed Kit!';
+      el.style.display = 'block';
+      setAction('KeyF', 'Feed', 'Enter', 'Exit');
+    } else if (hasStroller && !kitParkBonus) {
+      el.textContent = 'Central Park with Kit! Press P for a picnic';
+      el.style.display = 'block';
+      setAction('KeyP', 'Picnic', 'Enter', 'Exit');
+    } else {
+      el.textContent = 'Relaxing in Central Park... Press Enter to leave';
+      el.style.display = 'block';
+      setAction('Enter', 'Exit');
+    }
     return;
   }
   if (currentScene === Scene.HOSPITAL) {
@@ -631,6 +649,9 @@ function updatePrompt(near) {
       setAction(null, '');
     } else if (hospitalStage === 'color_pick') {
       el.textContent = 'Press 1-8 to choose Kit\'s color, Enter to confirm';
+      setAction('Enter', 'Confirm');
+    } else if (hospitalStage === 'name_pick') {
+      el.textContent = 'Type a name for your baby, then press Enter';
       setAction('Enter', 'Confirm');
     }
     el.style.display = 'block';
