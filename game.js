@@ -66,6 +66,7 @@ const Scene = {
   CAPE_LAUNCH: 'capeLaunch',
   SMOOTHIE_SHOP: 'smoothieShop',
   TOPGOLF: 'topGolf',
+  HOSPITAL: 'hospital',
 };
 let currentScene = null;
 
@@ -105,6 +106,20 @@ const PIZZA_SHOP = { x: 1000, w: 80 };
 let hotdogCount = 0;
 const HOTDOG_POSITIONS = [600, 2000, 3400];
 const CENTRAL_PARK_POS = { x: 2200, w: 160 };
+const HOSPITAL_POS = { x: 1800, w: 120 };
+
+// Hospital delivery minigame
+let hospitalStage = 'idle'; // 'idle' | 'prep' | 'vitals' | 'breathing' | 'delivery' | 'celebrate' | 'color_pick'
+let hospitalProgress = 0;
+let hospitalPrepStations = 0; // 0-3, stations prepared
+let hospitalVitalsZone = 0; // current heartbeat position (oscillates)
+let hospitalBreathingPhase = 0; // current breathing phase
+let hospitalBreathingHits = 0; // successful rhythm hits
+let hospitalDeliveryPower = 0; // delivery push power
+let hospitalDelivered = false; // has Kit been delivered this session?
+let kitFurColor = '#fda4af'; // baby Kit's chosen fur color (default pink)
+let hasStroller = false; // does player have the stroller?
+let kitParkBonus = false; // has player taken Kit to Central Park?
 const TAXI_POSITIONS = [300, 1200, 2400, 3600];
 // Rome interactions
 let gelatoCount = 0;
@@ -503,6 +518,12 @@ function completeTransition() {
   activeSpeechBubbles = [];
   pizzaMaking.stage = 'idle';
   pizzaMaking.progress = 0;
+  // Reset hospital minigame stage (but keep delivery/stroller/color state)
+  hospitalStage = 'idle';
+  hospitalProgress = 0;
+  hospitalPrepStations = 0;
+  hospitalBreathingHits = 0;
+  hospitalDeliveryPower = 0;
   camperPlayerX = 0;
   camperCooking = { active: false, progress: 0, burnt: false };
   camperNapping = false;
@@ -909,6 +930,135 @@ function update(dt) {
       keys['Enter'] = false;
       currentScene = null;
     }
+    return;
+  }
+
+  // Hospital delivery minigame
+  if (currentScene === Scene.HOSPITAL) {
+
+    // Stage 1: PREP ROOM — Press C at 3 stations to prepare supplies
+    if (hospitalStage === 'prep') {
+      if (keys['KeyC']) {
+        keys['KeyC'] = false;
+        hospitalPrepStations++;
+        addPopup(player.x, player.y - 30, 'Station ready!', '#60a5fa');
+        if (hospitalPrepStations >= 3) {
+          hospitalStage = 'vitals';
+          hospitalProgress = 0;
+          hospitalVitalsZone = 0;
+          addPopup(player.x, player.y - 40, 'Room prepared! Monitor vitals...', '#22c55e');
+        }
+      }
+    }
+
+    // Stage 2: VITALS — Heartbeat oscillates, press Space when in green zone
+    else if (hospitalStage === 'vitals') {
+      hospitalProgress += dt;
+      hospitalVitalsZone = Math.sin(hospitalProgress / 400) * 0.5 + 0.5;
+
+      if (keys['Space']) {
+        keys['Space'] = false;
+        if (hospitalVitalsZone > 0.35 && hospitalVitalsZone < 0.65) {
+          hospitalStage = 'breathing';
+          hospitalProgress = 0;
+          hospitalBreathingHits = 0;
+          hospitalBreathingPhase = 0;
+          addPopup(player.x, player.y - 40, 'Vitals stable! Coach breathing...', '#22c55e');
+          playChaChing();
+        } else {
+          hospitalProgress = 0;
+          addPopup(player.x, player.y - 40, 'Missed! Try again...', '#ef4444');
+        }
+      }
+    }
+
+    // Stage 3: BREATHING — Rhythmic button presses in sync with indicator
+    else if (hospitalStage === 'breathing') {
+      hospitalProgress += dt;
+      hospitalBreathingPhase = (hospitalProgress % 2000) / 2000;
+
+      if (keys['Space']) {
+        keys['Space'] = false;
+        const nearPeak = hospitalBreathingPhase < 0.15 || hospitalBreathingPhase > 0.85;
+        if (nearPeak) {
+          hospitalBreathingHits++;
+          addPopup(player.x, player.y - 30, 'Good rhythm!', '#22c55e');
+          if (hospitalBreathingHits >= 5) {
+            hospitalStage = 'delivery';
+            hospitalProgress = 0;
+            hospitalDeliveryPower = 0;
+            addPopup(player.x, player.y - 40, 'Ready to deliver!', '#fbbf24');
+            playChaChing();
+          }
+        } else {
+          addPopup(player.x, player.y - 30, 'Off beat!', '#f59e0b');
+        }
+      }
+    }
+
+    // Stage 4: DELIVERY — Hold Space to build power, release at right moment
+    else if (hospitalStage === 'delivery') {
+      hospitalProgress += dt;
+      if (keys['Space']) {
+        hospitalDeliveryPower = Math.min(1, hospitalDeliveryPower + 0.012);
+      } else if (hospitalDeliveryPower > 0) {
+        if (hospitalDeliveryPower > 0.7 && hospitalDeliveryPower < 0.95) {
+          hospitalStage = 'celebrate';
+          hospitalProgress = 0;
+          hospitalDelivered = true;
+          score += 200;
+          addPopup(player.x, player.y - 40, '+200 Baby Kit is here!', '#f472b6');
+          playChaChing();
+        } else if (hospitalDeliveryPower > 0.4) {
+          hospitalStage = 'celebrate';
+          hospitalProgress = 0;
+          hospitalDelivered = true;
+          score += 100;
+          addPopup(player.x, player.y - 40, '+100 Welcome Kit!', '#f472b6');
+          playChaChing();
+        } else {
+          hospitalDeliveryPower = 0;
+          addPopup(player.x, player.y - 40, 'More push needed!', '#ef4444');
+        }
+      }
+    }
+
+    // Stage 5: CELEBRATION — brief confetti moment, then color pick
+    else if (hospitalStage === 'celebrate') {
+      hospitalProgress += dt;
+      if (hospitalProgress > 3000) {
+        hospitalStage = 'color_pick';
+        hospitalProgress = 0;
+      }
+    }
+
+    // Stage 6: COLOR PICK — Choose Kit's fur color
+    else if (hospitalStage === 'color_pick') {
+      const kitColors = ['#fda4af','#93c5fd','#86efac','#fde047','#c4b5fd','#fdba74','#f0abfc','#67e8f9'];
+      for (let i = 0; i < 8; i++) {
+        if (keys['Digit' + (i + 1)]) {
+          keys['Digit' + (i + 1)] = false;
+          kitFurColor = kitColors[i];
+          hasStroller = true;
+          currentScene = null;
+          player.y = GROUND_Y;
+          player.vy = 0;
+          player.onGround = true;
+          addPopup(player.x, player.y - 40, 'Kit says meow!', kitFurColor);
+          break;
+        }
+      }
+      if (keys['Enter']) {
+        keys['Enter'] = false;
+        hasStroller = true;
+        currentScene = null;
+        player.y = GROUND_Y;
+        player.vy = 0;
+        player.onGround = true;
+        addPopup(player.x, player.y - 40, 'Kit says meow!', kitFurColor);
+      }
+    }
+
     return;
   }
 
@@ -1357,6 +1507,16 @@ function update(dt) {
     pizzaMaking.active = false;
   }
 
+  // Hospital entry (level 2 — NYC)
+  const nearHospital = currentLevel === 3 && Math.abs(player.x - HOSPITAL_POS.x) < BUILDING_RANGE && !hospitalDelivered;
+  if (keys['Enter'] && nearHospital && currentScene === null) {
+    keys['Enter'] = false;
+    currentScene = Scene.HOSPITAL;
+    hospitalStage = 'prep';
+    hospitalProgress = 0;
+    hospitalPrepStations = 0;
+  }
+
   // Hot dog stands (level 2 — buy for 10 points)
   let nearHotdog = false;
   if (currentLevel === 3) {
@@ -1380,6 +1540,16 @@ function update(dt) {
   if (keys['Enter'] && nearPark && currentScene === null) {
     keys['Enter'] = false;
     currentScene = Scene.PARK;
+  }
+
+  // Stroller bonus at Central Park
+  if (hasStroller && !kitParkBonus && currentLevel === 3 && currentScene === null) {
+    if (Math.abs(player.x - CENTRAL_PARK_POS.x) < CENTRAL_PARK_POS.w / 2) {
+      kitParkBonus = true;
+      score += 150;
+      addPopup(player.x, player.y - 40, '+150 Kit loves the park!', '#22c55e');
+      playChaChing();
+    }
   }
 
   // Taxi → Rome (level 2)
@@ -2588,7 +2758,7 @@ function update(dt) {
     nearChalet, nearTrain, nearNpc, nearStick, nearFirePit, nearHammock,
     nearBigfoot, nearDigSite, nearWaterPump, nearPool, nearCampCamper,
     nearSailboat, nearDiveSpot, nearBaobab, nearCheetah, nearSafariJeep,
-    nearWateringHole, nearElephant
+    nearWateringHole, nearElephant, nearHospital
   });
 }
 

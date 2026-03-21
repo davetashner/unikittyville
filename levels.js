@@ -1242,6 +1242,7 @@ const level2 = {
     { type: 'central_park', x: 2200 },
     { type: 'statue_liberty', x: 4550 },
     { type: 'subway', x: 1700 },
+    { type: 'hospital', x: 1800 },
     { type: 'pigeon_flock', x: 500 },
     { type: 'pigeon_flock', x: 2600 },
     { type: 'pigeon_flock', x: 3800 },

@@ -1321,3 +1321,324 @@ function drawCampCamperInterior(cam, W, H) {
   ctx.fillText('Camp Camper', cx, cy - 110);
   ctx.textAlign = 'left';
 }
+
+function drawHospitalInterior(cam, W, H) {
+  const cx = cam + W / 2;
+  const cy = GROUND_Y - 80;
+
+  // Hospital floor (light teal tiles)
+  ctx.fillStyle = '#f0fdfa';
+  ctx.fillRect(cam, cy, W, H);
+  // Tile grid
+  ctx.strokeStyle = '#ccfbf1';
+  ctx.lineWidth = 0.5;
+  for (let tx = -220; tx < 220; tx += 25) {
+    for (let ty = 0; ty < 160; ty += 25) {
+      ctx.strokeRect(cx + tx, cy + ty, 25, 25);
+    }
+  }
+
+  // Back wall (pale blue)
+  ctx.fillStyle = '#e0f2fe';
+  ctx.fillRect(cam, 0, W, cy);
+  // Wainscoting
+  ctx.fillStyle = '#bae6fd';
+  ctx.fillRect(cam, cy - 30, W, 30);
+
+  // Mom unikitty on hospital bed (right side)
+  const bedX = cx + 60;
+  const bedY = cy - 10;
+  // Bed
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.roundRect(bedX - 30, bedY, 60, 20, 4);
+  ctx.fill();
+  ctx.strokeStyle = '#94a3b8';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  // Pillow
+  ctx.fillStyle = '#e0f2fe';
+  ctx.beginPath();
+  ctx.roundRect(bedX + 15, bedY - 5, 18, 8, 3);
+  ctx.fill();
+  // Mom (larger unikitty, lying down)
+  ctx.fillStyle = '#f9a8d4';
+  ctx.beginPath();
+  ctx.ellipse(bedX + 5, bedY - 2, 12, 8, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Mom's head
+  ctx.beginPath();
+  ctx.arc(bedX + 18, bedY - 5, 8, 0, Math.PI * 2);
+  ctx.fill();
+  // Mom's eyes
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(bedX + 16, bedY - 6, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(bedX + 20, bedY - 6, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#1e1b4b';
+  ctx.beginPath();
+  ctx.arc(bedX + 16.5, bedY - 5.5, 1, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(bedX + 20.5, bedY - 5.5, 1, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Heart monitor (left side)
+  const monitorX = cx - 120;
+  const monitorY = cy - 80;
+  ctx.fillStyle = '#1f2937';
+  ctx.beginPath();
+  ctx.roundRect(monitorX, monitorY, 80, 50, 4);
+  ctx.fill();
+  // Screen
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(monitorX + 4, monitorY + 4, 72, 35);
+  // Heartbeat line
+  ctx.strokeStyle = '#22c55e';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  const lineY = monitorY + 22;
+  for (let i = 0; i < 70; i += 2) {
+    const hx = monitorX + 5 + i;
+    let hy = lineY;
+    const phase = (i + gameTime / 50) % 30;
+    if (phase > 10 && phase < 13) hy -= 8;
+    if (phase > 13 && phase < 16) hy += 5;
+    if (i === 0) ctx.moveTo(hx, hy);
+    else ctx.lineTo(hx, hy);
+  }
+  ctx.stroke();
+  // "HR: 120" text
+  ctx.fillStyle = '#22c55e';
+  ctx.font = '8px monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText('HR: 120', monitorX + 6, monitorY + 46);
+
+  // IV drip stand
+  ctx.fillStyle = '#94a3b8';
+  ctx.fillRect(cx + 100, cy - 100, 2, 90);
+  ctx.fillStyle = '#bfdbfe';
+  ctx.beginPath();
+  ctx.roundRect(cx + 94, cy - 105, 14, 18, 3);
+  ctx.fill();
+  // Drip line
+  ctx.strokeStyle = '#bfdbfe';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(cx + 101, cy - 87);
+  ctx.lineTo(cx + 101, cy - 75);
+  ctx.quadraticCurveTo(cx + 90, cy - 60, bedX + 25, bedY - 3);
+  ctx.stroke();
+
+  // Player as nurse (left side of room)
+  const nurseX = cx - 60;
+  const nurseY = cy - 20;
+  drawKitty(nurseX, nurseY, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
+  // Nurse hat (white cap with red cross)
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.roundRect(nurseX - 8, nurseY - 42, 16, 8, 2);
+  ctx.fill();
+  ctx.fillStyle = '#ef4444';
+  ctx.fillRect(nurseX - 1, nurseY - 41, 2, 6);
+  ctx.fillRect(nurseX - 3, nurseY - 39, 6, 2);
+
+  // ── Stage-specific visuals ──
+
+  // PREP STAGE
+  if (hospitalStage === 'prep') {
+    const stations = ['Blankets', 'Supplies', 'Equipment'];
+    for (let i = 0; i < 3; i++) {
+      const sx = cx - 160 + i * 80;
+      const sy = cy - 120;
+      ctx.fillStyle = i < hospitalPrepStations ? '#86efac' : '#e2e8f0';
+      ctx.beginPath();
+      ctx.roundRect(sx, sy, 50, 30, 4);
+      ctx.fill();
+      ctx.fillStyle = '#1f2937';
+      ctx.font = '8px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText(stations[i], sx + 25, sy + 18);
+      if (i < hospitalPrepStations) {
+        ctx.fillStyle = '#16a34a';
+        ctx.font = 'bold 14px system-ui';
+        ctx.fillText('\u2713', sx + 25, sy + 12);
+      }
+    }
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 16px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('Prepare the delivery room!', cx, cy - 140);
+    ctx.font = '12px system-ui';
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.fillText('Press C to prepare each station (' + hospitalPrepStations + '/3)', cx, cy + 140);
+  }
+
+  // VITALS STAGE
+  else if (hospitalStage === 'vitals') {
+    const barW = 200;
+    const barX = cx - barW / 2;
+    const barY = cy - 130;
+    ctx.fillStyle = '#1f2937';
+    ctx.beginPath();
+    ctx.roundRect(barX, barY, barW, 24, 6);
+    ctx.fill();
+    // Green zone (center)
+    ctx.fillStyle = 'rgba(34, 197, 94, 0.3)';
+    ctx.fillRect(barX + barW * 0.35, barY + 2, barW * 0.3, 20);
+    // Moving indicator
+    const indicatorX = barX + hospitalVitalsZone * barW;
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath();
+    ctx.arc(indicatorX, barY + 12, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 8px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('\u2665', indicatorX, barY + 15);
+
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 16px system-ui';
+    ctx.fillText("Monitor mom's vitals!", cx, barY - 8);
+    ctx.font = '12px system-ui';
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.fillText('Press Space when heart is in the GREEN zone', cx, cy + 140);
+  }
+
+  // BREATHING STAGE
+  else if (hospitalStage === 'breathing') {
+    const breathSize = 20 + Math.sin(hospitalBreathingPhase * Math.PI * 2) * 15;
+    const nearPeak = hospitalBreathingPhase < 0.15 || hospitalBreathingPhase > 0.85;
+    ctx.strokeStyle = nearPeak ? '#22c55e' : '#94a3b8';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(cx, cy - 90, breathSize, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = nearPeak ? 'rgba(34, 197, 94, 0.2)' : 'rgba(148, 163, 184, 0.1)';
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 12px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText(nearPeak ? 'NOW!' : 'wait...', cx, cy - 87);
+
+    // Progress dots
+    for (let i = 0; i < 5; i++) {
+      ctx.fillStyle = i < hospitalBreathingHits ? '#22c55e' : '#475569';
+      ctx.beginPath();
+      ctx.arc(cx - 30 + i * 15, cy - 55, 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 16px system-ui';
+    ctx.fillText('Coach breathing!', cx, cy - 130);
+    ctx.font = '12px system-ui';
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.fillText('Press Space at the peak of each breath (' + hospitalBreathingHits + '/5)', cx, cy + 140);
+  }
+
+  // DELIVERY STAGE
+  else if (hospitalStage === 'delivery') {
+    const barW = 200;
+    const barX = cx - barW / 2;
+    const barY = cy - 130;
+    ctx.fillStyle = '#1f2937';
+    ctx.beginPath();
+    ctx.roundRect(barX, barY, barW, 24, 6);
+    ctx.fill();
+    // Sweet spot zone (70-95%)
+    ctx.fillStyle = 'rgba(34, 197, 94, 0.3)';
+    ctx.fillRect(barX + barW * 0.7, barY + 2, barW * 0.25, 20);
+    // "Too much" zone (>95%)
+    ctx.fillStyle = 'rgba(239, 68, 68, 0.3)';
+    ctx.fillRect(barX + barW * 0.95, barY + 2, barW * 0.05, 20);
+    // Fill
+    ctx.fillStyle = hospitalDeliveryPower > 0.95 ? '#ef4444' : hospitalDeliveryPower > 0.7 ? '#22c55e' : '#60a5fa';
+    ctx.beginPath();
+    ctx.roundRect(barX + 2, barY + 2, (barW - 4) * hospitalDeliveryPower, 20, 4);
+    ctx.fill();
+
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 16px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('Time to deliver!', cx, barY - 8);
+    ctx.font = '12px system-ui';
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.fillText('Hold Space to build power, release in the GREEN zone!', cx, cy + 140);
+  }
+
+  // CELEBRATE STAGE
+  else if (hospitalStage === 'celebrate') {
+    // Confetti particles
+    const confettiColors = ['#ef4444','#f59e0b','#22c55e','#3b82f6','#a855f7','#ec4899'];
+    for (let i = 0; i < 20; i++) {
+      ctx.fillStyle = confettiColors[i % confettiColors.length];
+      const cx2 = cx - 100 + (i * 67 + Math.sin(hospitalProgress / 200 + i) * 30) % 200;
+      const cy2 = cy - 120 + ((hospitalProgress / 5 + i * 40) % 200);
+      ctx.fillRect(cx2, cy2, 4, 4);
+    }
+    // "It's a Kit!" banner
+    ctx.fillStyle = '#f472b6';
+    ctx.beginPath();
+    ctx.roundRect(cx - 80, cy - 130, 160, 40, 8);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 20px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText("It's a Kit!", cx, cy - 105);
+
+    // Baby Kit on the bed next to mom
+    drawBabyKit(bedX - 10, bedY - 5, kitFurColor);
+
+    // Hearts above mom
+    ctx.fillStyle = '#f472b6';
+    ctx.font = '10px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('\u2665', bedX + 5, bedY - 15);
+  }
+
+  // COLOR PICK STAGE
+  else if (hospitalStage === 'color_pick') {
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 16px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText("Choose Kit's color!", cx, cy - 130);
+
+    const kitColors = ['#fda4af','#93c5fd','#86efac','#fde047','#c4b5fd','#fdba74','#f0abfc','#67e8f9'];
+    const kitColorNames = ['Pink','Blue','Green','Yellow','Lilac','Peach','Magenta','Cyan'];
+    for (let i = 0; i < 8; i++) {
+      const sx = cx - 140 + i * 38;
+      const sy = cy - 100;
+      const isSelected = kitColors[i] === kitFurColor;
+      ctx.fillStyle = kitColors[i];
+      ctx.beginPath();
+      ctx.roundRect(sx, sy, 28, 28, 6);
+      ctx.fill();
+      if (isSelected) {
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+      ctx.fillStyle = '#1f2937';
+      ctx.font = 'bold 10px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText((i + 1).toString(), sx + 14, sy + 18);
+    }
+
+    // Preview baby Kit with current color
+    drawBabyKit(cx, cy + 20, kitFurColor);
+    ctx.fillStyle = '#fff';
+    ctx.font = '14px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('Baby Kit', cx, cy + 45);
+
+    ctx.font = '12px system-ui';
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.fillText('Press 1-8 to pick a color, Enter to confirm', cx, cy + 140);
+  }
+
+  ctx.textAlign = 'left';
+}

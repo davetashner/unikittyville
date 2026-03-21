@@ -568,6 +568,29 @@ function updatePrompt(near) {
     setAction('Enter', 'Exit');
     return;
   }
+  if (currentScene === Scene.HOSPITAL) {
+    if (hospitalStage === 'prep') {
+      el.textContent = 'Prepare the delivery room! Press C (' + hospitalPrepStations + '/3)';
+      setAction('KeyC', 'Prepare');
+    } else if (hospitalStage === 'vitals') {
+      el.textContent = 'Press Space when the heart is in the green zone!';
+      setAction('Space', 'Press');
+    } else if (hospitalStage === 'breathing') {
+      el.textContent = 'Coach breathing! Press Space at the peak (' + hospitalBreathingHits + '/5)';
+      setAction('Space', 'Breathe');
+    } else if (hospitalStage === 'delivery') {
+      el.textContent = 'Hold Space to build power, release in the green zone!';
+      setAction('Space', 'Push');
+    } else if (hospitalStage === 'celebrate') {
+      el.textContent = 'Baby Kit is here!';
+      setAction(null, '');
+    } else if (hospitalStage === 'color_pick') {
+      el.textContent = 'Press 1-8 to choose Kit\'s color, Enter to confirm';
+      setAction('Enter', 'Confirm');
+    }
+    el.style.display = 'block';
+    return;
+  }
   if (currentScene === Scene.PIZZA) {
     if (pizzaMaking.stage === 'idle') {
       el.textContent = 'Press C to make pizza! (Enter to leave)';
@@ -621,6 +644,10 @@ function updatePrompt(near) {
     el.textContent = 'Press Enter to make pizza!';
     el.style.display = 'block';
     setAction('Enter', 'Pizza');
+  } else if (near.nearHospital) {
+    el.textContent = 'Press Enter to help at the hospital!';
+    el.style.display = 'block';
+    setAction('Enter', 'Hospital');
   } else if (near.nearHotdog) {
     el.textContent = score >= 10 ? 'Press C to buy a hot dog (-10 pts)' : 'Not enough points for a hot dog!';
     el.style.display = 'block';

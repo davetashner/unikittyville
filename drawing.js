@@ -38,6 +38,7 @@ function draw() {
       [Scene.CAPE_LAUNCH]: () => drawCapeLaunchScene(cam, W, H),
       [Scene.SMOOTHIE_SHOP]: () => drawSmoothieShopInterior(cam, W, H),
       [Scene.TOPGOLF]: () => drawTopGolfInterior(cam, W, H),
+      [Scene.HOSPITAL]: () => drawHospitalInterior(cam, W, H),
     };
     if (sceneDrawMap[currentScene]) sceneDrawMap[currentScene]();
   } else {
@@ -402,6 +403,11 @@ function drawPlayerAndUI() {
   const sledOffset = (currentLevel === 2 && sledding) ? 5 : 0;
   drawKitty(player.x, player.y - (ridingCheetah ? 15 : sledOffset), player.color, player.facing, player.walkFrame, 'horn', playerEyeColor, playerHornColors);
 
+  // Draw stroller behind player on NYC street
+  if (hasStroller && currentLevel === 3 && currentScene === null) {
+    drawStroller(player.x - player.facing * 25, player.y, kitFurColor);
+  }
+
   // Glitter particles from horn
   for (const g of glitterParticles) {
     const alpha = Math.min(1, g.life / 400);
@@ -604,6 +610,7 @@ function drawNYCScenes(cam, W) {
       case 'statue_liberty': drawStatueLiberty(s.x); break;
       case 'subway': drawSubwayEntrance(s.x); break;
       case 'pigeon_flock': drawPigeons(s.x); break;
+      case 'hospital': drawHospital(s.x); break;
     }
   }
 }
@@ -876,6 +883,131 @@ function drawPigeons(x) {
     }
     ctx.restore();
   }
+}
+
+function drawHospital(x) {
+  const gy = GROUND_Y;
+  // Building
+  ctx.fillStyle = '#f0f9ff';
+  ctx.fillRect(x - 55, gy - 80, 110, 80);
+  // Roof
+  ctx.fillStyle = '#bae6fd';
+  ctx.fillRect(x - 60, gy - 85, 120, 8);
+  // Red cross
+  ctx.fillStyle = '#ef4444';
+  ctx.fillRect(x - 3, gy - 75, 6, 18);
+  ctx.fillRect(x - 9, gy - 69, 18, 6);
+  // Windows
+  ctx.fillStyle = '#bfdbfe';
+  ctx.fillRect(x - 40, gy - 65, 18, 14);
+  ctx.fillRect(x + 22, gy - 65, 18, 14);
+  ctx.fillRect(x - 40, gy - 42, 18, 14);
+  ctx.fillRect(x + 22, gy - 42, 18, 14);
+  // Door
+  ctx.fillStyle = '#60a5fa';
+  ctx.beginPath();
+  ctx.roundRect(x - 12, gy - 35, 24, 35, [6, 6, 0, 0]);
+  ctx.fill();
+  // Door cross
+  ctx.fillStyle = '#ef4444';
+  ctx.fillRect(x - 1, gy - 28, 2, 10);
+  ctx.fillRect(x - 4, gy - 24, 8, 2);
+  // Sign
+  ctx.fillStyle = '#ef4444';
+  ctx.beginPath();
+  ctx.roundRect(x - 35, gy - 90, 70, 10, 3);
+  ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 7px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText('HOSPITAL', x, gy - 82);
+  ctx.textAlign = 'left';
+
+  // If Kit was delivered, show a banner
+  if (hospitalDelivered) {
+    ctx.fillStyle = '#f472b6';
+    ctx.font = '6px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('Kit was born here!', x, gy - 92);
+    ctx.textAlign = 'left';
+  }
+}
+
+function drawBabyKit(x, y, color) {
+  // Tiny body
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.ellipse(x, y, 5, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Tiny head
+  ctx.beginPath();
+  ctx.arc(x, y - 5, 4, 0, Math.PI * 2);
+  ctx.fill();
+  // Big eyes (proportionally larger for baby)
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.arc(x - 2, y - 6, 2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(x + 2, y - 6, 2, 0, Math.PI * 2);
+  ctx.fill();
+  // Pupils
+  ctx.fillStyle = '#1e1b4b';
+  ctx.beginPath();
+  ctx.arc(x - 1.5, y - 5.5, 1, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(x + 2.5, y - 5.5, 1, 0, Math.PI * 2);
+  ctx.fill();
+  // Tiny nub horn
+  ctx.fillStyle = '#fbbf24';
+  ctx.beginPath();
+  ctx.moveTo(x - 1, y - 8);
+  ctx.lineTo(x, y - 12);
+  ctx.lineTo(x + 1, y - 8);
+  ctx.closePath();
+  ctx.fill();
+  // Tiny ears
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(x - 3, y - 8);
+  ctx.lineTo(x - 2, y - 11);
+  ctx.lineTo(x - 1, y - 8);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(x + 1, y - 8);
+  ctx.lineTo(x + 2, y - 11);
+  ctx.lineTo(x + 3, y - 8);
+  ctx.fill();
+}
+
+function drawStroller(x, y, kitColor) {
+  // Stroller frame
+  ctx.strokeStyle = '#6b7280';
+  ctx.lineWidth = 2;
+  // Handle
+  ctx.beginPath();
+  ctx.moveTo(x - 12, y - 25);
+  ctx.lineTo(x - 15, y - 10);
+  ctx.stroke();
+  // Basket
+  ctx.fillStyle = '#e2e8f0';
+  ctx.beginPath();
+  ctx.roundRect(x - 12, y - 12, 20, 12, 3);
+  ctx.fill();
+  ctx.strokeStyle = '#94a3b8';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  // Wheels
+  ctx.fillStyle = '#1f2937';
+  ctx.beginPath();
+  ctx.arc(x - 8, y + 2, 3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(x + 6, y + 2, 3, 0, Math.PI * 2);
+  ctx.fill();
+  // Baby Kit in stroller
+  drawBabyKit(x - 1, y - 10, kitColor);
 }
 
 function lerpColor(a, b, t) {
