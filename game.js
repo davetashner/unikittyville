@@ -423,8 +423,8 @@ let scubaPlayer = { x: 200, y: 200, vx: 0, vy: 0 };
 const SCUBA_WORLD_W = 1200;
 const SCUBA_WORLD_H = 500;
 const SCUBA_BUOYANCY = -0.04;
-const SCUBA_SWIM_FORCE = 0.5;
-const SCUBA_DRAG = 0.96;
+const SCUBA_SWIM_FORCE = 0.45;
+const SCUBA_DRAG = 0.92;
 let scubaCollectibles = [];
 let scubaPearlCount = 0;
 // Level select
