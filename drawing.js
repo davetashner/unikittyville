@@ -45,6 +45,7 @@ function draw() {
       [Scene.GRAND_CENTRAL]: () => drawGrandCentralInterior(cam, W, H),
       [Scene.THE_MET]: () => drawMetMuseumInterior(cam, W, H),
       [Scene.NASA_MUSEUM]: () => drawNasaMuseumInterior(cam, W, H),
+      [Scene.MISSION_CONTROL]: () => drawMissionControlInterior(cam, W, H),
       [Scene.TELEGRAM]: () => drawTelegramOffice(cam, W, H),
 
       [Scene.APOLLO_MISSION]: () => drawApolloMissionScene(cam, W, H),
@@ -7299,6 +7300,47 @@ function drawCapeWorld(W, H, cam, cycle, isNight) {
     // Door
     ctx.fillStyle = '#64748b';
     ctx.fillRect(nbx + NASA_BUILDING_POS.w / 2 - 15, GROUND_Y - 40, 30, 40);
+  }
+
+  // Mission Control Building
+  const mcbx = MISSION_CONTROL_POS.x;
+  if (mcbx > cam - 200 && mcbx < cam + W + 200) {
+    // Main building — darker, more industrial
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(mcbx, GROUND_Y - 100, MISSION_CONTROL_POS.w, 100);
+    // Flat roof with antenna array
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(mcbx - 8, GROUND_Y - 108, MISSION_CONTROL_POS.w + 16, 12);
+    // Antennas
+    ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(mcbx + 30, GROUND_Y - 108); ctx.lineTo(mcbx + 30, GROUND_Y - 135); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(mcbx + MISSION_CONTROL_POS.w - 30, GROUND_Y - 108); ctx.lineTo(mcbx + MISSION_CONTROL_POS.w - 30, GROUND_Y - 130); ctx.stroke();
+    // Satellite dish
+    ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(mcbx + 30, GROUND_Y - 135, 10, Math.PI, Math.PI * 2); ctx.stroke();
+    // Sign
+    ctx.fillStyle = '#1e40af';
+    ctx.fillRect(mcbx + 20, GROUND_Y - 85, MISSION_CONTROL_POS.w - 40, 22);
+    ctx.fillStyle = '#22c55e';
+    ctx.font = 'bold 10px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('MISSION CONTROL', mcbx + MISSION_CONTROL_POS.w / 2, GROUND_Y - 69);
+    ctx.textAlign = 'left';
+    // Monitor glow windows (green tint)
+    for (let w = 0; w < 3; w++) {
+      ctx.fillStyle = 'rgba(34, 197, 94, 0.3)';
+      ctx.fillRect(mcbx + 18 + w * 45, GROUND_Y - 55, 30, 18);
+      ctx.fillStyle = '#22c55e';
+      ctx.fillRect(mcbx + 20 + w * 45, GROUND_Y - 53, 26, 14);
+      // Tiny text lines on monitors
+      ctx.fillStyle = '#15803d';
+      for (let l = 0; l < 3; l++) {
+        ctx.fillRect(mcbx + 22 + w * 45, GROUND_Y - 51 + l * 5, 14 + Math.random() * 8, 2);
+      }
+    }
+    // Door
+    ctx.fillStyle = '#475569';
+    ctx.fillRect(mcbx + MISSION_CONTROL_POS.w / 2 - 12, GROUND_Y - 35, 24, 35);
   }
 
   // Space Suit Area

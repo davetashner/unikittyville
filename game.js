@@ -78,6 +78,7 @@ const Scene = {
   GRAND_CENTRAL: 'grandCentral',
   THE_MET: 'theMet',
   NASA_MUSEUM: 'nasaMuseum',
+  MISSION_CONTROL: 'missionControl',
   TELEGRAM: 'telegram',
 
   APOLLO_MISSION: 'apolloMission',
@@ -346,6 +347,27 @@ function sledTerrainY(x) {
 let collectedAlienCount = 0;
 const MAX_SPACE_ALIENS = 8;
 let spaceInvulnTimer = 0; // brief invulnerability after asteroid hit
+
+// Mission Control typing minigame state
+const MISSION_COMMANDS = [
+  'SYSTEMS CHECK',
+  'ALL ENGINES GO',
+  'IGNITION SEQUENCE START',
+  'MAIN ENGINE THROTTLE UP',
+  'WE HAVE LIFTOFF',
+];
+let missionControl = {
+  active: false,
+  round: 0,        // 0-4
+  typed: '',        // what the player has typed so far
+  errors: 0,       // total errors
+  startTime: 0,    // Date.now() when minigame started
+  complete: false,  // all 5 commands done
+  timeLeft: 60000,  // 60 seconds in ms
+  failed: false,    // ran out of time
+  rocketY: 0,       // for launch animation
+  showResult: 0,    // timer for showing result before exit
+};
 
 // Cape Canaveral state
 let capeSpaceSuit = false;
@@ -1053,6 +1075,7 @@ function completeTransition() {
   journalResultTimer = 0;
   cheetahSpeech = { text: '', timer: 0 };
   dustParticles = [];
+  missionControl = { active: false, round: 0, typed: '', errors: 0, startTime: 0, complete: false, timeLeft: 60000, failed: false, rocketY: 0, showResult: 0 };
   // Keep space suit on for levels 11-13 (Cape → Space → Moon)
   if (!(levelTransition.toLevel >= 11 && levelTransition.toLevel <= 13 && capeSpaceSuit)) {
     capeSpaceSuit = false;
@@ -1952,6 +1975,54 @@ function update(dt) {
       score += 30;
       addPopup(player.x, player.y - 40, '+30 Space history!', '#60a5fa');
       currentScene = null;
+    }
+    return;
+  }
+
+  // Mission Control typing minigame
+  if (currentScene === Scene.MISSION_CONTROL) {
+    const mc = missionControl;
+    if (mc.complete || mc.failed) {
+      // Show result then exit
+      mc.showResult += 16;
+      if (mc.complete) {
+        mc.rocketY += 3; // animate rocket going up
+      }
+      if (mc.showResult > 3000 || keys['Enter']) {
+        keys['Enter'] = false;
+        currentScene = null;
+        mc.active = false;
+      }
+    } else {
+      // Count down timer
+      mc.timeLeft -= 16;
+      if (mc.timeLeft <= 0) {
+        mc.timeLeft = 0;
+        mc.failed = true;
+        mc.showResult = 0;
+      }
+      // Typing is handled by keydown listener in ui.js
+      // Check if current command is complete
+      const currentCmd = MISSION_COMMANDS[mc.round];
+      if (mc.typed === currentCmd) {
+        // Command completed!
+        score += 30;
+        addPopup(player.x, player.y - 40, '+30 ' + currentCmd + '!', '#22c55e');
+        playChaChing();
+        mc.round++;
+        mc.typed = '';
+        if (mc.round >= MISSION_COMMANDS.length) {
+          // All commands done!
+          mc.complete = true;
+          mc.showResult = 0;
+          const elapsed = 60000 - mc.timeLeft;
+          if (elapsed <= 60000) {
+            // Under time limit — bonus!
+            score += 100;
+            addPopup(player.x, player.y - 60, '+100 All commands! LIFTOFF!', '#fbbf24');
+          }
+        }
+      }
     }
     return;
   }
@@ -3505,6 +3576,16 @@ function update(dt) {
     if (Math.abs(player.x - NASA_BUILDING_POS.x - NASA_BUILDING_POS.w / 2) < BUILDING_RANGE && keys['Enter'] && currentScene === null) {
       keys['Enter'] = false;
       currentScene = Scene.NASA_MUSEUM;
+    }
+    // Mission Control entry
+    if (Math.abs(player.x - MISSION_CONTROL_POS.x - MISSION_CONTROL_POS.w / 2) < BUILDING_RANGE && keys['Enter'] && currentScene === null) {
+      keys['Enter'] = false;
+      currentScene = Scene.MISSION_CONTROL;
+      missionControl = {
+        active: true, round: 0, typed: '', errors: 0,
+        startTime: Date.now(), complete: false,
+        timeLeft: 60000, failed: false, rocketY: 0, showResult: 0,
+      };
     }
     // Space suit
     if (!capeSpaceSuit && Math.abs(player.x - SPACE_SUIT_POS.x) < BUILDING_RANGE && keys['KeyS']) {

@@ -312,6 +312,24 @@ window.addEventListener('keydown', e => {
       kitNameInput += e.key;
     }
   }
+  // Mission Control typing minigame
+  if (currentScene === Scene.MISSION_CONTROL && missionControl.active && !missionControl.complete && !missionControl.failed && !e.repeat) {
+    const mc = missionControl;
+    const currentCmd = MISSION_COMMANDS[mc.round];
+    if (e.key === 'Backspace') {
+      e.preventDefault();
+      mc.typed = mc.typed.slice(0, -1);
+    } else if (e.key.length === 1 && /[a-zA-Z ]/.test(e.key)) {
+      e.preventDefault();
+      const typedChar = e.key.toUpperCase();
+      const expectedChar = currentCmd[mc.typed.length];
+      if (typedChar === expectedChar) {
+        mc.typed += typedChar;
+      } else {
+        mc.errors++;
+      }
+    }
+  }
   // Fuel calculator digit input — consume keys to prevent game actions
   if (fuelCalcActive && !e.repeat) {
     keys[e.code] = false; // block game from seeing these keys
@@ -1185,6 +1203,19 @@ function updatePrompt(near) {
     el.style.display = 'block';
     setAction('Enter', 'Exit');
     return;
+  } else if (currentScene === Scene.MISSION_CONTROL) {
+    if (missionControl.complete || missionControl.failed) {
+      el.textContent = 'Press Enter to exit Mission Control';
+    } else {
+      el.textContent = 'Type the command! Backspace to correct.';
+    }
+    el.style.display = 'block';
+    setAction('Enter', 'Exit');
+    return;
+  } else if (currentLevel === 11 && Math.abs(player.x - MISSION_CONTROL_POS.x - MISSION_CONTROL_POS.w / 2) < BUILDING_RANGE && currentScene === null) {
+    el.textContent = 'Press Enter to enter Mission Control!';
+    el.style.display = 'block';
+    setAction('Enter', 'Enter');
   } else if (currentLevel === 11 && Math.abs(player.x - NASA_BUILDING_POS.x - NASA_BUILDING_POS.w / 2) < BUILDING_RANGE && currentScene === null) {
     el.textContent = 'Press Enter to visit the NASA Museum!';
     el.style.display = 'block';
