@@ -67,6 +67,11 @@ const Scene = {
   SMOOTHIE_SHOP: 'smoothieShop',
   TOPGOLF: 'topGolf',
   HOSPITAL: 'hospital',
+  FAO_SCHWARZ: 'faoSchwarz',
+  EMPIRE_STATE: 'empireState',
+  THIRTY_ROCK: 'thirtyRock',
+  GRAND_CENTRAL: 'grandCentral',
+  THE_MET: 'theMet',
 };
 let currentScene = null;
 
@@ -107,6 +112,37 @@ let hotdogCount = 0;
 const HOTDOG_POSITIONS = [600, 2000, 3400];
 const CENTRAL_PARK_POS = { x: 2200, w: 160 };
 const HOSPITAL_POS = { x: 1800, w: 120 };
+const FAO_SCHWARZ_POS = { x: 700, w: 100 };
+const EMPIRE_STATE_POS = { x: 1500, w: 80 };
+const THIRTY_ROCK_POS = { x: 2800, w: 100 };
+const GRAND_CENTRAL_POS = { x: 3200, w: 120 };
+const MET_MUSEUM_POS = { x: 3800, w: 120 };
+// FAO Schwarz piano state
+let faoPlayerX = 0; // -3 to 3 (7 piano keys)
+let faoNoteTimer = 0;
+let faoMelody = [];
+let faoMelodyTarget = [];
+let faoMelodyScore = 0;
+// Empire State elevator
+let empireElevator = 0; // 0-100 progress
+let empireAtTop = false;
+// 30 Rock dance
+let thirtyRockDance = { active: false, sequence: [], input: [], timer: 0, score: 0, showing: true };
+// Grand Central
+let grandCentralWhisper = '';
+// Met Museum
+let metPaintingIndex = 0;
+const MET_PAINTINGS = [
+  { title: 'Meadow at Sunrise', level: 'Meadow', color: '#86efac' },
+  { title: 'Snow on the Mountain', level: 'Sledding', color: '#bae6fd' },
+  { title: 'City That Never Sleeps', level: 'NYC', color: '#fca5a5' },
+  { title: 'Roman Holiday', level: 'Rome', color: '#fde68a' },
+  { title: 'Aloha Paradise', level: 'Hawaii', color: '#38bdf8' },
+  { title: 'Sailors of Oriental', level: 'Oriental', color: '#67e8f9' },
+  { title: 'Alpine Descent', level: 'Alps', color: '#ddd6fe' },
+  { title: 'Campfire Dreams', level: 'Campground', color: '#bbf7d0' },
+  { title: 'Safari Sunset', level: 'Safari', color: '#f59e0b' },
+];
 
 // Hospital delivery minigame
 let hospitalStage = 'idle'; // 'idle' | 'prep' | 'vitals' | 'breathing' | 'delivery' | 'celebrate' | 'color_pick' | 'name_pick'
@@ -1104,6 +1140,117 @@ function update(dt) {
     return;
   }
 
+  // FAO Schwarz — giant floor piano
+  if (currentScene === Scene.FAO_SCHWARZ) {
+    if (keys['ArrowLeft']) { keys['ArrowLeft'] = false; faoPlayerX = Math.max(-3, faoPlayerX - 1); faoNoteTimer = 300; faoMelody.push(faoPlayerX + 3); }
+    if (keys['ArrowRight']) { keys['ArrowRight'] = false; faoPlayerX = Math.min(3, faoPlayerX + 1); faoNoteTimer = 300; faoMelody.push(faoPlayerX + 3); }
+    if (faoNoteTimer > 0) faoNoteTimer -= dt;
+    // Check melody match
+    if (faoMelody.length >= faoMelodyTarget.length) {
+      let match = 0;
+      for (let i = 0; i < faoMelodyTarget.length; i++) {
+        if (faoMelody[faoMelody.length - faoMelodyTarget.length + i] === faoMelodyTarget[i]) match++;
+      }
+      if (match >= 3) {
+        faoMelodyScore++;
+        score += 30;
+        addPopup(player.x, player.y - 40, '+30 Great melody!', '#f472b6');
+        playChaChing();
+        faoMelodyTarget = [];
+        for (let i = 0; i < 5; i++) faoMelodyTarget.push(Math.floor(Math.random() * 7));
+        faoMelody = [];
+      }
+    }
+    if (keys['Enter']) { keys['Enter'] = false; currentScene = null; }
+    return;
+  }
+
+  // Empire State Building — elevator ride
+  if (currentScene === Scene.EMPIRE_STATE) {
+    if (!empireAtTop) {
+      empireElevator = Math.min(100, empireElevator + dt / 30);
+      if (empireElevator >= 100) {
+        empireAtTop = true;
+        score += 50;
+        addPopup(player.x, player.y - 40, '+50 Top of the world!', '#fbbf24');
+        playChaChing();
+      }
+    }
+    if (keys['Enter']) { keys['Enter'] = false; currentScene = null; }
+    return;
+  }
+
+  // 30 Rock — dance sequence
+  if (currentScene === Scene.THIRTY_ROCK) {
+    if (thirtyRockDance.active) {
+      thirtyRockDance.timer += dt;
+      if (thirtyRockDance.showing) {
+        if (thirtyRockDance.timer > 3000) {
+          thirtyRockDance.showing = false;
+          thirtyRockDance.timer = 0;
+        }
+      } else {
+        // Player input phase — check for matching keys
+        const expectedIdx = thirtyRockDance.input.length;
+        if (expectedIdx < thirtyRockDance.sequence.length) {
+          for (const k of ['ArrowLeft','ArrowRight','ArrowUp','Space']) {
+            if (keys[k]) {
+              keys[k] = false;
+              thirtyRockDance.input.push(k);
+              if (k === thirtyRockDance.sequence[expectedIdx]) {
+                thirtyRockDance.score++;
+                addPopup(player.x, player.y - 30, 'Hit!', '#4ade80');
+              } else {
+                addPopup(player.x, player.y - 30, 'Miss!', '#ef4444');
+              }
+              break;
+            }
+          }
+        }
+        if (thirtyRockDance.input.length >= thirtyRockDance.sequence.length) {
+          thirtyRockDance.active = false;
+          const pts = thirtyRockDance.score * 15;
+          score += pts;
+          addPopup(player.x, player.y - 40, '+' + pts + ' Great show!', '#fbbf24');
+          if (pts > 0) playChaChing();
+        }
+        // Timeout
+        if (thirtyRockDance.timer > 8000) {
+          thirtyRockDance.active = false;
+          addPopup(player.x, player.y - 40, 'Time\'s up!', '#94a3b8');
+        }
+      }
+    }
+    if (keys['Enter'] && !thirtyRockDance.active) { keys['Enter'] = false; currentScene = null; }
+    return;
+  }
+
+  // Grand Central — whispering gallery
+  if (currentScene === Scene.GRAND_CENTRAL) {
+    if (!grandCentralWhisper && keys['KeyW']) {
+      keys['KeyW'] = false;
+      const whispers = ['I love yarn!', 'Sparkle forever!', 'Meow meow meow!', 'Pizza is life!', 'NYC is magical!'];
+      grandCentralWhisper = whispers[Math.floor(Math.random() * whispers.length)];
+      score += 15;
+      addPopup(player.x, player.y - 40, '+15 Echo!', '#a78bfa');
+    }
+    if (keys['Enter']) { keys['Enter'] = false; currentScene = null; grandCentralWhisper = ''; }
+    return;
+  }
+
+  // The Met Museum — art gallery
+  if (currentScene === Scene.THE_MET) {
+    if (keys['ArrowRight']) { keys['ArrowRight'] = false; metPaintingIndex = Math.min(MET_PAINTINGS.length - 1, metPaintingIndex + 1); }
+    if (keys['ArrowLeft']) { keys['ArrowLeft'] = false; metPaintingIndex = Math.max(0, metPaintingIndex - 1); }
+    if (keys['Enter']) {
+      keys['Enter'] = false;
+      score += 10;
+      addPopup(player.x, player.y - 40, '+10 Art appreciated!', '#c084fc');
+      currentScene = null;
+    }
+    return;
+  }
+
   if (currentScene === Scene.CAMPER) {
     // Nap in bed
     if (camperNapping) {
@@ -1589,6 +1736,49 @@ function update(dt) {
     hospitalStage = 'prep';
     hospitalProgress = 0;
     hospitalPrepStations = 0;
+  }
+
+  // FAO Schwarz entry
+  const nearFao = currentLevel === 3 && Math.abs(player.x - FAO_SCHWARZ_POS.x) < BUILDING_RANGE;
+  if (keys['Enter'] && nearFao && currentScene === null) {
+    keys['Enter'] = false;
+    currentScene = Scene.FAO_SCHWARZ;
+    faoPlayerX = 0;
+    faoMelodyScore = 0;
+    // Generate a random 5-note target melody
+    faoMelodyTarget = [];
+    for (let i = 0; i < 5; i++) faoMelodyTarget.push(Math.floor(Math.random() * 7));
+    faoMelody = [];
+  }
+  // Empire State Building entry
+  const nearEmpire = currentLevel === 3 && Math.abs(player.x - EMPIRE_STATE_POS.x) < BUILDING_RANGE;
+  if (keys['Enter'] && nearEmpire && currentScene === null) {
+    keys['Enter'] = false;
+    currentScene = Scene.EMPIRE_STATE;
+    empireElevator = 0;
+    empireAtTop = false;
+  }
+  // 30 Rock entry
+  const nearThirtyRock = currentLevel === 3 && Math.abs(player.x - THIRTY_ROCK_POS.x) < BUILDING_RANGE;
+  if (keys['Enter'] && nearThirtyRock && currentScene === null) {
+    keys['Enter'] = false;
+    currentScene = Scene.THIRTY_ROCK;
+    thirtyRockDance = { active: true, sequence: [], input: [], timer: 0, score: 0, showing: true };
+    for (let i = 0; i < 6; i++) thirtyRockDance.sequence.push(['ArrowLeft','ArrowRight','ArrowUp','Space'][Math.floor(Math.random() * 4)]);
+  }
+  // Grand Central entry
+  const nearGrandCentral = currentLevel === 3 && Math.abs(player.x - GRAND_CENTRAL_POS.x) < BUILDING_RANGE;
+  if (keys['Enter'] && nearGrandCentral && currentScene === null) {
+    keys['Enter'] = false;
+    currentScene = Scene.GRAND_CENTRAL;
+    grandCentralWhisper = '';
+  }
+  // Met Museum entry
+  const nearMet = currentLevel === 3 && Math.abs(player.x - MET_MUSEUM_POS.x) < BUILDING_RANGE;
+  if (keys['Enter'] && nearMet && currentScene === null) {
+    keys['Enter'] = false;
+    currentScene = Scene.THE_MET;
+    metPaintingIndex = 0;
   }
 
   // Hot dog stands (level 2 — buy for 10 points)
@@ -2901,7 +3091,8 @@ function update(dt) {
     nearChalet, nearTrain, nearNpc, nearStick, nearFirePit, nearHammock,
     nearBigfoot, nearDigSite, nearWaterPump, nearPool, nearCampCamper,
     nearSailboat, nearDiveSpot, nearBaobab, nearCheetah, nearSafariJeep,
-    nearWateringHole, nearElephant, nearHospital
+    nearWateringHole, nearElephant, nearHospital,
+    nearFao, nearEmpire, nearThirtyRock, nearGrandCentral, nearMet
   });
 }
 

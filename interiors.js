@@ -1826,3 +1826,186 @@ function drawHospitalInterior(cam, W, H) {
 
   ctx.textAlign = 'left';
 }
+
+// ── FAO Schwarz — Giant Floor Piano ──
+function drawFaoSchwarzInterior(cam, W, H) {
+  const cx = cam + W / 2;
+  // Toy store floor
+  ctx.fillStyle = '#fef3c7';
+  ctx.fillRect(cam, 0, W, H);
+  for (let r = 0; r < H / 30; r++) {
+    for (let c2 = 0; c2 < W / 30; c2++) {
+      ctx.fillStyle = (r + c2) % 2 === 0 ? '#fde68a' : '#fef9c3';
+      ctx.fillRect(cam + c2 * 30, r * 30, 30, 30);
+    }
+  }
+  // Header
+  ctx.fillStyle = '#dc2626';
+  ctx.fillRect(cam, 0, W, 55);
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 24px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText('FAO Schwarz', cx, 38);
+  // Piano keys
+  const keyW = W / 8;
+  const keyY = H * 0.55;
+  const keyH = H * 0.35;
+  const noteNames = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+  const keyColors = ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#6366f1','#a855f7'];
+  for (let i = 0; i < 7; i++) {
+    const kx = cam + keyW * 0.5 + i * keyW;
+    const isActive = (faoPlayerX + 3) === i;
+    ctx.fillStyle = isActive ? keyColors[i] : '#f1f5f9';
+    ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 2;
+    ctx.fillRect(kx, keyY, keyW - 4, keyH);
+    ctx.strokeRect(kx, keyY, keyW - 4, keyH);
+    ctx.fillStyle = isActive ? '#fff' : '#64748b';
+    ctx.font = 'bold 18px system-ui';
+    ctx.fillText(noteNames[i], kx + keyW / 2 - 2, keyY + keyH - 20);
+    if (isActive && faoNoteTimer > 0) {
+      ctx.fillStyle = keyColors[i] + '40';
+      ctx.fillRect(kx - 5, keyY - 10, keyW + 6, keyH + 20);
+    }
+  }
+  // Target melody
+  ctx.fillStyle = '#1e1b4b'; ctx.font = '14px system-ui';
+  ctx.fillText('Play this melody:', cx, keyY - 30);
+  for (let i = 0; i < faoMelodyTarget.length; i++) {
+    ctx.fillStyle = i < faoMelody.length ? '#4ade80' : keyColors[faoMelodyTarget[i]];
+    ctx.font = 'bold 16px system-ui';
+    ctx.fillText(noteNames[faoMelodyTarget[i]], cx - 80 + i * 35, keyY - 10);
+  }
+  drawKitty(cam + keyW * 0.5 + (faoPlayerX + 3) * keyW + keyW / 2, keyY - 15, player.color, 1, player.walkFrame, 'horn', playerEyeColor, playerHornColors);
+  ctx.textAlign = 'left';
+}
+
+// ── Empire State Building ──
+function drawEmpireStateInterior(cam, W, H) {
+  const cx = cam + W / 2;
+  if (!empireAtTop) {
+    ctx.fillStyle = '#78716c'; ctx.fillRect(cam, 0, W, H);
+    ctx.fillStyle = '#fbbf24'; ctx.fillRect(cx - 60, H * 0.3, 120, 160);
+    ctx.strokeStyle = '#92400e'; ctx.lineWidth = 3; ctx.strokeRect(cx - 60, H * 0.3, 120, 160);
+    ctx.fillStyle = '#1e1b4b'; ctx.fillRect(cx - 30, H * 0.2, 60, 30);
+    ctx.fillStyle = '#ef4444'; ctx.font = 'bold 20px system-ui'; ctx.textAlign = 'center';
+    ctx.fillText(Math.round(empireElevator), cx, H * 0.2 + 22);
+    ctx.fillStyle = '#374151'; ctx.fillRect(cam + 30, H * 0.4, 20, H * 0.4);
+    ctx.fillStyle = '#fbbf24'; ctx.fillRect(cam + 30, H * 0.4 + H * 0.4 * (1 - empireElevator / 100), 20, H * 0.4 * (empireElevator / 100));
+    drawKitty(cx, H * 0.58, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
+  } else {
+    ctx.fillStyle = '#60a5fa'; ctx.fillRect(cam, 0, W, H);
+    for (let i = 0; i < 30; i++) {
+      const bx = cam + (i * 137 + 20) % W;
+      const bh = 40 + (i * 89) % 80;
+      ctx.fillStyle = ['#64748b','#475569','#94a3b8','#334155'][i % 4];
+      ctx.fillRect(bx, H - bh, 25, bh);
+      ctx.fillStyle = '#fef08a';
+      for (let wy = H - bh + 5; wy < H - 5; wy += 12) {
+        ctx.fillRect(bx + 5, wy, 5, 5); ctx.fillRect(bx + 15, wy, 5, 5);
+      }
+    }
+    ctx.strokeStyle = '#6b7280'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(cam, H * 0.7); ctx.lineTo(cam + W, H * 0.7); ctx.stroke();
+    drawKitty(cx, H * 0.67, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 20px system-ui'; ctx.textAlign = 'center';
+    ctx.fillText('102nd Floor — Top of New York!', cx, 40);
+  }
+  ctx.textAlign = 'left';
+}
+
+// ── 30 Rock / NBC Studios ──
+function drawThirtyRockInterior(cam, W, H) {
+  const cx = cam + W / 2;
+  ctx.fillStyle = '#1e1b4b'; ctx.fillRect(cam, 0, W, H);
+  for (let i = 0; i < 5; i++) {
+    const lx = cam + W * 0.15 + i * W * 0.175;
+    ctx.fillStyle = ['#ef4444','#3b82f6','#22c55e','#fbbf24','#a855f7'][i];
+    ctx.globalAlpha = 0.3 + Math.sin(gameTime / 300 + i * 1.5) * 0.2;
+    ctx.beginPath(); ctx.moveTo(lx - 30, 0); ctx.lineTo(lx + 30, 0); ctx.lineTo(lx + 80, H); ctx.lineTo(lx - 80, H); ctx.closePath(); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = '#312e81'; ctx.fillRect(cam, H * 0.7, W, H * 0.3);
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 28px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText('NBC Studios — 30 Rock', cx, 40);
+  if (thirtyRockDance.active) {
+    const arrowMap = { 'ArrowLeft': '\u2190', 'ArrowRight': '\u2192', 'ArrowUp': '\u2191', 'Space': '\u2B24' };
+    ctx.font = 'bold 24px system-ui';
+    ctx.fillStyle = thirtyRockDance.showing ? '#fbbf24' : '#4ade80';
+    ctx.fillText(thirtyRockDance.showing ? 'Watch the moves!' : 'Your turn!', cx, H * 0.32);
+    for (let i = 0; i < thirtyRockDance.sequence.length; i++) {
+      const ax = cx - (thirtyRockDance.sequence.length - 1) * 25 + i * 50;
+      if (thirtyRockDance.showing || i < thirtyRockDance.input.length) {
+        const correct = !thirtyRockDance.showing && thirtyRockDance.input[i] === thirtyRockDance.sequence[i];
+        ctx.fillStyle = thirtyRockDance.showing ? '#fff' : (correct ? '#4ade80' : '#ef4444');
+      } else { ctx.fillStyle = '#6366f1'; }
+      ctx.font = 'bold 30px system-ui';
+      ctx.fillText(arrowMap[thirtyRockDance.sequence[i]], ax, H * 0.45);
+    }
+  } else {
+    ctx.fillStyle = '#fbbf24'; ctx.font = 'bold 20px system-ui';
+    ctx.fillText('Score: ' + thirtyRockDance.score + '/' + thirtyRockDance.sequence.length, cx, H * 0.4);
+  }
+  drawKitty(cx, H * 0.65, player.color, 1, player.walkFrame, 'horn', playerEyeColor, playerHornColors);
+  ctx.textAlign = 'left';
+}
+
+// ── Grand Central Terminal ──
+function drawGrandCentralInterior(cam, W, H) {
+  const cx = cam + W / 2;
+  ctx.fillStyle = '#fef3c7'; ctx.fillRect(cam, 0, W, H);
+  // Arched star ceiling
+  ctx.fillStyle = '#1e3a5f';
+  ctx.beginPath(); ctx.moveTo(cam, H * 0.5); ctx.quadraticCurveTo(cx, 0, cam + W, H * 0.5);
+  ctx.lineTo(cam + W, 0); ctx.lineTo(cam, 0); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#fbbf24';
+  for (let i = 0; i < 30; i++) {
+    ctx.beginPath(); ctx.arc(cam + (i * 137 + 50) % W, 20 + (i * 89) % (H * 0.35), 1.5, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.fillStyle = '#e2e8f0'; ctx.fillRect(cam, H * 0.7, W, H * 0.3);
+  // Clock
+  ctx.fillStyle = '#fbbf24'; ctx.beginPath(); ctx.arc(cx, H * 0.55, 25, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#92400e'; ctx.lineWidth = 3; ctx.stroke();
+  // Whisper echo effect
+  if (grandCentralWhisper) {
+    ctx.fillStyle = 'rgba(167,139,250,0.15)';
+    ctx.beginPath(); ctx.arc(cx, H * 0.55, 100 + Math.sin(gameTime / 300) * 20, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#7c3aed'; ctx.font = 'italic 16px system-ui'; ctx.textAlign = 'center';
+    ctx.globalAlpha = 0.5 + Math.sin(gameTime / 400) * 0.3;
+    ctx.fillText(grandCentralWhisper + '... ' + grandCentralWhisper + '...', cx, H * 0.45);
+    ctx.globalAlpha = 1;
+  }
+  ctx.fillStyle = '#1e1b4b'; ctx.font = 'bold 20px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText('Grand Central Terminal', cx, H * 0.65);
+  drawKitty(cx, H * 0.82, player.color, 1, player.walkFrame, 'horn', playerEyeColor, playerHornColors);
+  ctx.textAlign = 'left';
+}
+
+// ── The Metropolitan Museum of Art ──
+function drawMetMuseumInterior(cam, W, H) {
+  const cx = cam + W / 2;
+  ctx.fillStyle = '#f5f5f4'; ctx.fillRect(cam, 0, W, H);
+  ctx.fillStyle = '#d6d3d1'; ctx.fillRect(cam, H * 0.75, W, H * 0.25);
+  ctx.fillStyle = '#dc2626'; ctx.fillRect(cam, 0, W, 45);
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 22px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText('The Metropolitan Museum of Art', cx, 30);
+  const p = MET_PAINTINGS[metPaintingIndex];
+  const frameW = W * 0.5, frameH = H * 0.4;
+  const frameX = cx - frameW / 2, frameY = H * 0.15;
+  ctx.fillStyle = '#92400e'; ctx.fillRect(frameX - 10, frameY - 10, frameW + 20, frameH + 20);
+  ctx.fillStyle = '#b45309'; ctx.fillRect(frameX - 5, frameY - 5, frameW + 10, frameH + 10);
+  ctx.fillStyle = p.color; ctx.fillRect(frameX, frameY, frameW, frameH);
+  ctx.fillStyle = 'rgba(0,0,0,0.08)'; ctx.fillRect(frameX, frameY + frameH * 0.7, frameW, frameH * 0.3);
+  ctx.fillStyle = '#fff'; ctx.font = 'italic 14px system-ui';
+  ctx.fillText('"' + p.title + '"', cx, frameY + frameH * 0.4);
+  ctx.font = '12px system-ui'; ctx.fillText('Inspired by: ' + p.level, cx, frameY + frameH * 0.55);
+  ctx.fillStyle = '#fbbf24'; ctx.fillRect(cx - 60, frameY + frameH + 20, 120, 25);
+  ctx.fillStyle = '#1e1b4b'; ctx.font = 'bold 11px system-ui';
+  ctx.fillText(p.title, cx, frameY + frameH + 36);
+  ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 30px system-ui';
+  if (metPaintingIndex > 0) ctx.fillText('\u2190', cam + 40, H * 0.4);
+  if (metPaintingIndex < MET_PAINTINGS.length - 1) ctx.fillText('\u2192', cam + W - 60, H * 0.4);
+  ctx.fillStyle = '#78716c'; ctx.font = '14px system-ui';
+  ctx.fillText((metPaintingIndex + 1) + ' of ' + MET_PAINTINGS.length, cx, H * 0.72);
+  drawKitty(cx, H * 0.85, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
+  ctx.textAlign = 'left';
+}

@@ -39,6 +39,11 @@ function draw() {
       [Scene.SMOOTHIE_SHOP]: () => drawSmoothieShopInterior(cam, W, H),
       [Scene.TOPGOLF]: () => drawTopGolfInterior(cam, W, H),
       [Scene.HOSPITAL]: () => drawHospitalInterior(cam, W, H),
+      [Scene.FAO_SCHWARZ]: () => drawFaoSchwarzInterior(cam, W, H),
+      [Scene.EMPIRE_STATE]: () => drawEmpireStateInterior(cam, W, H),
+      [Scene.THIRTY_ROCK]: () => drawThirtyRockInterior(cam, W, H),
+      [Scene.GRAND_CENTRAL]: () => drawGrandCentralInterior(cam, W, H),
+      [Scene.THE_MET]: () => drawMetMuseumInterior(cam, W, H),
     };
     if (sceneDrawMap[currentScene]) sceneDrawMap[currentScene]();
   } else {
@@ -648,8 +653,98 @@ function drawNYCScenes(cam, W) {
       case 'subway': drawSubwayEntrance(s.x); break;
       case 'pigeon_flock': drawPigeons(s.x); break;
       case 'hospital': drawHospital(s.x); break;
+      case 'fao_schwarz': drawFaoExterior(s.x); break;
+      case 'empire_state': drawEmpireExterior(s.x); break;
+      case 'thirty_rock': drawThirtyRockExterior(s.x); break;
+      case 'grand_central': drawGrandCentralExterior(s.x); break;
+      case 'met_museum': drawMetExterior(s.x); break;
     }
   }
+}
+
+function drawFaoExterior(x) {
+  const gy = GROUND_Y;
+  ctx.fillStyle = '#dc2626'; ctx.fillRect(x - 45, gy - 90, 90, 90);
+  ctx.fillStyle = '#fbbf24'; ctx.fillRect(x - 40, gy - 85, 80, 5);
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 9px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText('FAO SCHWARZ', x, gy - 72);
+  ctx.fillStyle = '#fef08a';
+  ctx.fillRect(x - 30, gy - 60, 20, 30); ctx.fillRect(x + 10, gy - 60, 20, 30);
+  ctx.fillStyle = '#92400e'; ctx.fillRect(x - 8, gy - 35, 16, 35);
+  ctx.textAlign = 'left';
+}
+
+function drawEmpireExterior(x) {
+  const gy = GROUND_Y;
+  ctx.fillStyle = '#94a3b8'; ctx.fillRect(x - 25, gy - 120, 50, 120);
+  ctx.fillStyle = '#78716c'; ctx.fillRect(x - 15, gy - 140, 30, 25);
+  ctx.fillRect(x - 5, gy - 155, 10, 18);
+  ctx.fillRect(x - 2, gy - 170, 4, 18);
+  ctx.fillStyle = '#fef08a';
+  for (let wy = gy - 115; wy < gy - 5; wy += 10) {
+    for (let wx = x - 20; wx < x + 20; wx += 10) {
+      ctx.fillRect(wx, wy, 4, 4);
+    }
+  }
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 7px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText('EMPIRE STATE', x, gy - 125);
+  ctx.textAlign = 'left';
+}
+
+function drawThirtyRockExterior(x) {
+  const gy = GROUND_Y;
+  ctx.fillStyle = '#475569'; ctx.fillRect(x - 40, gy - 100, 80, 100);
+  ctx.fillStyle = '#334155'; ctx.fillRect(x - 35, gy - 95, 70, 5);
+  ctx.fillStyle = '#fef08a';
+  for (let wy = gy - 85; wy < gy - 5; wy += 12) {
+    ctx.fillRect(x - 30, wy, 8, 5); ctx.fillRect(x - 10, wy, 8, 5);
+    ctx.fillRect(x + 10, wy, 8, 5); ctx.fillRect(x + 25, wy, 8, 5);
+  }
+  ctx.fillStyle = '#3b82f6'; ctx.fillRect(x - 15, gy - 30, 30, 30);
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 8px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText('30 ROCK', x, gy - 98);
+  ctx.fillText('NBC', x, gy - 18);
+  ctx.textAlign = 'left';
+}
+
+function drawGrandCentralExterior(x) {
+  const gy = GROUND_Y;
+  ctx.fillStyle = '#d6d3d1'; ctx.fillRect(x - 50, gy - 80, 100, 80);
+  // Columns
+  for (let i = 0; i < 4; i++) {
+    ctx.fillStyle = '#a8a29e';
+    ctx.fillRect(x - 42 + i * 28, gy - 75, 6, 70);
+  }
+  // Pediment (triangle)
+  ctx.fillStyle = '#a8a29e';
+  ctx.beginPath(); ctx.moveTo(x - 55, gy - 80); ctx.lineTo(x, gy - 100); ctx.lineTo(x + 55, gy - 80); ctx.closePath(); ctx.fill();
+  // Clock
+  ctx.fillStyle = '#fbbf24'; ctx.beginPath(); ctx.arc(x, gy - 88, 6, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#92400e'; ctx.fillRect(x - 10, gy - 30, 20, 30);
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 7px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText('GRAND CENTRAL', x, gy - 72);
+  ctx.textAlign = 'left';
+}
+
+function drawMetExterior(x) {
+  const gy = GROUND_Y;
+  ctx.fillStyle = '#e7e5e4'; ctx.fillRect(x - 55, gy - 75, 110, 75);
+  // Columns
+  for (let i = 0; i < 5; i++) {
+    ctx.fillStyle = '#d6d3d1';
+    ctx.fillRect(x - 48 + i * 24, gy - 70, 5, 65);
+  }
+  // Steps
+  for (let s = 0; s < 3; s++) {
+    ctx.fillStyle = '#d6d3d1';
+    ctx.fillRect(x - 55 - s * 5, gy - 5 + s * 2, 110 + s * 10, 3);
+  }
+  // Banner
+  ctx.fillStyle = '#dc2626'; ctx.fillRect(x - 30, gy - 68, 60, 12);
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 7px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText('THE MET', x, gy - 59);
+  ctx.textAlign = 'left';
 }
 
 function drawTaxi(x) {
