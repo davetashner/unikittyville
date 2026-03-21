@@ -2007,6 +2007,187 @@ function drawGrandCentralInterior(cam, W, H) {
   ctx.textAlign = 'left';
 }
 
+// ── Grand Central Telegram Office ──
+function drawTelegramOffice(cam, W, H) {
+  const cx = cam + W / 2;
+
+  // Warm wood-paneled office background
+  ctx.fillStyle = '#78350f'; ctx.fillRect(cam, 0, W, H);
+  // Wainscoting / lighter upper wall
+  ctx.fillStyle = '#a16207'; ctx.fillRect(cam, 0, W, H * 0.55);
+  // Decorative trim line
+  ctx.fillStyle = '#fbbf24'; ctx.fillRect(cam, H * 0.54, W, 3);
+
+  // Floor — dark hardwood
+  ctx.fillStyle = '#5c2d0e'; ctx.fillRect(cam, H * 0.75, W, H * 0.25);
+  // Floor boards
+  ctx.strokeStyle = '#4a2508'; ctx.lineWidth = 1;
+  for (let i = 0; i < 8; i++) {
+    const bx = cam + i * (W / 8);
+    ctx.beginPath(); ctx.moveTo(bx, H * 0.75); ctx.lineTo(bx, H); ctx.stroke();
+  }
+
+  // Wooden desk
+  ctx.fillStyle = '#92400e';
+  ctx.fillRect(cx - 120, H * 0.6, 240, 20);
+  // Desk legs
+  ctx.fillRect(cx - 115, H * 0.62, 8, 50);
+  ctx.fillRect(cx + 107, H * 0.62, 8, 50);
+  // Desk surface highlight
+  ctx.fillStyle = '#a8590b';
+  ctx.fillRect(cx - 118, H * 0.6, 236, 4);
+
+  // Telegraph machine on desk
+  ctx.fillStyle = '#1e293b';
+  ctx.fillRect(cx - 30, H * 0.52, 60, 30); // base
+  ctx.fillStyle = '#334155';
+  ctx.fillRect(cx - 25, H * 0.48, 50, 20); // body
+  // Brass key lever
+  ctx.fillStyle = '#fbbf24';
+  ctx.fillRect(cx - 15, H * 0.56, 30, 6);
+  ctx.beginPath(); ctx.arc(cx + 18, H * 0.56 + 3, 5, 0, Math.PI * 2); ctx.fill();
+  // Brass knobs
+  ctx.beginPath(); ctx.arc(cx - 10, H * 0.50, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + 10, H * 0.50, 3, 0, Math.PI * 2); ctx.fill();
+  // Wire from telegraph
+  ctx.strokeStyle = '#475569'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(cx + 25, H * 0.50);
+  ctx.quadraticCurveTo(cx + 80, H * 0.35, cx + 100, H * 0.1); ctx.stroke();
+
+  // Paper tape roll
+  ctx.fillStyle = '#fef3c7';
+  ctx.fillRect(cx - 60, H * 0.55, 25, 25);
+  ctx.fillStyle = '#92400e';
+  ctx.beginPath(); ctx.arc(cx - 47, H * 0.55 + 12, 5, 0, Math.PI * 2); ctx.fill();
+
+  // Title
+  ctx.fillStyle = '#fbbf24'; ctx.font = 'bold 18px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText('Telegram Office', cx, H * 0.08);
+
+  // Difficulty indicator
+  const levels = ['Easy', 'Medium', 'Hard'];
+  const levelColors = ['#4ade80', '#fbbf24', '#f87171'];
+  ctx.font = '13px system-ui';
+  ctx.fillStyle = levelColors[telegramLevel];
+  ctx.fillText('Difficulty: ' + levels[telegramLevel], cx, H * 0.13);
+
+  if (telegramActive || telegramComplete) {
+    // Paper / telegram display area
+    const paperX = cx - W * 0.38;
+    const paperW = W * 0.76;
+    const paperY = H * 0.16;
+    const paperH = H * 0.32;
+
+    // Paper background
+    ctx.fillStyle = '#fefce8';
+    ctx.fillRect(paperX, paperY, paperW, paperH);
+    ctx.strokeStyle = '#d4a574'; ctx.lineWidth = 2;
+    ctx.strokeRect(paperX, paperY, paperW, paperH);
+
+    // Dotted lines on paper
+    ctx.strokeStyle = '#e5d5b0'; ctx.lineWidth = 0.5;
+    ctx.setLineDash([4, 4]);
+    for (let ly = paperY + 30; ly < paperY + paperH - 10; ly += 22) {
+      ctx.beginPath(); ctx.moveTo(paperX + 15, ly); ctx.lineTo(paperX + paperW - 15, ly); ctx.stroke();
+    }
+    ctx.setLineDash([]);
+
+    // "TELEGRAM" header on paper
+    ctx.fillStyle = '#78350f'; ctx.font = 'bold 14px "Courier New", monospace'; ctx.textAlign = 'center';
+    ctx.fillText('=== TELEGRAM ===', cx, paperY + 18);
+
+    // Target text (what player needs to type)
+    const fontSize = Math.min(16, Math.round(W * 0.025));
+    ctx.font = fontSize + 'px "Courier New", monospace';
+    const maxCharsPerLine = Math.floor((paperW - 30) / (fontSize * 0.6));
+    const lines = [];
+    for (let i = 0; i < telegramText.length; i += maxCharsPerLine) {
+      lines.push(telegramText.substring(i, i + maxCharsPerLine));
+    }
+
+    // Draw each character with coloring
+    let charIdx = 0;
+    const lineHeight = 22;
+    const startY = paperY + 38;
+    const errorFlashActive = (performance.now() - telegramErrorFlash) < 300;
+
+    for (let lineNum = 0; lineNum < lines.length; lineNum++) {
+      const line = lines[lineNum];
+      const lineX = paperX + 20;
+      const lineY = startY + lineNum * lineHeight;
+
+      for (let c = 0; c < line.length; c++) {
+        const ch = line[c];
+        const x = lineX + c * (fontSize * 0.6);
+
+        if (charIdx < telegramTyped.length) {
+          // Already typed — green
+          ctx.fillStyle = '#16a34a';
+          ctx.fillText(ch, x, lineY);
+        } else if (charIdx === telegramTyped.length) {
+          // Current character — cursor
+          // Blinking cursor background
+          const blink = Math.sin(performance.now() / 300) > 0;
+          if (blink) {
+            ctx.fillStyle = errorFlashActive ? 'rgba(239,68,68,0.3)' : 'rgba(59,130,246,0.3)';
+            ctx.fillRect(x - 1, lineY - fontSize + 2, fontSize * 0.6 + 2, fontSize + 2);
+          }
+          ctx.fillStyle = errorFlashActive ? '#ef4444' : '#1e40af';
+          ctx.font = 'bold ' + fontSize + 'px "Courier New", monospace';
+          ctx.fillText(ch, x, lineY);
+          ctx.font = fontSize + 'px "Courier New", monospace';
+        } else {
+          // Not yet reached — gray
+          ctx.fillStyle = '#94a3b8';
+          ctx.fillText(ch, x, lineY);
+        }
+        charIdx++;
+      }
+    }
+
+    // Stats below paper
+    if (telegramActive) {
+      const elapsed = (performance.now() - telegramStartTime) / 1000;
+      const words = telegramTyped.split(' ').filter(w => w).length || 0;
+      const wpm = elapsed > 1 ? Math.round((words / elapsed) * 60) : 0;
+      const typed = telegramTyped.length;
+      const accuracy = typed > 0 ? Math.round(((typed - telegramErrors) / typed) * 100) : 100;
+
+      ctx.font = '13px system-ui';
+      ctx.fillStyle = '#fbbf24';
+      ctx.fillText('WPM: ' + wpm + '  |  Accuracy: ' + accuracy + '%  |  Errors: ' + telegramErrors, cx, paperY + paperH + 18);
+    }
+
+    // Completion overlay
+    if (telegramComplete) {
+      const elapsed = (performance.now() - telegramStartTime) / 1000;
+      const words = telegramText.split(' ').length;
+      const wpm = Math.round((words / elapsed) * 60);
+      const accuracy = Math.round(((telegramText.length - telegramErrors) / telegramText.length) * 100);
+
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      ctx.fillRect(paperX, paperY + paperH + 5, paperW, 40);
+      ctx.fillStyle = '#4ade80'; ctx.font = 'bold 15px system-ui';
+      ctx.fillText('Telegram Sent!  WPM: ' + wpm + '  Accuracy: ' + accuracy + '%', cx, paperY + paperH + 28);
+    }
+  } else {
+    // Idle — instruction on paper
+    ctx.fillStyle = '#fefce8';
+    const idlePX = cx - 100, idlePY = H * 0.20, idlePW = 200, idlePH = 80;
+    ctx.fillRect(idlePX, idlePY, idlePW, idlePH);
+    ctx.strokeStyle = '#d4a574'; ctx.lineWidth = 1; ctx.strokeRect(idlePX, idlePY, idlePW, idlePH);
+    ctx.fillStyle = '#78350f'; ctx.font = '13px system-ui'; ctx.textAlign = 'center';
+    ctx.fillText('Press Enter to', cx, idlePY + 28);
+    ctx.fillText('send a telegram!', cx, idlePY + 48);
+    ctx.font = '11px system-ui'; ctx.fillStyle = '#94a3b8';
+    ctx.fillText('Left/Right to change difficulty', cx, idlePY + 66);
+  }
+
+  // Draw player
+  drawKitty(cx, H * 0.82, player.color, 1, player.walkFrame, 'horn', playerEyeColor, playerHornColors);
+  ctx.textAlign = 'left';
+}
+
 // ── The Metropolitan Museum of Art ──
 function drawMetMuseumInterior(cam, W, H) {
   const cx = cam + W / 2;
