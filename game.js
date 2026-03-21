@@ -449,6 +449,8 @@ function completeTransition() {
   fishing.active = false;
   currentScene = null;
   skiing = false;
+  alpsEquipment = null;
+  alpsChoosing = (levelTransition.toLevel === 7);
   sledding = false;
   hammockNapping = false;
   hammockNapTimer = 0;
@@ -541,6 +543,9 @@ let diamondCount = 0;
 let alpsScrollX = 0;
 const ALPS_WORLD_W = 6000;
 const ALPS_SPEED = 3.5; // auto-scroll speed while skiing
+// Alps equipment choice
+let alpsEquipment = null; // 'skis' or 'snowboard' — null means choosing
+let alpsChoosing = false; // true when the equipment selection UI is showing
 
 // ── Level 8: Campground ──
 let stickCount = 0;
@@ -1450,6 +1455,32 @@ function update(dt) {
   // Alps interactions (level 7)
   let nearChalet = false;
   if (currentLevel === 7) {
+    // Equipment selection phase
+    if (alpsChoosing) {
+      player.vx = 0;
+      // Press 1 or S for Skis
+      if (keys['Digit1'] || keys['KeyS']) {
+        keys['Digit1'] = false;
+        keys['KeyS'] = false;
+        alpsEquipment = 'skis';
+        alpsChoosing = false;
+        skiing = true;
+        addPopup(player.x, player.y - 40, 'Skis equipped!', '#60a5fa');
+      }
+      // Press 2 or B for Snowboard
+      if (keys['Digit2'] || keys['KeyB']) {
+        keys['Digit2'] = false;
+        keys['KeyB'] = false;
+        alpsEquipment = 'snowboard';
+        alpsChoosing = false;
+        skiing = true;
+        addPopup(player.x, player.y - 40, 'Snowboard equipped!', '#a78bfa');
+      }
+    }
+
+    if (alpsChoosing) {
+      // Skip the rest of level 7 logic while choosing
+    } else {
     // Auto-ski: push player right continuously
     player.vx = Math.max(player.vx, ALPS_SPEED);
 
@@ -1494,6 +1525,7 @@ function update(dt) {
         crossfadeToMusic(CHALET_MUSIC_ID); // chalet music
       }
     }
+    } // end else (not choosing)
   }
 
   // Oriental interactions (level 6)

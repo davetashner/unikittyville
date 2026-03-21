@@ -2519,7 +2519,155 @@ function drawAlpsWorld(W, H, cam) {
   }
 
   for (const npc of alpsNpcs) drawKitty(npc.x, npc.y, npc.color, npc.facing, npc.walkFrame, npc.accessory);
+
+  // Draw equipment on player during the run
+  if (alpsEquipment && !alpsChoosing) {
+    const px = player.x;
+    const py = player.y;
+    if (alpsEquipment === 'skis') {
+      drawSkisOnPlayer(px, py);
+    } else {
+      drawSnowboardOnPlayer(px, py);
+    }
+  }
+
   drawPlayerAndUI();
+
+  // Equipment choice overlay (drawn last, on top of everything)
+  if (alpsChoosing) {
+    drawAlpsEquipmentChoice(W, H);
+  }
+}
+
+function drawAlpsEquipmentChoice(W, H) {
+  // Semi-transparent overlay
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Title
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 28px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText('Choose Your Ride!', W / 2, H / 3 - 20);
+
+  // Skis option (left)
+  const skiX = W / 2 - 100;
+  const optY = H / 2 - 20;
+
+  // Ski icon — two parallel lines
+  ctx.strokeStyle = '#60a5fa';
+  ctx.lineWidth = 3;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(skiX - 15, optY - 15);
+  ctx.lineTo(skiX + 15, optY + 15);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(skiX - 10, optY - 15);
+  ctx.lineTo(skiX + 20, optY + 15);
+  ctx.stroke();
+  // Curved tips
+  ctx.beginPath();
+  ctx.arc(skiX - 15, optY - 18, 5, 0, Math.PI, true);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(skiX - 10, optY - 18, 5, 0, Math.PI, true);
+  ctx.stroke();
+
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 18px system-ui';
+  ctx.fillText('Skis', skiX, optY + 40);
+  ctx.font = '14px system-ui';
+  ctx.fillStyle = '#bae6fd';
+  ctx.fillText('Press 1 or S', skiX, optY + 60);
+
+  // Snowboard option (right)
+  const sbX = W / 2 + 100;
+
+  // Snowboard icon — single wide board
+  ctx.fillStyle = '#a78bfa';
+  ctx.save();
+  ctx.translate(sbX, optY);
+  ctx.rotate(-0.3);
+  ctx.beginPath();
+  ctx.roundRect(-20, -4, 40, 8, 4);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 18px system-ui';
+  ctx.fillText('Snowboard', sbX, optY + 40);
+  ctx.font = '14px system-ui';
+  ctx.fillStyle = '#c4b5fd';
+  ctx.fillText('Press 2 or B', sbX, optY + 60);
+
+  ctx.textAlign = 'left';
+}
+
+function drawSkisOnPlayer(px, py) {
+  ctx.save();
+  ctx.strokeStyle = '#3b82f6';
+  ctx.lineWidth = 3;
+  ctx.lineCap = 'round';
+
+  // Left ski
+  ctx.beginPath();
+  ctx.moveTo(px - 14, py + 2);
+  ctx.lineTo(px + 8, py + 2);
+  ctx.quadraticCurveTo(px + 14, py + 2, px + 14, py - 4);
+  ctx.stroke();
+
+  // Right ski
+  ctx.beginPath();
+  ctx.moveTo(px - 14, py + 6);
+  ctx.lineTo(px + 8, py + 6);
+  ctx.quadraticCurveTo(px + 14, py + 6, px + 14, py);
+  ctx.stroke();
+
+  // Ski poles
+  ctx.strokeStyle = '#94a3b8';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(px - 10, py - 15);
+  ctx.lineTo(px - 16, py + 5);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(px + 6, py - 15);
+  ctx.lineTo(px + 12, py + 5);
+  ctx.stroke();
+  // Pole baskets
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(px - 16, py + 7, 3, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(px + 12, py + 7, 3, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function drawSnowboardOnPlayer(px, py) {
+  ctx.save();
+
+  // Snowboard — single wide board under both feet
+  ctx.fillStyle = '#7c3aed';
+  ctx.beginPath();
+  ctx.roundRect(px - 16, py + 1, 32, 7, 4);
+  ctx.fill();
+
+  // Board design stripe
+  ctx.fillStyle = '#a78bfa';
+  ctx.fillRect(px - 10, py + 3, 20, 2);
+
+  // Board edge highlight
+  ctx.strokeStyle = '#6d28d9';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(px - 16, py + 1, 32, 7, 4);
+  ctx.stroke();
+
+  ctx.restore();
 }
 
 function drawAlpsPineTree(x, size, hit) {
