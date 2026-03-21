@@ -793,6 +793,11 @@ function updatePrompt(near) {
       return;
     }
     el.style.display = 'block';
+  } else if (bugCatcherActive) {
+    el.textContent = bugCatcherRule ? bugCatcherRule.text + ' (Space to catch)' : 'Bug Catcher!';
+    el.style.display = 'block';
+    setAction('Space', 'Catch');
+    return;
   } else if (fishing.active) {
     el.textContent = 'Fishing...';
     el.style.display = 'block';
@@ -826,6 +831,14 @@ function updatePrompt(near) {
     el.textContent = 'Press H to collect honey';
     el.style.display = 'block';
     setAction('KeyH', 'Honey');
+  } else if (near.nearBugNet) {
+    el.textContent = 'Press Space to pick up the Bug Net!';
+    el.style.display = 'block';
+    setAction('Space', 'Pick up');
+  } else if (currentLevel === 1 && hasBugNet && !bugCatcherActive && !bugCatcherFinished && Math.abs(player.x - BUG_NET_POS.x) < 120) {
+    el.textContent = 'Press B to start Bug Catcher!';
+    el.style.display = 'block';
+    setAction('KeyB', 'Bugs');
   } else if (near.nearPizza) {
     el.textContent = 'Press Enter to make pizza!';
     el.style.display = 'block';
