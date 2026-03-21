@@ -209,7 +209,7 @@ function setAction(key, label) {
 
 function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf, nearAirport, nearChalet, nearTrain, nearNpc, nearStick, nearFirePit, nearHammock, nearBigfoot, nearDigSite, nearWaterPump, nearPool, nearCampCamper, nearSailboat, nearDiveSpot, nearBaobab, nearCheetah, nearSafariJeep, nearWateringHole, nearElephant) {
   const el = document.getElementById('prompt');
-  if (insideCampCamper) {
+  if (currentScene === Scene.CAMP_CAMPER) {
     if (campCamperSleeping) {
       el.textContent = 'Sleeping... zzz (Press N to wake up)';
       setAction('KeyN', 'Wake');
@@ -237,7 +237,7 @@ function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, ne
     el.style.display = 'block';
     return;
   }
-  if (swimmingInPool) {
+  if (currentScene === Scene.SWIMMING_IN_POOL) {
     el.textContent = 'Swimming in your pool! Q: Talk to Leprechaun | S: Get out';
     el.style.display = 'block';
     setAction('KeyQ', 'Talk');
@@ -255,7 +255,7 @@ function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, ne
     setAction(null, '');
     return;
   }
-  if (insideChalet) {
+  if (currentScene === Scene.CHALET) {
     if (drinkingCocoa) {
       el.textContent = 'Drinking hot chocolate... mmm!';
     } else if (marshmallowScore >= 10 && !marshmallow.active) {
@@ -268,25 +268,25 @@ function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, ne
     el.style.display = 'block';
     return;
   }
-  if (surfing) {
+  if (currentScene === Scene.SURFING) {
     el.textContent = 'Surfing the waves! Press S to get off';
     el.style.display = 'block';
     setAction('KeyS', 'Stop');
     return;
   }
-  if (swimming) {
+  if (currentScene === Scene.SWIMMING) {
     el.textContent = 'Splashing in the fountain! Press S to get out';
     el.style.display = 'block';
     setAction('KeyS', 'Exit');
     return;
   }
-  if (insidePantheon) {
+  if (currentScene === Scene.PANTHEON) {
     el.textContent = 'Inside the Pantheon... Press Enter to leave';
     el.style.display = 'block';
     setAction('Enter', 'Exit');
     return;
   }
-  if (insideCamper) {
+  if (currentScene === Scene.CAMPER) {
     if (camperNapping) {
       el.textContent = 'Napping... zzz';
     } else if (camperPhone.answered) {
@@ -314,19 +314,19 @@ function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, ne
     el.style.display = 'block';
     return;
   }
-  if (insideWindmill) {
+  if (currentScene === Scene.WINDMILL) {
     el.textContent = 'Inside the windmill... Press Enter to go outside';
     el.style.display = 'block';
     setAction('Enter', 'Exit');
     return;
   }
-  if (insidePark) {
+  if (currentScene === Scene.PARK) {
     el.textContent = 'Relaxing in Central Park... Press Enter to leave';
     el.style.display = 'block';
     setAction('Enter', 'Exit');
     return;
   }
-  if (insidePizza) {
+  if (currentScene === Scene.PIZZA) {
     if (pizzaMaking.stage === 'idle') {
       el.textContent = 'Press C to make pizza! (Enter to leave)';
       setAction('KeyC', 'Cook');
@@ -491,7 +491,7 @@ function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, ne
     el.textContent = 'Press Enter to enter the camper! J: Safari jeep to Africa!';
     el.style.display = 'block';
     setAction('Enter', 'Enter');
-  } else if (swimmingInWateringHole) {
+  } else if (currentScene === Scene.WATERING_HOLE) {
     el.textContent = 'Splashing in the watering hole! Press S to get out';
     el.style.display = 'block';
     setAction('KeyS', 'Exit');
@@ -539,12 +539,12 @@ function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, ne
     el.textContent = 'Sled downhill! Dodge snowmen, collect snowballs!';
     el.style.display = 'block';
     setAction(null, '');
-  } else if (scubaDiving) {
+  } else if (currentScene === Scene.SCUBA_DIVING) {
     el.textContent = 'Swim with arrow keys! Collect pearls! Q: Talk to mercats | Enter: Surface';
     el.style.display = 'block';
     setAction('Enter', 'Surface');
     return;
-  } else if (sailing) {
+  } else if (currentScene === Scene.SAILING) {
     el.textContent = 'Sailing the Neuse River! Left/Right to steer | Enter: Dock';
     el.style.display = 'block';
     setAction('Enter', 'Dock');

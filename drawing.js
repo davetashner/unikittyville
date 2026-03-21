@@ -37,30 +37,24 @@ function draw() {
   ctx.save();
   ctx.translate(-cam, 0);
 
-  if (insideHouse) {
-    drawHouseInterior(cam, W, H);
-  } else if (insideCamper) {
-    drawCamperInterior(cam, W, H);
-  } else if (insideWindmill) {
-    drawWindmillInterior(cam, W, H);
-  } else if (insidePizza) {
-    drawPizzaInterior(cam, W, H);
-  } else if (insidePark) {
-    drawParkInterior(cam, W, H);
-  } else if (insidePantheon) {
-    drawPantheonInterior(cam, W, H);
-  } else if (swimming) {
-    drawSwimmingScene(cam, W, H);
-  } else if (surfing) {
-    drawSurfingScene(cam, W, H);
-  } else if (insideChalet) {
-    drawChaletInterior(cam, W, H);
-  } else if (swimmingInPool) {
-    drawPoolSwimmingScene(cam, W, H);
-  } else if (insideCampCamper) {
-    drawCampCamperInterior(cam, W, H);
-  } else if (swimmingInWateringHole) {
-    drawWateringHoleScene(cam, W, H);
+  if (currentScene !== null) {
+    const sceneDrawMap = {
+      [Scene.HOUSE]: () => drawHouseInterior(cam, W, H),
+      [Scene.CAMPER]: () => drawCamperInterior(cam, W, H),
+      [Scene.WINDMILL]: () => drawWindmillInterior(cam, W, H),
+      [Scene.PIZZA]: () => drawPizzaInterior(cam, W, H),
+      [Scene.PARK]: () => drawParkInterior(cam, W, H),
+      [Scene.PANTHEON]: () => drawPantheonInterior(cam, W, H),
+      [Scene.SWIMMING]: () => drawSwimmingScene(cam, W, H),
+      [Scene.SURFING]: () => drawSurfingScene(cam, W, H),
+      [Scene.CHALET]: () => drawChaletInterior(cam, W, H),
+      [Scene.SWIMMING_IN_POOL]: () => drawPoolSwimmingScene(cam, W, H),
+      [Scene.CAMP_CAMPER]: () => drawCampCamperInterior(cam, W, H),
+      [Scene.WATERING_HOLE]: () => drawWateringHoleScene(cam, W, H),
+      [Scene.SCUBA_DIVING]: () => drawScubaDivingScene(cam, W, H),
+      [Scene.SAILING]: () => drawSailingScene(cam, W, H),
+    };
+    if (sceneDrawMap[currentScene]) sceneDrawMap[currentScene]();
   } else if (currentLevel === 1) {
     drawLevel1World(W, H, cam, cycle, isNight);
   } else if (currentLevel === 2) {
@@ -71,10 +65,6 @@ function draw() {
     drawRomeWorld(W, H, cam, cycle, isNight);
   } else if (currentLevel === 5) {
     drawHawaiiWorld(W, H, cam, cycle, isNight);
-  } else if (scubaDiving) {
-    drawScubaDivingScene(cam, W, H);
-  } else if (sailing) {
-    drawSailingScene(cam, W, H);
   } else if (currentLevel === 6) {
     drawOrientalWorld(W, H, cam, cycle, isNight);
   } else if (currentLevel === 8) {
