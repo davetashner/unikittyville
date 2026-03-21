@@ -579,6 +579,10 @@ function updatePrompt(near) {
     el.textContent = 'Press Enter to go scuba diving!';
     el.style.display = 'block';
     setAction('Enter', 'Dive');
+  } else if (currentLevel === 7 && alpsChoosing) {
+    el.textContent = 'Choose your ride! Press 1/S for Skis or 2/B for Snowboard';
+    el.style.display = 'block';
+    setAction('KeyS', 'Skis', 'KeyB', 'Board');
   } else if (currentLevel === 7) {
     el.textContent = 'Ski downhill! Dodge trees, jump cornices, collect diamonds!';
     el.style.display = 'block';
