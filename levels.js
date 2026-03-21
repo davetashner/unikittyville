@@ -1983,3 +1983,115 @@ for (let i = 0; i < 4; i++) {
     idleTimer: Math.random() * 200
   });
 }
+level10Flight.npcs = flightNpcs;
+
+npcDialogs[10] = [
+  "Welcome aboard the transatlantic flight!",
+  "Please fasten your seatbelts and enjoy the ride!",
+  "The view from up here is absolutely magical!",
+  "Did you know cats always land on their feet? Even at 30,000 feet!",
+  "The in-flight snacks are fish-flavored. Of course!",
+  "I can see the ocean from here! So many fish down there!",
+  "First class has yarn ball pillows. So fancy!",
+  "We'll be landing at Cape Canaveral soon!",
+  "The clouds look like giant cotton balls. Must. Not. Pounce.",
+  "Turbulence? That's just the plane purring!",
+  "The pilot is a unicorn cat too. Best airline ever!",
+  "I've been flying for hours and I still love it!",
+  "Look! You can see the curvature of the Earth from here!",
+  "The sunset at this altitude is breathtaking!",
+  "Fun fact: this plane runs on rainbow fuel!",
+  "We're serving complimentary glitter confetti in first class!",
+  "I tried to open a window for fresh air. They said no.",
+  "Next stop: SPACE! Well, almost. Cape Canaveral first!",
+];
+
+// ── Level 11: Cape Canaveral ──
+const CAPE_WORLD_W = 5200;
+
+// Rocket position (centerpiece of the level)
+const ROCKET_POS = { x: 3800, y: GROUND_Y };
+// Space suit area
+const SPACE_SUIT_POS = { x: 2000 };
+// NASA buildings
+const NASA_BUILDING_POS = { x: 1200, w: 180 };
+
+const level11Cape = {
+  worldW: CAPE_WORLD_W,
+  platforms: [
+    { x: 300, y: 360, w: 90 },
+    { x: 550, y: 310, w: 80 },
+    { x: 900, y: 350, w: 100 },
+    { x: 1400, y: 290, w: 85 },
+    { x: 1700, y: 340, w: 95 },
+    { x: 2300, y: 300, w: 80 },
+    { x: 2700, y: 360, w: 90 },
+    { x: 3100, y: 320, w: 85 },
+    { x: 3500, y: 280, w: 90 },
+    { x: 4200, y: 350, w: 100 },
+    { x: 4600, y: 300, w: 80 },
+  ],
+  yarnBalls: [],
+  npcs: [],
+  scenes: [
+    { type: 'palm_tree', x: 100 },
+    { type: 'palm_tree', x: 500 },
+    { type: 'palm_tree', x: 1800 },
+    { type: 'palm_tree', x: 4400 },
+    { type: 'nasa_building', x: NASA_BUILDING_POS.x },
+    { type: 'rocket', x: ROCKET_POS.x },
+    { type: 'space_suit', x: SPACE_SUIT_POS.x },
+  ],
+};
+
+// Yarn balls on elevated platforms
+for (const p of level11Cape.platforms) {
+  if (p.y < 360) {
+    level11Cape.yarnBalls.push({
+      x: p.x + p.w / 2,
+      y: p.y - 14,
+      color: yarnColors[level11Cape.yarnBalls.length % yarnColors.length],
+      collected: false,
+      bobPhase: Math.random() * Math.PI * 2
+    });
+  }
+}
+
+// Cape NPCs
+const capeNpcs = [];
+const capeNpcColors = ['#f8fafc', '#93c5fd', '#fcd34d', '#a5b4fc'];
+const capeNpcAccessories = ['glasses', 'scarf', 'bow', 'flower'];
+for (let i = 0; i < 4; i++) {
+  capeNpcs.push({
+    x: 400 + i * 1100 + Math.random() * 200,
+    y: GROUND_Y,
+    color: capeNpcColors[i],
+    accessory: capeNpcAccessories[i],
+    vx: (Math.random() - 0.5) * 1.0,
+    walkFrame: 0, walkTimer: 0,
+    facing: 1,
+    idleTimer: Math.random() * 200
+  });
+}
+level11Cape.npcs = capeNpcs;
+
+npcDialogs[11] = [
+  "Welcome to Cape Canaveral! Home of rockets and dreams!",
+  "That rocket over there? She's going to the MOON, baby!",
+  "I've been an engineer here for 20 years. Still get chills every launch!",
+  "Did you know unicorn cats have natural space resistance? Probably!",
+  "The space suit fitting room is over there. You'll look adorable in it!",
+  "T-minus whenever we feel like it! That's how countdowns work, right?",
+  "I saw a shooting star last night. Turned out it was a glitter trail!",
+  "First time at the space center? Don't forget to fuel the rocket!",
+  "The palm trees here have seen more launches than I can count!",
+  "Houston, we have a problem... I can't decide which rocket is prettiest!",
+  "Fun fact: the first cat in space was French! Félicette, 1963!",
+  "Make sure to put on your space suit before boarding! Safety first!",
+  "The countdown is the best part. 10... 9... 8... I get so excited!",
+  "I once tried to ride a rocket. They said cats can't be astronauts. WRONG!",
+  "The fuel smells like... adventure. And maybe a little like fish. Coincidence?",
+  "If you see aliens up there, tell them we said meow!",
+  "The launchpad was just repainted. Please don't scratch it. ...I know, it's tempting.",
+  "Space: the final frontier. Also the best place to chase laser pointers!",
+];

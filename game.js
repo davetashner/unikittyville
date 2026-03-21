@@ -63,6 +63,7 @@ const Scene = {
   SWIMMING_IN_POOL: 'swimmingInPool',
   CAMP_CAMPER: 'campCamper',
   WATERING_HOLE: 'wateringHole',
+  CAPE_LAUNCH: 'capeLaunch',
 };
 let currentScene = null;
 
@@ -137,6 +138,14 @@ const SLED_SPEED = 3.0;
 const NPC_TALK_RANGE = 60;
 let activeSpeechBubbles = []; // { npc, text, life }
 const SLED_WORLD_W = 5000;
+
+// Cape Canaveral state
+let capeSpaceSuit = false;
+let capeFueling = 0;
+let capeFueled = false;
+let capeLaunching = false;
+let capeCountdown = 10000; // 10 seconds
+let capeLaunchPower = 0;
 
 let popups = []; // floating score popups
 let keys = {};
@@ -432,6 +441,12 @@ function completeTransition() {
   safariPhotography = { active: false, timer: 0, targetAnimal: '' };
   cheetahSpeech = { text: '', timer: 0 };
   dustParticles = [];
+  capeSpaceSuit = false;
+  capeFueling = 0;
+  capeFueled = false;
+  capeLaunching = false;
+  capeCountdown = 10000;
+  capeLaunchPower = 0;
   // Stop any looping SFX from previous level
   stopLoopSfx('sfxSailWind');
   stopLoopSfx('sfxWaterLapping');
@@ -1998,6 +2013,65 @@ function update(dt) {
     if (player.x > level10Flight.worldW - 400 && keys['Enter']) {
       keys['Enter'] = false;
       switchToLevel(11);
+    }
+  }
+
+  // ── Cape Canaveral interactions (level 11) ──
+  if (currentLevel === 11) {
+    // Space suit
+    if (!capeSpaceSuit && Math.abs(player.x - SPACE_SUIT_POS.x) < BUILDING_RANGE && keys['KeyS']) {
+      keys['KeyS'] = false;
+      capeSpaceSuit = true;
+      addPopup(player.x, player.y - 30, 'Space Suit ON!', '#60a5fa');
+    }
+
+    // Fuel rocket
+    if (Math.abs(player.x - ROCKET_POS.x) < BUILDING_RANGE && !capeFueled) {
+      if (keys['KeyP']) {
+        capeFueling += 16; // ~dt
+        if (capeFueling >= 3000) {
+          capeFueled = true;
+          capeFueling = 3000;
+          addPopup(ROCKET_POS.x, GROUND_Y - 200, 'Rocket Fueled!', '#22c55e');
+        }
+      } else {
+        capeFueling = Math.max(0, capeFueling - 8); // drain if not holding
+      }
+    }
+
+    // Board rocket
+    if (capeFueled && capeSpaceSuit && Math.abs(player.x - ROCKET_POS.x) < BUILDING_RANGE && keys['Enter'] && !capeLaunching) {
+      keys['Enter'] = false;
+      capeLaunching = true;
+      currentScene = Scene.CAPE_LAUNCH;
+      capeCountdown = 10000;
+      capeLaunchPower = 0;
+    }
+  }
+
+  // Cape Canaveral Launch minigame
+  if (currentScene === Scene.CAPE_LAUNCH) {
+    capeCountdown -= 16; // ~dt
+    if (keys['Space']) {
+      capeLaunchPower = Math.min(1, capeLaunchPower + 0.015);
+    } else {
+      capeLaunchPower = Math.max(0, capeLaunchPower - 0.005);
+    }
+
+    if (capeCountdown <= 0) {
+      if (capeLaunchPower > 0.7) {
+        // Successful launch!
+        score += 100;
+        addPopup(player.x, player.y - 40, '+100 LIFTOFF!', '#fbbf24');
+        currentScene = null;
+        capeLaunching = false;
+        switchToLevel(12);
+      } else {
+        // Failed — retry
+        capeCountdown = 10000;
+        capeLaunchPower = 0;
+        addPopup(player.x, player.y - 40, 'Not enough power! Try again!', '#ef4444');
+      }
     }
   }
 
