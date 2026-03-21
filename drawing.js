@@ -28,6 +28,8 @@ function draw() {
     drawOrientalSky(W, H, cycle, isNight);
   } else if (currentLevel === 8) {
     drawCampgroundSky(W, H, cycle, isNight);
+  } else if (currentLevel === 9) {
+    drawSafariSky(W, H, cycle, isNight);
   } else {
     drawAlpsSky(W, H, cycle, isNight);
   }
@@ -57,6 +59,8 @@ function draw() {
     drawPoolSwimmingScene(cam, W, H);
   } else if (insideCampCamper) {
     drawCampCamperInterior(cam, W, H);
+  } else if (swimmingInWateringHole) {
+    drawWateringHoleScene(cam, W, H);
   } else if (currentLevel === 1) {
     drawLevel1World(W, H, cam, cycle, isNight);
   } else if (currentLevel === 2) {
@@ -75,6 +79,8 @@ function draw() {
     drawOrientalWorld(W, H, cam, cycle, isNight);
   } else if (currentLevel === 8) {
     drawCampgroundWorld(W, H, cam, cycle, isNight);
+  } else if (currentLevel === 9) {
+    drawSafariWorld(W, H, cam, cycle, isNight);
   } else {
     drawAlpsWorld(W, H, cam, cycle, isNight);
   }
@@ -223,7 +229,11 @@ function drawPlayerAndUI() {
   if (currentLevel === 2 && sledding) {
     drawSled(player.x, player.y);
   }
-  drawKitty(player.x, player.y, player.color, player.facing, player.walkFrame, 'horn');
+  // Draw cheetah under kitty when riding
+  if (currentLevel === 9 && ridingCheetah) {
+    drawRidingCheetah(player.x, player.y, player.facing);
+  }
+  drawKitty(player.x, player.y - (ridingCheetah ? 15 : 0), player.color, player.facing, player.walkFrame, 'horn');
 
   // Glitter particles from horn
   for (const g of glitterParticles) {
@@ -234,12 +244,21 @@ function drawPlayerAndUI() {
     ctx.arc(g.x, g.y, g.size, 0, Math.PI * 2);
     ctx.fill();
   }
+  // Dust particles (cheetah ride)
+  for (const d of dustParticles) {
+    const alpha = Math.min(1, d.life / 300);
+    ctx.globalAlpha = alpha * 0.6;
+    ctx.fillStyle = d.color;
+    ctx.beginPath();
+    ctx.arc(d.x, d.y, d.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
   ctx.globalAlpha = 1;
 
   ctx.fillStyle = '#fff';
   ctx.font = 'bold 12px system-ui';
   ctx.textAlign = 'center';
-  ctx.fillText(playerName, player.x, player.y - 38);
+  ctx.fillText(playerName, player.x, player.y - (ridingCheetah ? 53 : 38));
 
   if (fishing.active) {
     ctx.strokeStyle = '#a3a3a3';
@@ -4060,4 +4079,616 @@ function drawCampCamper(x) {
     ctx.beginPath(); ctx.arc(x - 30, gy, 10, 0, Math.PI * 2); ctx.fill();
     ctx.beginPath(); ctx.arc(x + 30, gy, 10, 0, Math.PI * 2); ctx.fill();
   }
+}
+
+// ── Africa Safari Drawing Functions ──
+
+function drawSafariSky(W, H, cycle, isNight) {
+  // Warm sunset savanna sky
+  const dayTop = [220, 140, 60]; const nightTop = [15, 12, 30];
+  const dayBot = [255, 180, 80]; const nightBot = [35, 25, 50];
+  const skyTop = lerpColor(dayTop, nightTop, cycle);
+  const skyBot = lerpColor(dayBot, nightBot, cycle);
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, `rgb(${skyTop})`);
+  grad.addColorStop(0.6, `rgb(${skyBot})`);
+  grad.addColorStop(1, '#c8a96e');
+  ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
+  if (isNight) drawStars(W, H, cycle);
+  drawCelestial(W, H, cycle);
+}
+
+function drawSafariWorld(W, H, cam) {
+  const ww = getCurrentWorldW();
+  // Savanna ground
+  ctx.fillStyle = '#c8a96e';
+  ctx.fillRect(0, GROUND_Y, ww, H);
+  // Dirt/sand variation
+  ctx.fillStyle = '#b89a5a';
+  for (let gx = Math.floor((cam - 20) / 80) * 80; gx < cam + W + 20; gx += 80) {
+    ctx.beginPath(); ctx.arc(gx + 30, GROUND_Y + 3, 4, Math.PI, 0); ctx.fill();
+    ctx.beginPath(); ctx.arc(gx + 55, GROUND_Y + 2, 3, Math.PI, 0); ctx.fill();
+  }
+
+  // Background distant hills (parallax)
+  ctx.fillStyle = '#a08050';
+  for (let hx = Math.floor((cam * 0.2) / 200) * 200 - 200; hx < cam * 0.2 + W + 200; hx += 200) {
+    const px = hx / 0.2;
+    const hh = 40 + Math.sin(hx * 0.3) * 15;
+    ctx.beginPath();
+    ctx.arc(px, GROUND_Y, hh + 30, Math.PI, 0);
+    ctx.fill();
+  }
+
+  // Draw scenes
+  drawSafariScenes(cam, W);
+
+  // Watering hole
+  drawWateringHole(cam, W);
+
+  // Platforms
+  drawSafariPlatforms();
+
+  // Yarn balls
+  drawSafariYarnBalls();
+
+  // Safari NPCs
+  for (const npc of safariNpcs) drawKitty(npc.x, npc.y, npc.color, npc.facing, npc.walkFrame, npc.accessory);
+
+  // Cheetah speech bubble
+  if (cheetahSpeech.timer > 0) {
+    drawCheetahSpeech(CHEETAH_POS.x, GROUND_Y);
+  }
+
+  drawPlayerAndUI();
+}
+
+function drawSafariScenes(cam, W) {
+  for (const scene of level7.scenes) {
+    if (scene.x < cam - 150 || scene.x > cam + W + 150) continue;
+    switch (scene.type) {
+      case 'acacia_tree': drawAcaciaTree(scene.x); break;
+      case 'baobab_tree': drawBaobabTree(scene.x); break;
+      case 'tall_grass': drawTallGrass(scene.x, scene.w); break;
+      case 'elephant': drawElephant(scene.x); break;
+      case 'rhino': break; // drawn dynamically from level7.rhinos
+      case 'giraffe': drawGiraffe(scene.x); break;
+      case 'cheetah': if (!ridingCheetah) drawCheetah(scene.x); break;
+      case 'safari_jeep': drawSafariJeep(scene.x); break;
+      case 'safari_rock': drawSafariRock(scene.x); break;
+      case 'animal_tracks': drawAnimalTracks(scene.x); break;
+    }
+  }
+  // Draw rhinos dynamically
+  for (const rh of level7.rhinos) {
+    if (rh.x < cam - 80 || rh.x > cam + W + 80) continue;
+    drawRhino(rh.x, rh.charging);
+  }
+  // Draw antelopes
+  for (const ant of level7.antelopes) {
+    if (ant.x < cam - 60 || ant.x > cam + W + 60) continue;
+    drawAntelope(ant.x, ant.running, ant.size);
+  }
+}
+
+function drawSafariPlatforms() {
+  for (const p of level7.platforms) {
+    ctx.fillStyle = 'rgba(0,0,0,0.1)'; ctx.fillRect(p.x + 3, p.y + 3, p.w, 14);
+    const pGrad = ctx.createLinearGradient(p.x, p.y, p.x, p.y + 14);
+    pGrad.addColorStop(0, '#a0845a'); pGrad.addColorStop(1, '#8a6e44');
+    ctx.fillStyle = pGrad; ctx.beginPath(); ctx.roundRect(p.x, p.y, p.w, 14, 4); ctx.fill();
+    // Rocky texture
+    ctx.fillStyle = '#b89a6a';
+    ctx.fillRect(p.x + 5, p.y + 2, 6, 3);
+    ctx.fillRect(p.x + p.w - 15, p.y + 4, 8, 2);
+  }
+}
+
+function drawSafariYarnBalls() {
+  for (const yb of level7.yarnBalls) {
+    if (yb.collected) continue;
+    const bob = Math.sin(gameTime / 400 + yb.bobPhase) * 3;
+    const yx = yb.x, yy = yb.y + bob;
+    ctx.globalAlpha = 0.25; ctx.fillStyle = yb.color;
+    ctx.beginPath(); ctx.arc(yx, yy, 18, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+    ctx.fillStyle = yb.color; ctx.beginPath(); ctx.arc(yx, yy, 12, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(yx, yy, 10, 0.3, 1.8); ctx.stroke();
+    ctx.beginPath(); ctx.arc(yx, yy, 8, 2.0, 3.5); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.beginPath(); ctx.arc(yx - 3, yy - 4, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = yb.color; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(yx + 10, yy + 5);
+    ctx.quadraticCurveTo(yx + 16, yy + 12 + bob, yx + 12, yy + 18); ctx.stroke();
+  }
+}
+
+function drawAcaciaTree(x) {
+  const gy = GROUND_Y;
+  // Trunk — tall and thin
+  ctx.fillStyle = '#5c3a1e';
+  ctx.fillRect(x - 4, gy - 90, 8, 90);
+  // Distinctive flat-top canopy
+  ctx.fillStyle = '#4a7c3f';
+  ctx.beginPath();
+  ctx.ellipse(x, gy - 90, 45, 18, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Darker top layer
+  ctx.fillStyle = '#3a6a2f';
+  ctx.beginPath();
+  ctx.ellipse(x, gy - 95, 35, 12, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Branch hints
+  ctx.strokeStyle = '#5c3a1e'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(x, gy - 60); ctx.lineTo(x - 25, gy - 82); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x, gy - 55); ctx.lineTo(x + 30, gy - 80); ctx.stroke();
+}
+
+function drawBaobabTree(x) {
+  const gy = GROUND_Y;
+  // Thick trunk
+  ctx.fillStyle = '#8B7355';
+  ctx.beginPath();
+  ctx.moveTo(x - 18, gy);
+  ctx.lineTo(x - 14, gy - 60);
+  ctx.lineTo(x + 14, gy - 60);
+  ctx.lineTo(x + 18, gy);
+  ctx.closePath();
+  ctx.fill();
+  // Bulging middle
+  ctx.beginPath();
+  ctx.ellipse(x, gy - 35, 20, 28, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Sparse branches
+  ctx.strokeStyle = '#6B5440'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x - 5, gy - 60); ctx.lineTo(x - 25, gy - 85); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x + 5, gy - 60); ctx.lineTo(x + 20, gy - 80); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x, gy - 60); ctx.lineTo(x + 5, gy - 90); ctx.stroke();
+  // Small leaf clusters
+  ctx.fillStyle = '#5c9c4a';
+  ctx.beginPath(); ctx.arc(x - 25, gy - 88, 8, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 20, gy - 83, 7, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 5, gy - 93, 6, 0, Math.PI * 2); ctx.fill();
+  // Fruit
+  ctx.fillStyle = '#f59e0b';
+  ctx.beginPath(); ctx.ellipse(x - 22, gy - 78, 3, 5, 0.3, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x + 18, gy - 74, 3, 5, -0.2, 0, Math.PI * 2); ctx.fill();
+}
+
+function drawTallGrass(x, w) {
+  const gy = GROUND_Y;
+  ctx.fillStyle = '#8aba70';
+  for (let gx = x; gx < x + w; gx += 8) {
+    const gh = 15 + Math.sin(gx * 0.5 + gameTime / 500) * 5;
+    const sway = Math.sin(gameTime / 800 + gx * 0.3) * 3;
+    ctx.beginPath();
+    ctx.moveTo(gx, gy);
+    ctx.quadraticCurveTo(gx + sway, gy - gh * 0.6, gx + sway * 1.5, gy - gh);
+    ctx.quadraticCurveTo(gx + sway + 2, gy - gh * 0.6, gx + 4, gy);
+    ctx.fill();
+  }
+  // Lighter accents
+  ctx.fillStyle = '#a8d88a';
+  for (let gx = x + 4; gx < x + w; gx += 12) {
+    const gh = 12 + Math.sin(gx * 0.7) * 4;
+    const sway = Math.sin(gameTime / 700 + gx * 0.4) * 2;
+    ctx.beginPath();
+    ctx.moveTo(gx, gy);
+    ctx.quadraticCurveTo(gx + sway, gy - gh * 0.6, gx + sway, gy - gh);
+    ctx.quadraticCurveTo(gx + sway + 1, gy - gh * 0.6, gx + 3, gy);
+    ctx.fill();
+  }
+}
+
+function drawElephant(x) {
+  const gy = GROUND_Y;
+  // Body
+  ctx.fillStyle = '#94a3b8';
+  ctx.beginPath();
+  ctx.ellipse(x, gy - 35, 35, 28, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Head
+  ctx.beginPath();
+  ctx.ellipse(x + 28, gy - 45, 18, 16, 0.2, 0, Math.PI * 2);
+  ctx.fill();
+  // Trunk
+  ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 8; ctx.lineCap = 'round';
+  const trunkSway = Math.sin(gameTime / 600) * 5;
+  ctx.beginPath();
+  ctx.moveTo(x + 42, gy - 40);
+  ctx.quadraticCurveTo(x + 55, gy - 25 + trunkSway, x + 48, gy - 10);
+  ctx.stroke();
+  // Legs
+  ctx.fillStyle = '#7c8ea0';
+  ctx.fillRect(x - 20, gy - 12, 10, 12);
+  ctx.fillRect(x - 5, gy - 12, 10, 12);
+  ctx.fillRect(x + 10, gy - 12, 10, 12);
+  ctx.fillRect(x + 22, gy - 12, 10, 12);
+  // Ear
+  ctx.fillStyle = '#a0b0c0';
+  ctx.beginPath();
+  ctx.ellipse(x + 20, gy - 48, 12, 10, -0.3, 0, Math.PI * 2);
+  ctx.fill();
+  // Eye
+  ctx.fillStyle = '#1e293b';
+  ctx.beginPath(); ctx.arc(x + 35, gy - 48, 3, 0, Math.PI * 2); ctx.fill();
+  // Tusk
+  ctx.fillStyle = '#fef3c7';
+  ctx.beginPath();
+  ctx.moveTo(x + 38, gy - 38);
+  ctx.quadraticCurveTo(x + 48, gy - 32, x + 44, gy - 22);
+  ctx.lineWidth = 3; ctx.strokeStyle = '#fef3c7'; ctx.stroke();
+}
+
+function drawRhino(x, charging) {
+  const gy = GROUND_Y;
+  // Body
+  ctx.fillStyle = charging ? '#6b7280' : '#78716c';
+  ctx.beginPath();
+  ctx.ellipse(x, gy - 22, 28, 18, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Head
+  ctx.beginPath();
+  ctx.ellipse(x + 22, gy - 25, 14, 12, 0.1, 0, Math.PI * 2);
+  ctx.fill();
+  // Horn
+  ctx.fillStyle = '#a8a29e';
+  ctx.beginPath();
+  ctx.moveTo(x + 34, gy - 28);
+  ctx.lineTo(x + 40, gy - 42);
+  ctx.lineTo(x + 36, gy - 28);
+  ctx.fill();
+  // Second smaller horn
+  ctx.beginPath();
+  ctx.moveTo(x + 28, gy - 30);
+  ctx.lineTo(x + 31, gy - 38);
+  ctx.lineTo(x + 30, gy - 30);
+  ctx.fill();
+  // Legs
+  ctx.fillStyle = '#57534e';
+  ctx.fillRect(x - 16, gy - 8, 8, 8);
+  ctx.fillRect(x - 3, gy - 8, 8, 8);
+  ctx.fillRect(x + 8, gy - 8, 8, 8);
+  ctx.fillRect(x + 18, gy - 8, 8, 8);
+  // Eye
+  ctx.fillStyle = '#1e293b';
+  ctx.beginPath(); ctx.arc(x + 28, gy - 28, 2, 0, Math.PI * 2); ctx.fill();
+  // Charging effect
+  if (charging) {
+    ctx.fillStyle = 'rgba(239, 68, 68, 0.3)';
+    ctx.beginPath(); ctx.arc(x + 40, gy - 35, 8, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+function drawAntelope(x, running, size) {
+  const gy = GROUND_Y;
+  const s = size || 1;
+  ctx.save();
+  ctx.translate(x, gy);
+  ctx.scale(s, s);
+  // Body
+  ctx.fillStyle = '#d4a574';
+  ctx.beginPath();
+  ctx.ellipse(0, -18, 18, 12, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Head
+  ctx.beginPath();
+  ctx.ellipse(15, -25, 8, 6, 0.3, 0, Math.PI * 2);
+  ctx.fill();
+  // Legs
+  ctx.strokeStyle = '#b8956a'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  const legAnim = running ? Math.sin(gameTime / 80) * 8 : 0;
+  ctx.beginPath(); ctx.moveTo(-10, -8); ctx.lineTo(-12 + legAnim, 0); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-3, -8); ctx.lineTo(-5 - legAnim, 0); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(5, -8); ctx.lineTo(3 + legAnim, 0); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(12, -8); ctx.lineTo(10 - legAnim, 0); ctx.stroke();
+  // Horns
+  ctx.strokeStyle = '#5c3a1e'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(17, -28); ctx.lineTo(14, -40); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(19, -28); ctx.lineTo(22, -40); ctx.stroke();
+  // Eye
+  ctx.fillStyle = '#1e293b';
+  ctx.beginPath(); ctx.arc(19, -27, 1.5, 0, Math.PI * 2); ctx.fill();
+  // White belly
+  ctx.fillStyle = '#fef3c7';
+  ctx.beginPath();
+  ctx.ellipse(0, -14, 14, 6, 0, 0.2, Math.PI - 0.2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawGiraffe(x) {
+  const gy = GROUND_Y;
+  // Long legs
+  ctx.fillStyle = '#d4a574';
+  ctx.fillRect(x - 12, gy - 50, 6, 50);
+  ctx.fillRect(x - 2, gy - 50, 6, 50);
+  ctx.fillRect(x + 8, gy - 50, 6, 50);
+  ctx.fillRect(x + 18, gy - 50, 6, 50);
+  // Body
+  ctx.fillStyle = '#d4a574';
+  ctx.beginPath();
+  ctx.ellipse(x + 5, gy - 55, 22, 14, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Long neck
+  ctx.fillStyle = '#d4a574';
+  ctx.save();
+  ctx.translate(x + 20, gy - 60);
+  ctx.rotate(-0.15);
+  ctx.fillRect(-5, -65, 10, 65);
+  ctx.restore();
+  // Head
+  ctx.beginPath();
+  ctx.ellipse(x + 22, gy - 125, 8, 6, 0.2, 0, Math.PI * 2);
+  ctx.fill();
+  // Spots
+  ctx.fillStyle = '#92400e';
+  const spots = [[-5, -55], [10, -58], [0, -48], [15, -50], [18, -75], [16, -90], [20, -105]];
+  for (const [sx, sy] of spots) {
+    ctx.beginPath(); ctx.ellipse(x + sx, gy + sy, 4, 3, 0, 0, Math.PI * 2); ctx.fill();
+  }
+  // Ossicones (horns)
+  ctx.strokeStyle = '#5c3a1e'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x + 19, gy - 128); ctx.lineTo(x + 17, gy - 138); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x + 25, gy - 128); ctx.lineTo(x + 27, gy - 138); ctx.stroke();
+  ctx.fillStyle = '#92400e';
+  ctx.beginPath(); ctx.arc(x + 17, gy - 139, 2, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 27, gy - 139, 2, 0, Math.PI * 2); ctx.fill();
+  // Eye
+  ctx.fillStyle = '#1e293b';
+  ctx.beginPath(); ctx.arc(x + 27, gy - 126, 2, 0, Math.PI * 2); ctx.fill();
+  // Friendly smile
+  ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(x + 25, gy - 122, 3, 0, Math.PI); ctx.stroke();
+}
+
+function drawCheetah(x) {
+  const gy = GROUND_Y;
+  // Body
+  ctx.fillStyle = '#f59e0b';
+  ctx.beginPath();
+  ctx.ellipse(x, gy - 18, 22, 14, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Head
+  ctx.beginPath();
+  ctx.ellipse(x + 20, gy - 22, 10, 8, 0.1, 0, Math.PI * 2);
+  ctx.fill();
+  // Spots
+  ctx.fillStyle = '#292524';
+  const spotPositions = [[-10, -20], [-5, -14], [2, -22], [8, -16], [-8, -25], [5, -10], [12, -20]];
+  for (const [sx, sy] of spotPositions) {
+    ctx.beginPath(); ctx.arc(x + sx, gy + sy, 2, 0, Math.PI * 2); ctx.fill();
+  }
+  // Legs
+  ctx.fillStyle = '#d97706';
+  ctx.fillRect(x - 14, gy - 6, 5, 6);
+  ctx.fillRect(x - 5, gy - 6, 5, 6);
+  ctx.fillRect(x + 5, gy - 6, 5, 6);
+  ctx.fillRect(x + 14, gy - 6, 5, 6);
+  // Tail
+  ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  const tailSway = Math.sin(gameTime / 400) * 8;
+  ctx.beginPath();
+  ctx.moveTo(x - 20, gy - 18);
+  ctx.quadraticCurveTo(x - 30, gy - 30 + tailSway, x - 25, gy - 35);
+  ctx.stroke();
+  // Tail tip (black)
+  ctx.strokeStyle = '#292524'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(x - 26, gy - 33); ctx.lineTo(x - 25, gy - 37); ctx.stroke();
+  // Tear marks (black lines from eyes)
+  ctx.strokeStyle = '#292524'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(x + 26, gy - 22); ctx.lineTo(x + 28, gy - 16); ctx.stroke();
+  // Eye
+  ctx.fillStyle = '#fef3c7';
+  ctx.beginPath(); ctx.arc(x + 25, gy - 24, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#292524';
+  ctx.beginPath(); ctx.arc(x + 26, gy - 24, 1.5, 0, Math.PI * 2); ctx.fill();
+  // Yarn wanted indicator
+  if (cheetahYarnGiven < 5) {
+    const bob = Math.sin(gameTime / 300) * 3;
+    ctx.fillStyle = '#c4b5fd';
+    ctx.beginPath(); ctx.arc(x, gy - 42 + bob, 8, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 10px system-ui'; ctx.textAlign = 'center';
+    ctx.fillText('?', x, gy - 39 + bob);
+  }
+}
+
+function drawRidingCheetah(x, y, facing) {
+  // Simplified cheetah body under the player
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(facing, 1);
+  // Body
+  ctx.fillStyle = '#f59e0b';
+  ctx.beginPath();
+  ctx.ellipse(0, -5, 25, 12, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Head
+  ctx.beginPath();
+  ctx.ellipse(22, -8, 10, 8, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Spots
+  ctx.fillStyle = '#292524';
+  const spots = [[-8, -8], [0, -4], [8, -9], [-4, -12], [5, -2]];
+  for (const [sx, sy] of spots) {
+    ctx.beginPath(); ctx.arc(sx, sy, 1.5, 0, Math.PI * 2); ctx.fill();
+  }
+  // Legs (animated)
+  const legAnim = Math.sin(gameTime / 60) * 10;
+  ctx.strokeStyle = '#d97706'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(-15, 3); ctx.lineTo(-18 + legAnim, 12); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-5, 3); ctx.lineTo(-8 - legAnim, 12); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(8, 3); ctx.lineTo(5 + legAnim, 12); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(18, 3); ctx.lineTo(15 - legAnim, 12); ctx.stroke();
+  // Tail
+  ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 3;
+  const tailSway = Math.sin(gameTime / 200) * 8;
+  ctx.beginPath();
+  ctx.moveTo(-23, -5);
+  ctx.quadraticCurveTo(-33, -15 + tailSway, -28, -22);
+  ctx.stroke();
+  // Eye
+  ctx.fillStyle = '#292524';
+  ctx.beginPath(); ctx.arc(28, -10, 2, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+
+function drawSafariJeep(x) {
+  const gy = GROUND_Y;
+  // Body
+  ctx.fillStyle = '#65a30d';
+  ctx.beginPath(); ctx.roundRect(x - 40, gy - 40, 80, 30, 5); ctx.fill();
+  // Roof
+  ctx.fillStyle = '#4d7c0f';
+  ctx.fillRect(x - 30, gy - 55, 50, 15);
+  // Roof supports
+  ctx.strokeStyle = '#4d7c0f'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(x - 30, gy - 40); ctx.lineTo(x - 30, gy - 55); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x + 20, gy - 40); ctx.lineTo(x + 20, gy - 55); ctx.stroke();
+  // Windshield
+  ctx.fillStyle = '#bae6fd';
+  ctx.fillRect(x - 25, gy - 38, 20, 12);
+  // Wheels
+  ctx.fillStyle = '#1f2937';
+  ctx.beginPath(); ctx.arc(x - 22, gy - 8, 8, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 22, gy - 8, 8, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#6b7280';
+  ctx.beginPath(); ctx.arc(x - 22, gy - 8, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 22, gy - 8, 4, 0, Math.PI * 2); ctx.fill();
+  // Spare tire
+  ctx.fillStyle = '#374151';
+  ctx.beginPath(); ctx.arc(x + 42, gy - 30, 7, 0, Math.PI * 2); ctx.fill();
+  // "SAFARI" text
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 8px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText('SAFARI', x, gy - 44);
+}
+
+function drawSafariRock(x) {
+  const gy = GROUND_Y;
+  ctx.fillStyle = '#a0845a';
+  ctx.beginPath();
+  ctx.moveTo(x - 15, gy);
+  ctx.lineTo(x - 12, gy - 12);
+  ctx.lineTo(x - 3, gy - 18);
+  ctx.lineTo(x + 8, gy - 14);
+  ctx.lineTo(x + 14, gy);
+  ctx.closePath();
+  ctx.fill();
+  // Highlight
+  ctx.fillStyle = '#b89a6a';
+  ctx.beginPath();
+  ctx.moveTo(x - 8, gy - 10);
+  ctx.lineTo(x - 3, gy - 16);
+  ctx.lineTo(x + 4, gy - 12);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawAnimalTracks(x) {
+  const gy = GROUND_Y;
+  ctx.fillStyle = '#8a6e44';
+  // Paw prints leading somewhere
+  for (let i = 0; i < 5; i++) {
+    const tx = x + i * 18;
+    const ty = gy + 3;
+    // Main pad
+    ctx.beginPath(); ctx.ellipse(tx, ty, 3, 4, 0, 0, Math.PI * 2); ctx.fill();
+    // Toe pads
+    ctx.beginPath(); ctx.arc(tx - 3, ty - 4, 1.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(tx + 3, ty - 4, 1.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(tx, ty - 5, 1.5, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+function drawWateringHole(cam, W) {
+  const whx = WATERING_HOLE_POS.x;
+  const whw = WATERING_HOLE_POS.w;
+  if (whx + whw < cam - 50 || whx > cam + W + 50) return;
+
+  const gy = GROUND_Y;
+  // Water
+  ctx.fillStyle = '#38bdf8';
+  ctx.globalAlpha = 0.7;
+  ctx.beginPath();
+  ctx.ellipse(whx + whw / 2, gy + 5, whw / 2, 20, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  // Shore
+  ctx.strokeStyle = '#92400e'; ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.ellipse(whx + whw / 2, gy + 5, whw / 2 + 5, 23, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  // Water ripples
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1;
+  const ripple = Math.sin(gameTime / 500) * 5;
+  ctx.beginPath();
+  ctx.ellipse(whx + whw / 2 - 20, gy + 3, 15 + ripple, 5, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.ellipse(whx + whw / 2 + 30, gy + 7, 12 - ripple, 4, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  // Mud patches on shore
+  ctx.fillStyle = '#78552e';
+  ctx.beginPath(); ctx.ellipse(whx + 20, gy + 3, 8, 3, 0.2, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(whx + whw - 15, gy + 5, 6, 3, -0.3, 0, Math.PI * 2); ctx.fill();
+}
+
+function drawWateringHoleScene(cam, W, H) {
+  // Swimming scene — similar to fountain swimming
+  const cx = cam + W / 2;
+  const cy = GROUND_Y - 80;
+  // Background
+  ctx.fillStyle = '#87CEEB';
+  ctx.fillRect(cam, 0, W, H);
+  // Water
+  ctx.fillStyle = '#38bdf8';
+  ctx.fillRect(cam, cy + 30, W, H - cy - 30);
+  // Ripple effects
+  ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 2;
+  for (let i = 0; i < 5; i++) {
+    const rx = cx + Math.sin(gameTime / 600 + i * 1.2) * 100;
+    const ry = cy + 50 + i * 20;
+    ctx.beginPath();
+    ctx.ellipse(rx, ry, 20 + Math.sin(gameTime / 400 + i) * 5, 5, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  // Shore
+  ctx.fillStyle = '#c8a96e';
+  ctx.fillRect(cam, cy + 25, W, 8);
+  // Player splashing
+  drawKitty(cx, cy + 45, player.color, player.facing, player.walkFrame, 'horn');
+  // Splash effects
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  for (let i = 0; i < 3; i++) {
+    const sx = cx + Math.sin(gameTime / 200 + i * 2) * 30;
+    const sy = cy + 40 + Math.cos(gameTime / 300 + i) * 5;
+    ctx.beginPath(); ctx.arc(sx, sy, 3, 0, Math.PI * 2); ctx.fill();
+  }
+  // Instructions
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 14px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText('Splashing in the watering hole! Press S to get out', cx, cy - 10);
+}
+
+function drawCheetahSpeech(x, gy) {
+  if (cheetahSpeech.timer <= 0) return;
+  const text = cheetahSpeech.text;
+  ctx.font = '11px system-ui';
+  const tw = ctx.measureText(text).width + 16;
+  const bx = x - tw / 2;
+  const by = gy - 65;
+  // Bubble
+  ctx.fillStyle = 'rgba(255,255,255,0.95)';
+  ctx.beginPath(); ctx.roundRect(bx, by, tw, 24, 6); ctx.fill();
+  ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.roundRect(bx, by, tw, 24, 6); ctx.stroke();
+  // Tail
+  ctx.fillStyle = 'rgba(255,255,255,0.95)';
+  ctx.beginPath();
+  ctx.moveTo(x - 5, by + 24);
+  ctx.lineTo(x, by + 32);
+  ctx.lineTo(x + 5, by + 24);
+  ctx.fill();
+  // Text
+  ctx.fillStyle = '#292524'; ctx.textAlign = 'center';
+  ctx.fillText(text, x, by + 16);
 }

@@ -235,7 +235,8 @@ function applyVolume() {
 
 // ── Music system with crossfade ──
 const FADE_DURATION = 1200; // ms
-const levelMusic = { 1: 'musicMeadow', 2: 'musicSledding', 3: 'musicNYC', 4: 'musicRome', 5: 'musicHawaii', 6: 'musicOriental', 7: 'musicAlps', 8: 'musicChalet', 9: 'musicCampground' };
+const levelMusic = { 1: 'musicMeadow', 2: 'musicSledding', 3: 'musicNYC', 4: 'musicRome', 5: 'musicHawaii', 6: 'musicOriental', 7: 'musicAlps', 8: 'musicCampground', 9: 'musicSafari' };
+const CHALET_MUSIC_ID = 'musicChalet';
 let currentMusicId = null;
 let musicFade = null; // { out: AudioElement, in: AudioElement, timer: 0 }
 
@@ -251,6 +252,11 @@ function startLevelMusic(level) {
 
 function crossfadeToLevel(level) {
   const newId = levelMusic[level];
+  if (!newId) return;
+  crossfadeToMusic(newId);
+}
+
+function crossfadeToMusic(newId) {
   if (!newId || newId === currentMusicId) return;
   const outEl = currentMusicId ? document.getElementById(currentMusicId) : null;
   const inEl = document.getElementById(newId);
@@ -337,18 +343,23 @@ function completeTransition() {
   campCamperPasta = { cooking: false, progress: 0, eaten: 0 };
   campCamperShowering = false;
   campCamperShowerTimer = 0;
+  ridingCheetah = false;
+  swimmingInWateringHole = false;
+  safariPhotography = { active: false, timer: 0, targetAnimal: '' };
+  cheetahSpeech = { text: '', timer: 0 };
+  dustParticles = [];
 }
 
 function getCurrentPlatforms() {
-  return currentLevel === 1 ? platforms : currentLevel === 2 ? level2Sled.platforms : currentLevel === 3 ? level2.platforms : currentLevel === 4 ? level3.platforms : currentLevel === 5 ? level4.platforms : currentLevel === 6 ? levelOriental.platforms : currentLevel === 8 ? level6.platforms : level5.platforms;
+  return currentLevel === 1 ? platforms : currentLevel === 2 ? level2Sled.platforms : currentLevel === 3 ? level2.platforms : currentLevel === 4 ? level3.platforms : currentLevel === 5 ? level4.platforms : currentLevel === 6 ? levelOriental.platforms : currentLevel === 8 ? level6.platforms : currentLevel === 9 ? level7.platforms : level5.platforms;
 }
 
 function getCurrentYarnBalls() {
-  return currentLevel === 1 ? yarnBalls : currentLevel === 2 ? level2Sled.yarnBalls : currentLevel === 3 ? level2.yarnBalls : currentLevel === 4 ? level3.yarnBalls : currentLevel === 5 ? level4.yarnBalls : currentLevel === 6 ? levelOriental.yarnBalls : currentLevel === 8 ? level6.yarnBalls : level5.yarnBalls;
+  return currentLevel === 1 ? yarnBalls : currentLevel === 2 ? level2Sled.yarnBalls : currentLevel === 3 ? level2.yarnBalls : currentLevel === 4 ? level3.yarnBalls : currentLevel === 5 ? level4.yarnBalls : currentLevel === 6 ? levelOriental.yarnBalls : currentLevel === 8 ? level6.yarnBalls : currentLevel === 9 ? level7.yarnBalls : level5.yarnBalls;
 }
 
 function getCurrentWorldW() {
-  return currentLevel === 1 ? WORLD_W : currentLevel === 2 ? level2Sled.worldW : currentLevel === 3 ? level2.worldW : currentLevel === 4 ? level3.worldW : currentLevel === 5 ? level4.worldW : currentLevel === 6 ? levelOriental.worldW : currentLevel === 8 ? level6.worldW : level5.worldW;
+  return currentLevel === 1 ? WORLD_W : currentLevel === 2 ? level2Sled.worldW : currentLevel === 3 ? level2.worldW : currentLevel === 4 ? level3.worldW : currentLevel === 5 ? level4.worldW : currentLevel === 6 ? levelOriental.worldW : currentLevel === 8 ? level6.worldW : currentLevel === 9 ? level7.worldW : level5.worldW;
 }
 
 // ── Level 6: Oriental NC ──
@@ -373,8 +384,8 @@ let scubaPearlCount = 0;
 let levelSelectUnlocked = true; // permanently unlocked for dev/debug
 let gameCompleted = false;
 let showLevelSelect = false;
-const LEVEL_NAMES = ['Meadow', 'Sledding', 'NYC', 'Rome', 'Hawaii', 'Oriental', 'Alps', 'Campground'];
-const TOTAL_LEVELS = 8;
+const LEVEL_NAMES = ['Meadow', 'Sledding', 'NYC', 'Rome', 'Hawaii', 'Oriental', 'Alps', 'Campground', 'Africa Safari'];
+const TOTAL_LEVELS = 9;
 
 // ── Level 7: Alps ──
 // The Alps is a downhill skiing level — the kitty starts at the top-left
@@ -409,6 +420,21 @@ let campCamperPasta = { cooking: false, progress: 0, eaten: 0 };
 let campCamperShowering = false;
 let campCamperShowerTimer = 0;
 const CAMP_CAMPER_POS = { x: 4700 };
+
+// ── Level 8: Africa Safari ──
+let fruitCount = 0;
+let safariPhotoCount = 0;
+let cheetahYarnGiven = 0;
+let ridingCheetah = false;
+let cheetahSpeech = { text: '', timer: 0 };
+let safariPhotography = { active: false, timer: 0, targetAnimal: '' };
+const SAFARI_PHOTO_DURATION = 1500; // 1.5s timing window
+let safariPhotosTaken = { elephant: false, rhino: false, antelope: false, giraffe: false };
+let swimmingInWateringHole = false;
+let dustParticles = []; // cheetah ride dust trail
+const CHEETAH_SPEED = 6.5; // faster than normal 4px
+const CHEETAH_YARN_MAGNET = 80; // auto-collect radius while riding
+const SAFARI_JEEP_POS_GAME = { x: 5200 };
 
 const CAMP_WORLD_W = 5000;
 const FIRE_PIT_POS = { x: 1200 };
@@ -1261,7 +1287,7 @@ function update(dt) {
         keys['Enter'] = false;
         insideChalet = true;
         marshmallowAngle = Math.PI / 5; // reset aim
-        crossfadeToLevel(8); // chalet music
+        crossfadeToMusic(CHALET_MUSIC_ID); // chalet music
       }
     }
   }
@@ -1494,6 +1520,274 @@ function update(dt) {
     if (leprechaunSpeech.timer > 0) {
       leprechaunSpeech.timer -= dt;
     }
+    // Safari jeep at end of campground → Africa
+    if (Math.abs(player.x - CAMP_CAMPER_POS.x) < 55 && keys['KeyJ']) {
+      keys['KeyJ'] = false;
+      switchToLevel(9);
+    }
+  }
+
+  // ── Africa Safari interactions (level 8) ──
+  let nearBaobab = false;
+  let nearCheetah = false;
+  let nearSafariJeep = false;
+  let nearWateringHole = false;
+  let nearElephant = false;
+  if (currentLevel === 9) {
+    // Cheetah ride mode — override movement speed
+    if (ridingCheetah) {
+      if (keys['ArrowLeft'] || keys['ArrowRight']) {
+        // Faster movement while riding
+        player.vx = keys['ArrowLeft'] ? -CHEETAH_SPEED : CHEETAH_SPEED;
+      }
+      // Dust trail particles
+      if (Math.abs(player.vx) > 2) {
+        for (let i = 0; i < 2; i++) {
+          dustParticles.push({
+            x: player.x - player.facing * 15 + (Math.random() - 0.5) * 10,
+            y: player.y + (Math.random() - 0.5) * 5,
+            vx: -player.facing * (1 + Math.random() * 2),
+            vy: -Math.random() * 1.5,
+            life: 400 + Math.random() * 300,
+            size: 2 + Math.random() * 4,
+            color: '#d4a574'
+          });
+        }
+      }
+      // Yarn magnet — auto-collect nearby yarn while riding
+      for (const yb of getCurrentYarnBalls()) {
+        if (yb.collected) continue;
+        const dx = player.x - yb.x;
+        const dy = (player.y - 20) - yb.y;
+        if (dx * dx + dy * dy < CHEETAH_YARN_MAGNET * CHEETAH_YARN_MAGNET) {
+          yb.collected = true;
+          yarnCount++;
+          score += 20;
+          addPopup(yb.x, yb.y - 20, '+20 Yarn!', yb.color);
+          playChaChing();
+        }
+      }
+      // Dismount with G key
+      if (keys['KeyG']) {
+        keys['KeyG'] = false;
+        ridingCheetah = false;
+      }
+    }
+
+    // Update dust particles
+    for (let i = dustParticles.length - 1; i >= 0; i--) {
+      const p = dustParticles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.03;
+      p.life -= dt;
+      if (p.life <= 0) dustParticles.splice(i, 1);
+    }
+
+    // Baobab fruit collection
+    for (const bx of BAOBAB_POSITIONS) {
+      if (Math.abs(player.x - bx) < 50) {
+        nearBaobab = true;
+        if (keys['KeyF']) {
+          keys['KeyF'] = false;
+          fruitCount++;
+          score += 10;
+          addPopup(bx, player.y - 40, '+10 Baobab fruit!', '#f59e0b');
+          playChaChing();
+        }
+      }
+    }
+
+    // Watering hole swimming
+    if (player.x > WATERING_HOLE_POS.x && player.x < WATERING_HOLE_POS.x + WATERING_HOLE_POS.w) {
+      nearWateringHole = true;
+      if (!swimmingInWateringHole && keys['KeyS']) {
+        keys['KeyS'] = false;
+        swimmingInWateringHole = true;
+      }
+    }
+    if (swimmingInWateringHole && keys['KeyS']) {
+      keys['KeyS'] = false;
+      swimmingInWateringHole = false;
+    }
+
+    // Elephant water launch — press E near elephant to get launched high
+    for (const ex of ELEPHANT_POSITIONS) {
+      if (Math.abs(player.x - ex) < 60) {
+        nearElephant = true;
+        if (keys['KeyE'] && player.onGround) {
+          keys['KeyE'] = false;
+          player.vy = JUMP_VEL * 1.8; // super high launch!
+          player.onGround = false;
+          score += 15;
+          addPopup(ex, player.y - 60, '+15 Elephant boost!', '#94a3b8');
+          playMeow();
+        }
+      }
+    }
+
+    // Rhino obstacles — charge when player is nearby
+    for (const rh of level7.rhinos) {
+      if (rh.cooldown > 0) {
+        rh.cooldown -= dt;
+        continue;
+      }
+      const dist = player.x - rh.x;
+      if (!rh.charging && Math.abs(dist) < 200 && Math.abs(dist) > 30) {
+        rh.charging = true;
+        rh.chargeVx = dist > 0 ? 5 : -5; // charge toward player
+        rh.chargeTimer = 0;
+      }
+      if (rh.charging) {
+        rh.chargeTimer += dt;
+        rh.x += rh.chargeVx;
+        // Hit detection
+        if (!rh.hit && Math.abs(player.x - rh.x) < 20 && player.y > GROUND_Y - 50) {
+          rh.hit = true;
+          score = Math.max(0, score - 15);
+          addPopup(rh.x, player.y - 40, '-15 Rhino charge!', '#ef4444');
+          player.vy = JUMP_VEL * 0.8; // knocked back
+          player.onGround = false;
+        }
+        if (rh.chargeTimer > 2000) {
+          rh.charging = false;
+          rh.hit = false;
+          rh.cooldown = 4000; // 4s cooldown
+        }
+      }
+    }
+
+    // Antelope herds — periodic running
+    for (const ant of level7.antelopes) {
+      if (!ant.running) {
+        ant.runTimer += dt;
+        if (ant.runTimer > 8000 + Math.random() * 5000) {
+          ant.running = true;
+          ant.runTimer = 0;
+          ant.vx = (Math.random() > 0.5 ? 1 : -1) * (3 + Math.random() * 2);
+        }
+      }
+      if (ant.running) {
+        ant.x += ant.vx;
+        ant.runTimer += dt;
+        if (ant.runTimer > 3000 || ant.x < 50 || ant.x > SAFARI_WORLD_W - 50) {
+          ant.running = false;
+          ant.runTimer = 0;
+          ant.x = Math.max(50, Math.min(SAFARI_WORLD_W - 50, ant.x));
+        }
+      }
+    }
+
+    // Safari photography — press P near animals to photograph
+    if (safariPhotography.active) {
+      safariPhotography.timer += dt;
+      if (safariPhotography.timer >= SAFARI_PHOTO_DURATION) {
+        safariPhotography.active = false;
+        // Check if timing was good (sweet spot: 500-1200ms)
+        if (safariPhotography.timer < 2000) {
+          const animal = safariPhotography.targetAnimal;
+          if (!safariPhotosTaken[animal]) {
+            safariPhotosTaken[animal] = true;
+            safariPhotoCount++;
+            score += 30;
+            addPopup(player.x, player.y - 40, '+30 Great photo!', '#fbbf24');
+            playChaChing();
+            // Bonus for all 4 species
+            if (safariPhotoCount >= 4) {
+              score += 100;
+              addPopup(player.x, player.y - 60, '+100 Safari collection complete!', '#f97316');
+              playChaChing();
+            }
+          } else {
+            score += 5;
+            addPopup(player.x, player.y - 40, '+5 Nice shot!', '#86efac');
+            playChaChing();
+          }
+        } else {
+          addPopup(player.x, player.y - 40, 'Too slow! It walked away...', '#94a3b8');
+        }
+      }
+    }
+    if (!safariPhotography.active && keys['KeyP']) {
+      keys['KeyP'] = false;
+      // Check if near any animal for photography
+      let targetAnimal = '';
+      for (const ex of ELEPHANT_POSITIONS) {
+        if (Math.abs(player.x - ex) < 80) targetAnimal = 'elephant';
+      }
+      for (const rh of level7.rhinos) {
+        if (Math.abs(player.x - rh.x) < 80) targetAnimal = 'rhino';
+      }
+      for (const ant of level7.antelopes) {
+        if (Math.abs(player.x - ant.x) < 80) targetAnimal = 'antelope';
+      }
+      for (const gx of GIRAFFE_POSITIONS) {
+        if (Math.abs(player.x - gx) < 80) targetAnimal = 'giraffe';
+      }
+      if (targetAnimal) {
+        safariPhotography.active = true;
+        safariPhotography.timer = 0;
+        safariPhotography.targetAnimal = targetAnimal;
+      }
+    }
+
+    // Cheetah interaction — give yarn
+    if (Math.abs(player.x - CHEETAH_POS.x) < 60) {
+      nearCheetah = true;
+      if (!ridingCheetah && cheetahYarnGiven < 5 && yarnCount > 0 && keys['KeyY']) {
+        keys['KeyY'] = false;
+        yarnCount--;
+        cheetahYarnGiven++;
+        const dialogueIdx = Math.min(cheetahYarnGiven - 1, CHEETAH_DIALOGUES.length - 1);
+        cheetahSpeech = { text: CHEETAH_DIALOGUES[dialogueIdx], timer: 3000 };
+        if (cheetahYarnGiven >= 5) {
+          ridingCheetah = true;
+          score += 50;
+          addPopup(CHEETAH_POS.x, player.y - 40, '+50 Cheetah ride unlocked!', '#f97316');
+          playChaChing();
+        }
+      }
+      // Mount/remount cheetah
+      if (!ridingCheetah && cheetahYarnGiven >= 5 && keys['KeyG']) {
+        keys['KeyG'] = false;
+        ridingCheetah = true;
+      }
+    }
+    if (cheetahSpeech.timer > 0) {
+      cheetahSpeech.timer -= dt;
+    }
+
+    // Giraffe ride — press G near giraffe to reach high platforms
+    for (const gx of GIRAFFE_POSITIONS) {
+      if (Math.abs(player.x - gx) < 50 && keys['KeyE'] && player.onGround && !ridingCheetah) {
+        keys['KeyE'] = false;
+        player.vy = JUMP_VEL * 1.5; // high boost
+        player.onGround = false;
+        score += 10;
+        addPopup(gx, player.y - 40, '+10 Giraffe lift!', '#fde68a');
+        playMeow();
+      }
+    }
+
+    // Safari jeep — exit portal
+    if (Math.abs(player.x - SAFARI_JEEP_POS_GAME.x) < 55) {
+      nearSafariJeep = true;
+      // For now the safari is the last level — could connect to next level later
+    }
+
+    // Tall grass slowdown
+    for (const scene of level7.scenes) {
+      if (scene.type === 'tall_grass' && player.x > scene.x && player.x < scene.x + scene.w) {
+        if (!ridingCheetah) {
+          player.vx *= 0.6; // slow down in tall grass
+        }
+      }
+    }
+
+    // Update HUD
+    document.getElementById('hudFruit').textContent = fruitCount;
+    document.getElementById('hudPhoto').textContent = safariPhotoCount;
+    document.getElementById('hudCheetahYarn').textContent = cheetahYarnGiven + '/5';
   }
 
   // Rainbow bridge portal (level 1 → level 2 sledding)
@@ -1566,7 +1860,7 @@ function update(dt) {
   }
 
   // NPC AI
-  const activeNpcs = currentLevel === 1 ? npcs : currentLevel === 2 ? sledNpcs : currentLevel === 3 ? nycNpcs : currentLevel === 4 ? romeNpcs : currentLevel === 5 ? hawaiiNpcs : currentLevel === 6 ? orientalNpcs : currentLevel === 8 ? campNpcs : alpsNpcs;
+  const activeNpcs = currentLevel === 1 ? npcs : currentLevel === 2 ? sledNpcs : currentLevel === 3 ? nycNpcs : currentLevel === 4 ? romeNpcs : currentLevel === 5 ? hawaiiNpcs : currentLevel === 6 ? orientalNpcs : currentLevel === 8 ? campNpcs : currentLevel === 9 ? safariNpcs : alpsNpcs;
   const worldW = getCurrentWorldW();
   for (const npc of activeNpcs) {
     npc.idleTimer -= dt / 16;
@@ -1587,7 +1881,7 @@ function update(dt) {
 
   // NPC talk — Q key to chat with nearby NPCs
   let nearNpc = false;
-  if (!insideChalet && !insideHouse && !insideCamper && !insideWindmill && !insidePizza && !insidePark && !insidePantheon && !swimming && !surfing && !swimmingInPool && !insideCampCamper && !scubaDiving && !sailing) {
+  if (!insideChalet && !insideHouse && !insideCamper && !insideWindmill && !insidePizza && !insidePark && !insidePantheon && !swimming && !surfing && !swimmingInPool && !insideCampCamper && !scubaDiving && !sailing && !swimmingInWateringHole) {
     for (const npc of activeNpcs) {
       if (Math.abs(player.x - npc.x) < NPC_TALK_RANGE) {
         nearNpc = true;
@@ -1673,19 +1967,23 @@ function update(dt) {
   }
 
   // Hide controls during interior/mini-game scenes (always hidden on mobile)
-  const inScene = insideHouse || insideCamper || insideWindmill || insidePizza || insidePark || insidePantheon || swimming || surfing || insideChalet || swimmingInPool || insideCampCamper || scubaDiving || sailing;
+  const inScene = insideHouse || insideCamper || insideWindmill || insidePizza || insidePark || insidePantheon || swimming || surfing || insideChalet || swimmingInPool || insideCampCamper || scubaDiving || sailing || swimmingInWateringHole;
   if (!isMobile) {
     document.getElementById('controls').style.display = inScene ? 'none' : 'flex';
   }
 
   // Prompt
-  updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf, nearAirport, nearChalet, nearTrain, nearNpc, nearStick, nearFirePit, nearHammock, nearBigfoot, nearDigSite, nearWaterPump, nearPool, nearCampCamper, nearSailboat, nearDiveSpot);
+  updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf, nearAirport, nearChalet, nearTrain, nearNpc, nearStick, nearFirePit, nearHammock, nearBigfoot, nearDigSite, nearWaterPump, nearPool, nearCampCamper, nearSailboat, nearDiveSpot, nearBaobab, nearCheetah, nearSafariJeep, nearWateringHole, nearElephant);
 }
 
 function getGroundLevel(x) {
   // Pond area is lower (level 1 only)
   if (currentLevel === 1 && x > POND.x + 20 && x < POND.x + POND.w - 20) {
     return GROUND_Y + POND.depth;
+  }
+  // Watering hole (Africa safari)
+  if (currentLevel === 9 && x > WATERING_HOLE_POS.x + 20 && x < WATERING_HOLE_POS.x + WATERING_HOLE_POS.w - 20) {
+    return GROUND_Y + WATERING_HOLE_POS.depth;
   }
   return GROUND_Y;
 }

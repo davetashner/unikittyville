@@ -222,6 +222,42 @@ const npcDialogs = {
     "I tried to catch a snowflake on my horn. Caught twelve!",
     "The Alps sunset turns everything pink and purple. My colors!",
   ],
+  9: [ // Africa Safari
+    "Welcome to the savanna! Watch out for rhinos!",
+    "Did you know cheetahs can't roar? They meow! We have SO much in common!",
+    "That elephant just winked at me. We're basically best friends now.",
+    "The baobab trees look like they're growing upside down!",
+    "I tried to outrun a cheetah. Spoiler: I did NOT.",
+    "The giraffes up here have the BEST view of everything!",
+    "I put on safari khaki but my horn still sparkles. Can't hide fabulous!",
+    "A rhino charged at me! Turns out it just wanted to say hi. Aggressively.",
+    "The sunset here turns the whole savanna into gold! My favorite color!",
+    "I tried to take a selfie with an elephant. Its trunk photobombed me!",
+    "The watering hole is like a community pool for all the animals!",
+    "An antelope herd just ran past! They're SO graceful. I tripped watching.",
+    "Safari tip: if a cheetah asks for yarn, GIVE IT THE YARN. Trust me.",
+    "I made friends with a giraffe! It can see my sparkles from miles away!",
+    "The tall grass tickles my belly! *giggles and rolls around*",
+    "I heard the safari jeep has air conditioning. Luxury!",
+    "The baobab fruit tastes like fizzy sherbet! Nature's candy!",
+    "I tried to photograph a rhino but it charged the camera. Great action shot!",
+    "The dust here gets in my fur but it makes me look rugged and adventurous!",
+    "That cheetah keeps staring at my yarn ball. I think it's in love.",
+    "An elephant used its trunk to give me a shower! Unexpected but refreshing!",
+    "The stars in Africa are incredible. Even brighter than my horn!",
+    "I tried to ride an antelope. It said no. The cheetah said maybe. Progress!",
+    "Safari guide rule #1: never get between a unicorn cat and baobab fruit.",
+    "The savanna breeze makes my mane flow majestically. I was born for this!",
+    "I saw lion tracks! Or maybe big cat prints. Wait... am I a big cat?",
+    "The acacia trees look like giant umbrellas! Nature's shade!",
+    "Riding a cheetah is like riding a furry rocket! WHEEEEE!",
+    "The elephants here have better memories than me. They remember ALL the yarn!",
+    "I learned to say 'meow' in elephant. It's just a really loud trumpet sound.",
+    "The safari jeep driver says I'm the first unicorn cat passenger. Celebrity!",
+    "These animal tracks lead somewhere... probably to more yarn!",
+    "I wore a pith helmet but it kept sliding off my horn. Design flaw!",
+    "The antelope do parkour across the savanna. Respect!",
+  ],
   8: [ // Campground
     "Nothing beats the smell of a campfire!",
     "I saw Bigfoot over there... he seems friendly!",
@@ -1030,6 +1066,166 @@ for (let i = 0; i < 4; i++) {
     y: GROUND_Y,
     color: campNpcColors[i],
     accessory: campNpcAccessories[i],
+    vx: (Math.random() - 0.5) * 1.0,
+    walkFrame: 0, walkTimer: 0,
+    facing: 1,
+    idleTimer: Math.random() * 200
+  });
+}
+
+// ── Level 8: Africa Safari ──
+const SAFARI_WORLD_W = 5500;
+const SAFARI_JEEP_POS = { x: 5200 };
+const WATERING_HOLE_POS = { x: 2400, w: 300, depth: 60 };
+const BAOBAB_POSITIONS = [500, 1600, 2900, 4200];
+const CHEETAH_POS = { x: 3400 };
+const ELEPHANT_POSITIONS = [800, 3800];
+const RHINO_POSITIONS = [1200, 4600];
+const ANTELOPE_POSITIONS = [600, 1800, 3000, 4400];
+const GIRAFFE_POSITIONS = [1000, 2200, 3600];
+
+// Cheetah dialogue when giving yarn
+const CHEETAH_DIALOGUES = [
+  "Hmm, yarn? I need more than that...",
+  "Getting closer... but I need MORE yarn!",
+  "Almost enough! Keep the yarn coming!",
+  "One more ball of yarn and we have a deal!",
+  "PURRRR! That's enough! Hop on, let's GO!"
+];
+
+const level7 = {
+  worldW: SAFARI_WORLD_W,
+  platforms: [
+    // Scattered rock formations and ledges
+    { x: 200, y: 360, w: 80 },
+    { x: 400, y: 310, w: 70 },
+    { x: 600, y: 260, w: 80 },
+    { x: 850, y: 340, w: 90 },
+    { x: 1050, y: 280, w: 70 },
+    { x: 1250, y: 220, w: 80 },
+    { x: 1500, y: 350, w: 90 },
+    { x: 1700, y: 290, w: 70 },
+    { x: 1900, y: 230, w: 80 },
+    // Around watering hole
+    { x: 2150, y: 340, w: 80 },
+    { x: 2350, y: 270, w: 70 },
+    { x: 2700, y: 340, w: 80 },
+    { x: 2900, y: 280, w: 70 },
+    // Cheetah area — some only reachable at cheetah speed
+    { x: 3100, y: 350, w: 90 },
+    { x: 3300, y: 290, w: 70 },
+    { x: 3500, y: 230, w: 80 },
+    { x: 3750, y: 340, w: 80 },
+    { x: 3950, y: 270, w: 70 },
+    // Speed-jump gaps (cheetah-only areas)
+    { x: 4200, y: 310, w: 60 },
+    { x: 4450, y: 260, w: 60 },
+    { x: 4700, y: 210, w: 60 },
+    // Final approach
+    { x: 4900, y: 350, w: 90 },
+    { x: 5100, y: 280, w: 80 },
+  ],
+  yarnBalls: [],
+  scenes: [
+    // Acacia trees (iconic silhouettes)
+    { type: 'acacia_tree', x: 150 },
+    { type: 'acacia_tree', x: 700 },
+    { type: 'acacia_tree', x: 1300 },
+    { type: 'acacia_tree', x: 1900 },
+    { type: 'acacia_tree', x: 2800 },
+    { type: 'acacia_tree', x: 3500 },
+    { type: 'acacia_tree', x: 4100 },
+    { type: 'acacia_tree', x: 4800 },
+    // Baobab trees (fruit collection)
+    { type: 'baobab_tree', x: 500 },
+    { type: 'baobab_tree', x: 1600 },
+    { type: 'baobab_tree', x: 2900 },
+    { type: 'baobab_tree', x: 4200 },
+    // Tall grass zones
+    { type: 'tall_grass', x: 300, w: 150 },
+    { type: 'tall_grass', x: 1400, w: 200 },
+    { type: 'tall_grass', x: 2100, w: 150 },
+    { type: 'tall_grass', x: 3200, w: 200 },
+    { type: 'tall_grass', x: 4500, w: 150 },
+    // Animals
+    { type: 'elephant', x: 800 },
+    { type: 'elephant', x: 3800 },
+    { type: 'rhino', x: 1200 },
+    { type: 'rhino', x: 4600 },
+    { type: 'giraffe', x: 1000 },
+    { type: 'giraffe', x: 2200 },
+    { type: 'giraffe', x: 3600 },
+    // Watering hole
+    { type: 'watering_hole', x: 2400 },
+    // Cheetah
+    { type: 'cheetah', x: 3400 },
+    // Safari jeep (exit)
+    { type: 'safari_jeep', x: 5200 },
+    // Rocks and boulders
+    { type: 'safari_rock', x: 400 },
+    { type: 'safari_rock', x: 1100 },
+    { type: 'safari_rock', x: 2000 },
+    { type: 'safari_rock', x: 3000 },
+    { type: 'safari_rock', x: 4300 },
+    // Animal tracks (lead to hidden yarn)
+    { type: 'animal_tracks', x: 900 },
+    { type: 'animal_tracks', x: 2600 },
+    { type: 'animal_tracks', x: 4000 },
+  ],
+  // Antelope herds — run across screen periodically
+  antelopes: [],
+  // Rhino charge obstacles
+  rhinos: [],
+};
+
+// Init antelope herd members
+for (let i = 0; i < ANTELOPE_POSITIONS.length; i++) {
+  level7.antelopes.push({
+    x: ANTELOPE_POSITIONS[i],
+    y: GROUND_Y,
+    vx: 2 + Math.random() * 1.5,
+    running: false,
+    runTimer: 0,
+    size: 0.8 + Math.random() * 0.4
+  });
+}
+
+// Init rhino obstacles
+for (let i = 0; i < RHINO_POSITIONS.length; i++) {
+  level7.rhinos.push({
+    x: RHINO_POSITIONS[i],
+    y: GROUND_Y,
+    charging: false,
+    chargeVx: 0,
+    chargeTimer: 0,
+    cooldown: 0,
+    hit: false
+  });
+}
+
+// Init safari yarn balls on higher platforms
+for (const p of level7.platforms) {
+  if (p.y < 300) {
+    level7.yarnBalls.push({
+      x: p.x + p.w / 2,
+      y: p.y - 14,
+      color: yarnColors[level7.yarnBalls.length % yarnColors.length],
+      collected: false,
+      bobPhase: Math.random() * Math.PI * 2
+    });
+  }
+}
+
+// Safari NPCs (guide unicorn cats)
+const safariNpcs = [];
+const safariNpcColors = ['#fbbf24','#f97316','#a3e635','#fb923c'];
+const safariNpcAccessories = ['glasses','scarf','bow','flower'];
+for (let i = 0; i < 4; i++) {
+  safariNpcs.push({
+    x: 500 + i * 1200 + Math.random() * 200,
+    y: GROUND_Y,
+    color: safariNpcColors[i],
+    accessory: safariNpcAccessories[i],
     vx: (Math.random() - 0.5) * 1.0,
     walkFrame: 0, walkTimer: 0,
     facing: 1,
