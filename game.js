@@ -503,6 +503,31 @@ const ctx = canvas.getContext('2d');
 const campCamperImg = new Image();
 campCamperImg.src = 'assets/images/camper.png';
 
+// ── Cached HUD elements (avoid per-frame getElementById) ──
+const hud = {
+  score: document.getElementById('hudScore'),
+  fish: document.getElementById('hudFish'),
+  bacon: document.getElementById('hudBacon'),
+  yarn: document.getElementById('hudYarn'),
+  pizza: document.getElementById('hudPizza'),
+  hotdog: document.getElementById('hudHotdog'),
+  gelato: document.getElementById('hudGelato'),
+  honey: document.getElementById('hudHoney'),
+  tiki: document.getElementById('hudTiki'),
+  coconut: document.getElementById('hudCoconut'),
+  diamond: document.getElementById('hudDiamond'),
+  snowball: document.getElementById('hudSnowball'),
+  stick: document.getElementById('hudStick'),
+  smore: document.getElementById('hudSmore'),
+  shell: document.getElementById('hudShell'),
+  level: document.getElementById('hudLevel'),
+  fruit: document.getElementById('hudFruit'),
+  photo: document.getElementById('hudPhoto'),
+  cheetahYarn: document.getElementById('hudCheetahYarn'),
+  controls: document.getElementById('controls'),
+};
+const hudItems = document.querySelectorAll('.hud-item');
+
 
 // ── Game Loop ──
 let lastTime = 0;
@@ -678,7 +703,7 @@ function update(dt) {
       playChaChing();
     }
     // HUD updates during scuba
-    document.getElementById('hudScore').textContent = score;
+    hud.score.textContent = score;
     return;
   }
 
@@ -1849,9 +1874,9 @@ function update(dt) {
     else { stopLoopSfx('sfxGrassRustle'); }
 
     // Update HUD
-    document.getElementById('hudFruit').textContent = fruitCount;
-    document.getElementById('hudPhoto').textContent = safariPhotoCount;
-    document.getElementById('hudCheetahYarn').textContent = cheetahYarnGiven + '/5';
+    hud.fruit.textContent = fruitCount;
+    hud.photo.textContent = safariPhotoCount;
+    hud.cheetahYarn.textContent = cheetahYarnGiven + '/5';
   }
 
   // Rainbow bridge portal (level 1 → level 2 sledding)
@@ -2007,25 +2032,25 @@ function update(dt) {
   }
 
   // HUD update
-  document.getElementById('hudScore').textContent = score;
-  document.getElementById('hudFish').textContent = fishCount;
-  document.getElementById('hudBacon').textContent = baconCount;
-  document.getElementById('hudYarn').textContent = yarnCount;
-  document.getElementById('hudLevel').textContent = levelRegistry[currentLevel].name;
-  document.getElementById('hudPizza').textContent = pizzaMaking.pizzaCount;
-  document.getElementById('hudHotdog').textContent = hotdogCount;
-  document.getElementById('hudGelato').textContent = gelatoCount;
-  document.getElementById('hudHoney').textContent = honeyCount;
-  document.getElementById('hudTiki').textContent = tikiCount;
-  document.getElementById('hudCoconut').textContent = coconutCount;
-  document.getElementById('hudDiamond').textContent = diamondCount;
-  document.getElementById('hudSnowball').textContent = snowballCount;
-  document.getElementById('hudStick').textContent = stickCount;
-  document.getElementById('hudSmore').textContent = smoreCount;
-  document.getElementById('hudShell').textContent = shellCount;
+  hud.score.textContent = score;
+  hud.fish.textContent = fishCount;
+  hud.bacon.textContent = baconCount;
+  hud.yarn.textContent = yarnCount;
+  hud.level.textContent = levelRegistry[currentLevel].name;
+  hud.pizza.textContent = pizzaMaking.pizzaCount;
+  hud.hotdog.textContent = hotdogCount;
+  hud.gelato.textContent = gelatoCount;
+  hud.honey.textContent = honeyCount;
+  hud.tiki.textContent = tikiCount;
+  hud.coconut.textContent = coconutCount;
+  hud.diamond.textContent = diamondCount;
+  hud.snowball.textContent = snowballCount;
+  hud.stick.textContent = stickCount;
+  hud.smore.textContent = smoreCount;
+  hud.shell.textContent = shellCount;
 
   // Show/hide HUD items based on current level
-  for (const el of document.querySelectorAll('.hud-item')) {
+  for (const el of hudItems) {
     const levels = el.dataset.levels.split(',');
     el.style.display = levels.includes(String(currentLevel)) ? '' : 'none';
   }
@@ -2033,7 +2058,7 @@ function update(dt) {
   // Hide controls during interior/mini-game scenes (always hidden on mobile)
   const inScene = currentScene !== null;
   if (!isMobile) {
-    document.getElementById('controls').style.display = inScene ? 'none' : 'flex';
+    hud.controls.style.display = inScene ? 'none' : 'flex';
   }
 
   // Prompt
@@ -2114,6 +2139,6 @@ function updatePizzaMinigame(dt) {
     }
   }
   // HUD updates still needed
-  document.getElementById('hudScore').textContent = score;
-  document.getElementById('hudPizza').textContent = pizzaMaking.pizzaCount;
+  hud.score.textContent = score;
+  hud.pizza.textContent = pizzaMaking.pizzaCount;
 }
