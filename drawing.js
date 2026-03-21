@@ -14,25 +14,7 @@ function draw() {
   const cycle = (Math.sin(gameTime / DAY_LENGTH * Math.PI * 2 - Math.PI / 2) + 1) / 2;
   const isNight = cycle > 0.5;
 
-  if (currentLevel === 1) {
-    drawLevel1Sky(W, H, cycle, isNight, cam);
-  } else if (currentLevel === 2) {
-    drawSleddingSky(W, H, cycle, isNight);
-  } else if (currentLevel === 3) {
-    drawLevel2Sky(W, H, cycle, isNight);
-  } else if (currentLevel === 4) {
-    drawRomeSky(W, H, cycle, isNight);
-  } else if (currentLevel === 5) {
-    drawHawaiiSky(W, H, cycle, isNight);
-  } else if (currentLevel === 6) {
-    drawOrientalSky(W, H, cycle, isNight);
-  } else if (currentLevel === 8) {
-    drawCampgroundSky(W, H, cycle, isNight);
-  } else if (currentLevel === 9) {
-    drawSafariSky(W, H, cycle, isNight);
-  } else {
-    drawAlpsSky(W, H, cycle, isNight);
-  }
+  levelRegistry[currentLevel].drawSky(W, H, cycle, isNight, cam);
 
   ctx.save();
   ctx.translate(-cam, 0);
@@ -55,24 +37,8 @@ function draw() {
       [Scene.SAILING]: () => drawSailingScene(cam, W, H),
     };
     if (sceneDrawMap[currentScene]) sceneDrawMap[currentScene]();
-  } else if (currentLevel === 1) {
-    drawLevel1World(W, H, cam, cycle, isNight);
-  } else if (currentLevel === 2) {
-    drawSleddingWorld(W, H, cam, cycle, isNight);
-  } else if (currentLevel === 3) {
-    drawLevel2World(W, H, cam, cycle, isNight);
-  } else if (currentLevel === 4) {
-    drawRomeWorld(W, H, cam, cycle, isNight);
-  } else if (currentLevel === 5) {
-    drawHawaiiWorld(W, H, cam, cycle, isNight);
-  } else if (currentLevel === 6) {
-    drawOrientalWorld(W, H, cam, cycle, isNight);
-  } else if (currentLevel === 8) {
-    drawCampgroundWorld(W, H, cam, cycle, isNight);
-  } else if (currentLevel === 9) {
-    drawSafariWorld(W, H, cam, cycle, isNight);
   } else {
-    drawAlpsWorld(W, H, cam, cycle, isNight);
+    levelRegistry[currentLevel].drawWorld(W, H, cam, cycle, isNight);
   }
 
   // Draw speech bubbles above NPCs (in world coordinates)
@@ -4681,4 +4647,110 @@ function drawCheetahSpeech(x, gy) {
   // Text
   ctx.fillStyle = '#292524'; ctx.textAlign = 'center';
   ctx.fillText(text, x, by + 16);
+}
+
+// ── Level Registry ──
+// Central registry mapping level numbers to their data and draw functions.
+// Defined here (at the bottom of drawing.js) because all level data from
+// levels.js and all draw functions from drawing.js are in scope.
+const levelRegistry = {
+  1: {
+    name: 'Meadow',
+    worldW: WORLD_W,
+    platforms: platforms,
+    yarnBalls: yarnBalls,
+    npcs: npcs,
+    musicId: 'musicMeadow',
+    drawSky: drawLevel1Sky,
+    drawWorld: drawLevel1World,
+  },
+  2: {
+    name: 'Sledding',
+    worldW: level2Sled.worldW,
+    platforms: level2Sled.platforms,
+    yarnBalls: level2Sled.yarnBalls,
+    npcs: sledNpcs,
+    musicId: 'musicSledding',
+    drawSky: drawSleddingSky,
+    drawWorld: drawSleddingWorld,
+  },
+  3: {
+    name: 'NYC',
+    worldW: level2.worldW,
+    platforms: level2.platforms,
+    yarnBalls: level2.yarnBalls,
+    npcs: nycNpcs,
+    musicId: 'musicNYC',
+    drawSky: drawLevel2Sky,
+    drawWorld: drawLevel2World,
+  },
+  4: {
+    name: 'Rome',
+    worldW: level3.worldW,
+    platforms: level3.platforms,
+    yarnBalls: level3.yarnBalls,
+    npcs: romeNpcs,
+    musicId: 'musicRome',
+    drawSky: drawRomeSky,
+    drawWorld: drawRomeWorld,
+  },
+  5: {
+    name: 'Hawaii',
+    worldW: level4.worldW,
+    platforms: level4.platforms,
+    yarnBalls: level4.yarnBalls,
+    npcs: hawaiiNpcs,
+    musicId: 'musicHawaii',
+    drawSky: drawHawaiiSky,
+    drawWorld: drawHawaiiWorld,
+  },
+  6: {
+    name: 'Oriental',
+    worldW: levelOriental.worldW,
+    platforms: levelOriental.platforms,
+    yarnBalls: levelOriental.yarnBalls,
+    npcs: orientalNpcs,
+    musicId: 'musicOriental',
+    drawSky: drawOrientalSky,
+    drawWorld: drawOrientalWorld,
+  },
+  7: {
+    name: 'Alps',
+    worldW: level5.worldW,
+    platforms: level5.platforms,
+    yarnBalls: level5.yarnBalls,
+    npcs: alpsNpcs,
+    musicId: 'musicAlps',
+    drawSky: drawAlpsSky,
+    drawWorld: drawAlpsWorld,
+  },
+  8: {
+    name: 'Campground',
+    worldW: level6.worldW,
+    platforms: level6.platforms,
+    yarnBalls: level6.yarnBalls,
+    npcs: campNpcs,
+    musicId: 'musicCampground',
+    drawSky: drawCampgroundSky,
+    drawWorld: drawCampgroundWorld,
+  },
+  9: {
+    name: 'Africa Safari',
+    worldW: level7.worldW,
+    platforms: level7.platforms,
+    yarnBalls: level7.yarnBalls,
+    npcs: safariNpcs,
+    musicId: 'musicSafari',
+    drawSky: drawSafariSky,
+    drawWorld: drawSafariWorld,
+  },
+};
+
+// Derive constants from registry
+const LEVEL_NAMES = Object.values(levelRegistry).map(l => l.name);
+const TOTAL_LEVELS = Object.keys(levelRegistry).length;
+
+// Validate registry completeness at startup
+for (let i = 1; i <= Object.keys(levelRegistry).length; i++) {
+  if (!levelRegistry[i]) console.warn('Missing level registry entry for level ' + i);
 }

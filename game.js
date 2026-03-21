@@ -276,7 +276,8 @@ function applyVolume() {
 
 // ── Music system with crossfade ──
 const FADE_DURATION = 1200; // ms
-const levelMusic = { 1: 'musicMeadow', 2: 'musicSledding', 3: 'musicNYC', 4: 'musicRome', 5: 'musicHawaii', 6: 'musicOriental', 7: 'musicAlps', 8: 'musicCampground', 9: 'musicSafari' };
+// levelMusic is now derived from levelRegistry (defined in drawing.js).
+// These functions use levelRegistry[level].musicId for lookups.
 const CHALET_MUSIC_ID = 'musicChalet';
 const SCUBA_MUSIC_ID = 'musicScuba';
 const FLIGHT_MUSIC_ID = 'musicFlight';
@@ -284,7 +285,7 @@ let currentMusicId = null;
 let musicFade = null; // { out: AudioElement, in: AudioElement, timer: 0 }
 
 function startLevelMusic(level) {
-  const id = levelMusic[level];
+  const id = levelRegistry[level] && levelRegistry[level].musicId;
   if (!id || id === currentMusicId) return;
   const el = document.getElementById(id);
   el.volume = getMusicVolume();
@@ -294,7 +295,7 @@ function startLevelMusic(level) {
 }
 
 function crossfadeToLevel(level) {
-  const newId = levelMusic[level];
+  const newId = levelRegistry[level] && levelRegistry[level].musicId;
   if (!newId) return;
   crossfadeToMusic(newId);
 }
@@ -388,17 +389,9 @@ function completeTransition() {
   stopLoopSfx('sfxFlightWind');
 }
 
-function getCurrentPlatforms() {
-  return currentLevel === 1 ? platforms : currentLevel === 2 ? level2Sled.platforms : currentLevel === 3 ? level2.platforms : currentLevel === 4 ? level3.platforms : currentLevel === 5 ? level4.platforms : currentLevel === 6 ? levelOriental.platforms : currentLevel === 8 ? level6.platforms : currentLevel === 9 ? level7.platforms : level5.platforms;
-}
-
-function getCurrentYarnBalls() {
-  return currentLevel === 1 ? yarnBalls : currentLevel === 2 ? level2Sled.yarnBalls : currentLevel === 3 ? level2.yarnBalls : currentLevel === 4 ? level3.yarnBalls : currentLevel === 5 ? level4.yarnBalls : currentLevel === 6 ? levelOriental.yarnBalls : currentLevel === 8 ? level6.yarnBalls : currentLevel === 9 ? level7.yarnBalls : level5.yarnBalls;
-}
-
-function getCurrentWorldW() {
-  return currentLevel === 1 ? WORLD_W : currentLevel === 2 ? level2Sled.worldW : currentLevel === 3 ? level2.worldW : currentLevel === 4 ? level3.worldW : currentLevel === 5 ? level4.worldW : currentLevel === 6 ? levelOriental.worldW : currentLevel === 8 ? level6.worldW : currentLevel === 9 ? level7.worldW : level5.worldW;
-}
+function getCurrentPlatforms() { return levelRegistry[currentLevel].platforms; }
+function getCurrentYarnBalls() { return levelRegistry[currentLevel].yarnBalls; }
+function getCurrentWorldW() { return levelRegistry[currentLevel].worldW; }
 
 // ── Level 6: Oriental NC ──
 let sailAngle = 0; // visual sail angle
@@ -418,8 +411,7 @@ let scubaCollectibles = [];
 let scubaPearlCount = 0;
 // Level select
 let levelSelectUnlocked = true; // permanently unlocked for dev/debug
-const LEVEL_NAMES = ['Meadow', 'Sledding', 'NYC', 'Rome', 'Hawaii', 'Oriental', 'Alps', 'Campground', 'Africa Safari'];
-const TOTAL_LEVELS = 9;
+// LEVEL_NAMES and TOTAL_LEVELS are now derived from levelRegistry (defined in drawing.js)
 
 // ── Level 7: Alps ──
 // The Alps is a downhill skiing level — the kitty starts at the top-left
@@ -1918,7 +1910,7 @@ function update(dt) {
   }
 
   // NPC AI
-  const activeNpcs = currentLevel === 1 ? npcs : currentLevel === 2 ? sledNpcs : currentLevel === 3 ? nycNpcs : currentLevel === 4 ? romeNpcs : currentLevel === 5 ? hawaiiNpcs : currentLevel === 6 ? orientalNpcs : currentLevel === 8 ? campNpcs : currentLevel === 9 ? safariNpcs : alpsNpcs;
+  const activeNpcs = levelRegistry[currentLevel].npcs;
   const worldW = getCurrentWorldW();
   for (const npc of activeNpcs) {
     npc.idleTimer -= dt / 16;
@@ -2005,7 +1997,7 @@ function update(dt) {
   document.getElementById('hudFish').textContent = fishCount;
   document.getElementById('hudBacon').textContent = baconCount;
   document.getElementById('hudYarn').textContent = yarnCount;
-  document.getElementById('hudLevel').textContent = LEVEL_NAMES[currentLevel - 1] || 'Unknown';
+  document.getElementById('hudLevel').textContent = levelRegistry[currentLevel].name;
   document.getElementById('hudPizza').textContent = pizzaMaking.pizzaCount;
   document.getElementById('hudHotdog').textContent = hotdogCount;
   document.getElementById('hudGelato').textContent = gelatoCount;
