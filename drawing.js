@@ -97,6 +97,71 @@ function drawSpeechBubbles() {
   }
 }
 
+// ── Shared Drawing Helpers ──
+
+function drawYarnBallsForLevel(yarnBallArray) {
+  for (const yb of yarnBallArray) {
+    if (yb.collected) continue;
+    const bob = Math.sin(gameTime / 400 + yb.bobPhase) * 3;
+    const yx = yb.x, yy = yb.y + bob;
+
+    // Glow
+    ctx.globalAlpha = 0.25;
+    ctx.fillStyle = yb.color;
+    ctx.beginPath();
+    ctx.arc(yx, yy, 18, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // Ball body
+    ctx.fillStyle = yb.color;
+    ctx.beginPath();
+    ctx.arc(yx, yy, 12, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Yarn lines (cross-hatch pattern)
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(yx, yy, 10, 0.3, 1.8); ctx.stroke();
+    ctx.beginPath(); ctx.arc(yx, yy, 8, 2.0, 3.5); ctx.stroke();
+    ctx.beginPath(); ctx.arc(yx, yy, 6, 4.0, 5.5); ctx.stroke();
+
+    // Shine
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.beginPath();
+    ctx.arc(yx - 3, yy - 4, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Trailing string
+    ctx.strokeStyle = yb.color;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(yx + 10, yy + 5);
+    ctx.quadraticCurveTo(yx + 16, yy + 12 + bob, yx + 12, yy + 18);
+    ctx.stroke();
+  }
+}
+
+function drawPlatformsWithStyle(platformArray, topColor, bottomColor, decorateFn) {
+  for (const p of platformArray) {
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.1)';
+    ctx.fillRect(p.x + 3, p.y + 3, p.w, 14);
+
+    // Main platform body
+    const pGrad = ctx.createLinearGradient(p.x, p.y, p.x, p.y + 14);
+    pGrad.addColorStop(0, topColor);
+    pGrad.addColorStop(1, bottomColor);
+    ctx.fillStyle = pGrad;
+    ctx.beginPath();
+    ctx.roundRect(p.x, p.y, p.w, 14, 4);
+    ctx.fill();
+
+    // Level-specific decoration
+    if (decorateFn) decorateFn(p);
+  }
+}
+
 function drawLevel1Sky(W, H, cycle, isNight, cam) {
   const dayTop = [135, 206, 250];
   const nightTop = [15, 23, 42];
@@ -378,43 +443,7 @@ function drawNYCPlatforms() {
   }
 }
 
-function drawNYCYarnBalls() {
-  for (const yb of level2.yarnBalls) {
-    if (yb.collected) continue;
-    const bob = Math.sin(gameTime / 400 + yb.bobPhase) * 3;
-    const yx = yb.x, yy = yb.y + bob;
-
-    ctx.globalAlpha = 0.25;
-    ctx.fillStyle = yb.color;
-    ctx.beginPath();
-    ctx.arc(yx, yy, 18, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha = 1;
-
-    ctx.fillStyle = yb.color;
-    ctx.beginPath();
-    ctx.arc(yx, yy, 12, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
-    ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.arc(yx, yy, 10, 0.3, 1.8); ctx.stroke();
-    ctx.beginPath(); ctx.arc(yx, yy, 8, 2.0, 3.5); ctx.stroke();
-    ctx.beginPath(); ctx.arc(yx, yy, 6, 4.0, 5.5); ctx.stroke();
-
-    ctx.fillStyle = 'rgba(255,255,255,0.6)';
-    ctx.beginPath();
-    ctx.arc(yx - 3, yy - 4, 3, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.strokeStyle = yb.color;
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(yx + 10, yy + 5);
-    ctx.quadraticCurveTo(yx + 16, yy + 12 + bob, yx + 12, yy + 18);
-    ctx.stroke();
-  }
-}
+function drawNYCYarnBalls() { drawYarnBallsForLevel(level2.yarnBalls); }
 
 function drawNYCScenes(cam, W) {
   for (const s of level2.scenes) {
@@ -1305,20 +1334,7 @@ function drawRainbowBridge(x) {
 }
 
 function drawPlatforms() {
-  for (const p of platforms) {
-    // Platform shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.1)';
-    ctx.fillRect(p.x + 3, p.y + 3, p.w, 14);
-
-    // Main platform body
-    const pGrad = ctx.createLinearGradient(p.x, p.y, p.x, p.y + 14);
-    pGrad.addColorStop(0, '#a78bfa');
-    pGrad.addColorStop(1, '#7c3aed');
-    ctx.fillStyle = pGrad;
-    ctx.beginPath();
-    ctx.roundRect(p.x, p.y, p.w, 14, 6);
-    ctx.fill();
-
+  drawPlatformsWithStyle(platforms, '#a78bfa', '#7c3aed', function(p) {
     // Grass tufts on top
     ctx.fillStyle = '#4ade80';
     for (let gx = p.x + 8; gx < p.x + p.w - 8; gx += 12) {
@@ -1328,66 +1344,14 @@ function drawPlatforms() {
       ctx.lineTo(gx + 3, p.y);
       ctx.fill();
     }
-
     // Sparkle dots
     ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.beginPath();
-    ctx.arc(p.x + 10, p.y + 6, 2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(p.x + p.w - 10, p.y + 6, 1.5, 0, Math.PI * 2);
-    ctx.fill();
-  }
+    ctx.beginPath(); ctx.arc(p.x + 10, p.y + 6, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(p.x + p.w - 10, p.y + 6, 1.5, 0, Math.PI * 2); ctx.fill();
+  });
 }
 
-function drawYarnBalls() {
-  for (const yb of yarnBalls) {
-    if (yb.collected) continue;
-    const bob = Math.sin(gameTime / 400 + yb.bobPhase) * 3;
-    const yx = yb.x, yy = yb.y + bob;
-
-    // Glow
-    ctx.globalAlpha = 0.25;
-    ctx.fillStyle = yb.color;
-    ctx.beginPath();
-    ctx.arc(yx, yy, 18, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha = 1;
-
-    // Ball body
-    ctx.fillStyle = yb.color;
-    ctx.beginPath();
-    ctx.arc(yx, yy, 12, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Yarn lines (cross-hatch pattern)
-    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.arc(yx, yy, 10, 0.3, 1.8);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(yx, yy, 8, 2.0, 3.5);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(yx, yy, 6, 4.0, 5.5);
-    ctx.stroke();
-
-    // Shine
-    ctx.fillStyle = 'rgba(255,255,255,0.6)';
-    ctx.beginPath();
-    ctx.arc(yx - 3, yy - 4, 3, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Trailing string
-    ctx.strokeStyle = yb.color;
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(yx + 10, yy + 5);
-    ctx.quadraticCurveTo(yx + 16, yy + 12 + bob, yx + 12, yy + 18);
-    ctx.stroke();
-  }
-}
+function drawYarnBalls() { drawYarnBallsForLevel(yarnBalls); }
 
 function drawHouse() {
   const hx = HOUSE.x, hy = GROUND_Y, hw = HOUSE.w, hh = HOUSE.h;
@@ -1471,34 +1435,13 @@ function drawRomeWorld(W, H, cam) {
 }
 
 function drawRomePlatforms() {
-  for (const p of level3.platforms) {
-    ctx.fillStyle = 'rgba(0,0,0,0.1)'; ctx.fillRect(p.x + 3, p.y + 3, p.w, 14);
-    const pGrad = ctx.createLinearGradient(p.x, p.y, p.x, p.y + 14);
-    pGrad.addColorStop(0, '#d6d3d1'); pGrad.addColorStop(1, '#a8a29e');
-    ctx.fillStyle = pGrad; ctx.beginPath(); ctx.roundRect(p.x, p.y, p.w, 14, 4); ctx.fill();
+  drawPlatformsWithStyle(level3.platforms, '#d6d3d1', '#a8a29e', function(p) {
     ctx.strokeStyle = 'rgba(0,0,0,0.15)'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(p.x + 5, p.y + 7); ctx.lineTo(p.x + p.w - 5, p.y + 7); ctx.stroke();
-  }
+  });
 }
 
-function drawRomeYarnBalls() {
-  for (const yb of level3.yarnBalls) {
-    if (yb.collected) continue;
-    const bob = Math.sin(gameTime / 400 + yb.bobPhase) * 3;
-    const yx = yb.x, yy = yb.y + bob;
-    ctx.globalAlpha = 0.25; ctx.fillStyle = yb.color;
-    ctx.beginPath(); ctx.arc(yx, yy, 18, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
-    ctx.fillStyle = yb.color; ctx.beginPath(); ctx.arc(yx, yy, 12, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.arc(yx, yy, 10, 0.3, 1.8); ctx.stroke();
-    ctx.beginPath(); ctx.arc(yx, yy, 8, 2.0, 3.5); ctx.stroke();
-    ctx.fillStyle = 'rgba(255,255,255,0.6)';
-    ctx.beginPath(); ctx.arc(yx - 3, yy - 4, 3, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = yb.color; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(yx + 10, yy + 5);
-    ctx.quadraticCurveTo(yx + 16, yy + 12 + bob, yx + 12, yy + 18); ctx.stroke();
-  }
-}
+function drawRomeYarnBalls() { drawYarnBallsForLevel(level3.yarnBalls); }
 
 function drawRomeScenes(cam, W) {
   for (const s of level3.scenes) {
@@ -1761,39 +1704,17 @@ function drawHawaiiWorld(W, H, cam) {
 }
 
 function drawHawaiiPlatforms() {
-  for (const p of level4.platforms) {
-    ctx.fillStyle = 'rgba(0,0,0,0.1)'; ctx.fillRect(p.x + 3, p.y + 3, p.w, 14);
-    const pGrad = ctx.createLinearGradient(p.x, p.y, p.x, p.y + 14);
-    pGrad.addColorStop(0, '#a3e635'); pGrad.addColorStop(1, '#65a30d');
-    ctx.fillStyle = pGrad; ctx.beginPath(); ctx.roundRect(p.x, p.y, p.w, 14, 4); ctx.fill();
-    // Grass tufts on platforms
+  drawPlatformsWithStyle(level4.platforms, '#a3e635', '#65a30d', function(p) {
     ctx.strokeStyle = '#4ade80'; ctx.lineWidth = 1.5;
     for (let i = 0; i < 3; i++) {
       const gx = p.x + 10 + i * (p.w - 20) / 2;
       ctx.beginPath(); ctx.moveTo(gx, p.y); ctx.lineTo(gx - 3, p.y - 6); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(gx, p.y); ctx.lineTo(gx + 3, p.y - 5); ctx.stroke();
     }
-  }
+  });
 }
 
-function drawHawaiiYarnBalls() {
-  for (const yb of level4.yarnBalls) {
-    if (yb.collected) continue;
-    const bob = Math.sin(gameTime / 400 + yb.bobPhase) * 3;
-    const yx = yb.x, yy = yb.y + bob;
-    ctx.globalAlpha = 0.25; ctx.fillStyle = yb.color;
-    ctx.beginPath(); ctx.arc(yx, yy, 18, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
-    ctx.fillStyle = yb.color; ctx.beginPath(); ctx.arc(yx, yy, 12, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.arc(yx, yy, 10, 0.3, 1.8); ctx.stroke();
-    ctx.beginPath(); ctx.arc(yx, yy, 8, 2.0, 3.5); ctx.stroke();
-    ctx.fillStyle = 'rgba(255,255,255,0.6)';
-    ctx.beginPath(); ctx.arc(yx - 3, yy - 4, 3, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = yb.color; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(yx + 10, yy + 5);
-    ctx.quadraticCurveTo(yx + 16, yy + 12 + bob, yx + 12, yy + 18); ctx.stroke();
-  }
-}
+function drawHawaiiYarnBalls() { drawYarnBallsForLevel(level4.yarnBalls); }
 
 function drawHawaiiScenes(cam, W) {
   for (const s of level4.scenes) {
@@ -2883,38 +2804,16 @@ function drawOrientalWorld(W, H, cam) {
 }
 
 function drawOrientalPlatforms() {
-  for (const p of levelOriental.platforms) {
-    ctx.fillStyle = 'rgba(0,0,0,0.1)'; ctx.fillRect(p.x + 3, p.y + 3, p.w, 14);
-    const pGrad = ctx.createLinearGradient(p.x, p.y, p.x, p.y + 14);
-    pGrad.addColorStop(0, '#92400e'); pGrad.addColorStop(1, '#78350f');
-    ctx.fillStyle = pGrad; ctx.beginPath(); ctx.roundRect(p.x, p.y, p.w, 14, 4); ctx.fill();
-    // Dock plank lines
+  drawPlatformsWithStyle(levelOriental.platforms, '#92400e', '#78350f', function(p) {
     ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 0.5;
     for (let i = 0; i < 3; i++) {
       const gx = p.x + 8 + i * (p.w - 16) / 2;
       ctx.beginPath(); ctx.moveTo(gx, p.y + 2); ctx.lineTo(gx, p.y + 12); ctx.stroke();
     }
-  }
+  });
 }
 
-function drawOrientalYarnBalls() {
-  for (const yb of levelOriental.yarnBalls) {
-    if (yb.collected) continue;
-    const bob = Math.sin(gameTime / 400 + yb.bobPhase) * 3;
-    const yx = yb.x, yy = yb.y + bob;
-    ctx.globalAlpha = 0.25; ctx.fillStyle = yb.color;
-    ctx.beginPath(); ctx.arc(yx, yy, 18, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
-    ctx.fillStyle = yb.color; ctx.beginPath(); ctx.arc(yx, yy, 12, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.arc(yx, yy, 10, 0.3, 1.8); ctx.stroke();
-    ctx.beginPath(); ctx.arc(yx, yy, 8, 2.0, 3.5); ctx.stroke();
-    ctx.fillStyle = 'rgba(255,255,255,0.6)';
-    ctx.beginPath(); ctx.arc(yx - 3, yy - 4, 3, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = yb.color; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(yx + 10, yy + 5);
-    ctx.quadraticCurveTo(yx + 16, yy + 12 + bob, yx + 12, yy + 18); ctx.stroke();
-  }
-}
+function drawOrientalYarnBalls() { drawYarnBallsForLevel(levelOriental.yarnBalls); }
 
 function drawOrientalScenes(cam, W) {
   for (const s of levelOriental.scenes) {
@@ -3650,38 +3549,16 @@ function drawCampgroundWorld(W, H, cam) {
 }
 
 function drawCampgroundPlatforms() {
-  for (const p of level6.platforms) {
-    ctx.fillStyle = 'rgba(0,0,0,0.1)'; ctx.fillRect(p.x + 3, p.y + 3, p.w, 14);
-    const pGrad = ctx.createLinearGradient(p.x, p.y, p.x, p.y + 14);
-    pGrad.addColorStop(0, '#8B7355'); pGrad.addColorStop(1, '#6B5440');
-    ctx.fillStyle = pGrad; ctx.beginPath(); ctx.roundRect(p.x, p.y, p.w, 14, 4); ctx.fill();
-    // Moss on platforms
+  drawPlatformsWithStyle(level6.platforms, '#8B7355', '#6B5440', function(p) {
     ctx.fillStyle = '#5c9c4a';
     for (let i = 0; i < 2; i++) {
       const mx = p.x + 8 + i * (p.w - 16);
       ctx.beginPath(); ctx.arc(mx, p.y + 2, 3, Math.PI, 0); ctx.fill();
     }
-  }
+  });
 }
 
-function drawCampgroundYarnBalls() {
-  for (const yb of level6.yarnBalls) {
-    if (yb.collected) continue;
-    const bob = Math.sin(gameTime / 400 + yb.bobPhase) * 3;
-    const yx = yb.x, yy = yb.y + bob;
-    ctx.globalAlpha = 0.25; ctx.fillStyle = yb.color;
-    ctx.beginPath(); ctx.arc(yx, yy, 18, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
-    ctx.fillStyle = yb.color; ctx.beginPath(); ctx.arc(yx, yy, 12, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.arc(yx, yy, 10, 0.3, 1.8); ctx.stroke();
-    ctx.beginPath(); ctx.arc(yx, yy, 8, 2.0, 3.5); ctx.stroke();
-    ctx.fillStyle = 'rgba(255,255,255,0.6)';
-    ctx.beginPath(); ctx.arc(yx - 3, yy - 4, 3, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = yb.color; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(yx + 10, yy + 5);
-    ctx.quadraticCurveTo(yx + 16, yy + 12 + bob, yx + 12, yy + 18); ctx.stroke();
-  }
-}
+function drawCampgroundYarnBalls() { drawYarnBallsForLevel(level6.yarnBalls); }
 
 function drawCampgroundScenes(cam, W) {
   // Pine trees scattered throughout
@@ -4128,36 +4005,14 @@ function drawSafariScenes(cam, W) {
 }
 
 function drawSafariPlatforms() {
-  for (const p of level7.platforms) {
-    ctx.fillStyle = 'rgba(0,0,0,0.1)'; ctx.fillRect(p.x + 3, p.y + 3, p.w, 14);
-    const pGrad = ctx.createLinearGradient(p.x, p.y, p.x, p.y + 14);
-    pGrad.addColorStop(0, '#a0845a'); pGrad.addColorStop(1, '#8a6e44');
-    ctx.fillStyle = pGrad; ctx.beginPath(); ctx.roundRect(p.x, p.y, p.w, 14, 4); ctx.fill();
-    // Rocky texture
+  drawPlatformsWithStyle(level7.platforms, '#a0845a', '#8a6e44', function(p) {
     ctx.fillStyle = '#b89a6a';
     ctx.fillRect(p.x + 5, p.y + 2, 6, 3);
     ctx.fillRect(p.x + p.w - 15, p.y + 4, 8, 2);
-  }
+  });
 }
 
-function drawSafariYarnBalls() {
-  for (const yb of level7.yarnBalls) {
-    if (yb.collected) continue;
-    const bob = Math.sin(gameTime / 400 + yb.bobPhase) * 3;
-    const yx = yb.x, yy = yb.y + bob;
-    ctx.globalAlpha = 0.25; ctx.fillStyle = yb.color;
-    ctx.beginPath(); ctx.arc(yx, yy, 18, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
-    ctx.fillStyle = yb.color; ctx.beginPath(); ctx.arc(yx, yy, 12, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.arc(yx, yy, 10, 0.3, 1.8); ctx.stroke();
-    ctx.beginPath(); ctx.arc(yx, yy, 8, 2.0, 3.5); ctx.stroke();
-    ctx.fillStyle = 'rgba(255,255,255,0.6)';
-    ctx.beginPath(); ctx.arc(yx - 3, yy - 4, 3, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = yb.color; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(yx + 10, yy + 5);
-    ctx.quadraticCurveTo(yx + 16, yy + 12 + bob, yx + 12, yy + 18); ctx.stroke();
-  }
-}
+function drawSafariYarnBalls() { drawYarnBallsForLevel(level7.yarnBalls); }
 
 function drawAcaciaTree(x) {
   const gy = GROUND_Y;
