@@ -871,9 +871,9 @@ function updatePrompt(near) {
     el.style.display = 'block';
     setAction('KeyS', 'Swim');
   } else if (near.nearGelato) {
-    el.textContent = 'Press G for gelato! (+5 pts)';
+    el.textContent = 'Press G for gelato (+5 pts) | Enter for Gelato Shop';
     el.style.display = 'block';
-    setAction('KeyG', 'Gelato');
+    setAction('Enter', 'Shop');
   } else if (near.nearPantheonDoor) {
     el.textContent = 'Press Enter to enter the Pantheon';
     el.style.display = 'block';
