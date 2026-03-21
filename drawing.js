@@ -3897,7 +3897,7 @@ function drawWaterPump(x) {
 function drawCampCamper(x) {
   const gy = GROUND_Y;
   // Draw the camper image
-  if (campCamperImg.complete && campCamperImg.naturalWidth > 0) {
+  if (campCamperImgLoaded && campCamperImg.naturalWidth > 0) {
     const imgW = 160;
     const imgH = imgW * (campCamperImg.naturalHeight / campCamperImg.naturalWidth);
     ctx.drawImage(campCamperImg, x - imgW / 2, gy - imgH + 25, imgW, imgH);
@@ -4608,4 +4608,11 @@ const TOTAL_LEVELS = Object.keys(levelRegistry).length;
 // Validate registry completeness at startup
 for (let i = 1; i <= Object.keys(levelRegistry).length; i++) {
   if (!levelRegistry[i]) console.warn('Missing level registry entry for level ' + i);
+}
+
+// Validate audio elements exist for each level's musicId
+for (const [lvl, reg] of Object.entries(levelRegistry)) {
+  if (reg.musicId && !document.getElementById(reg.musicId)) {
+    console.warn('Missing audio element for level ' + lvl + ': ' + reg.musicId);
+  }
 }

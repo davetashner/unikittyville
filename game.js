@@ -293,9 +293,12 @@ let currentMusicId = null;
 let musicFade = null; // { out: AudioElement, in: AudioElement, timer: 0 }
 
 function startLevelMusic(level) {
-  const id = levelRegistry[level] && levelRegistry[level].musicId;
-  if (!id || id === currentMusicId) return;
+  const reg = levelRegistry[level];
+  if (!reg || !reg.musicId) return;
+  const id = reg.musicId;
+  if (id === currentMusicId) return;
   const el = document.getElementById(id);
+  if (!el) return; // audio element missing (e.g., no music file yet)
   el.volume = getMusicVolume();
   el.currentTime = 0;
   ensureLoaded(el).then(() => el.play().catch(() => {}));
@@ -312,6 +315,7 @@ function crossfadeToMusic(newId) {
   if (!newId || newId === currentMusicId) return;
   const outEl = currentMusicId ? document.getElementById(currentMusicId) : null;
   const inEl = document.getElementById(newId);
+  if (!inEl) return; // audio element missing
   inEl.volume = 0;
   inEl.currentTime = 0;
   ensureLoaded(inEl).then(() => inEl.play().catch(() => {}));
@@ -343,6 +347,10 @@ const player = {
 };
 
 function switchToLevel(lvl) {
+  if (!levelRegistry[lvl]) {
+    console.warn('switchToLevel: invalid level', lvl);
+    return;
+  }
   levelTransition.active = true;
   levelTransition.timer = 0;
   levelTransition.toLevel = lvl;
@@ -500,7 +508,10 @@ initScubaCollectibles();
 // ── Canvas Setup ──
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
+if (!ctx) { console.error('Failed to get canvas 2d context'); }
 const campCamperImg = new Image();
+let campCamperImgLoaded = false;
+campCamperImg.onload = () => { campCamperImgLoaded = true; };
 campCamperImg.src = 'assets/images/camper.png';
 
 // ── Cached HUD elements (avoid per-frame getElementById) ──
@@ -1976,7 +1987,8 @@ function update(dt) {
           keys['KeyQ'] = false;
           const alreadyTalking = activeSpeechBubbles.some(b => b.npc === npc);
           if (!alreadyTalking) {
-            const levelDialogs = npcDialogs[currentLevel] || npcDialogs[1];
+            const levelDialogs = npcDialogs[currentLevel] || [];
+            if (levelDialogs.length === 0) return; // no dialogs available
             const text = levelDialogs[Math.floor(Math.random() * levelDialogs.length)];
             activeSpeechBubbles.push({ npc, text, life: 4000 });
             npc.facing = player.x < npc.x ? -1 : 1;
