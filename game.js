@@ -362,11 +362,18 @@ function showSlider() {
 
 function applyVolume() {
   const mv = getMusicVolume();
-  // Update currently playing music
   if (currentMusicId) {
-    document.getElementById(currentMusicId).volume = mv;
+    const el = document.getElementById(currentMusicId);
+    if (el) {
+      el.volume = mv;
+      // Resume music when unmuting, pause when muting
+      if (muted) {
+        el.pause();
+      } else if (el.paused) {
+        ensureLoaded(el).then(() => el.play().catch(() => {}));
+      }
+    }
   }
-  // Update SFX
   for (const m of meowSounds) m.volume = getSfxVolume();
   if (chaChingSound) chaChingSound.volume = getSfxVolume();
 }
@@ -386,12 +393,19 @@ function startLevelMusic(level) {
   if (!reg || !reg.musicId) return;
   const id = reg.musicId;
   if (id === currentMusicId) return;
+  // Stop previous track
+  if (currentMusicId) {
+    const prev = document.getElementById(currentMusicId);
+    if (prev) { prev.pause(); prev.currentTime = 0; }
+  }
   const el = document.getElementById(id);
-  if (!el) return; // audio element missing (e.g., no music file yet)
+  if (!el) return;
+  currentMusicId = id;
   el.volume = getMusicVolume();
   el.currentTime = 0;
-  ensureLoaded(el).then(() => el.play().catch(() => {}));
-  currentMusicId = id;
+  if (!muted) {
+    ensureLoaded(el).then(() => el.play().catch(() => {}));
+  }
 }
 
 function crossfadeToLevel(level) {
@@ -404,20 +418,24 @@ function crossfadeToMusic(newId) {
   if (!newId || newId === currentMusicId) return;
   const outEl = currentMusicId ? document.getElementById(currentMusicId) : null;
   const inEl = document.getElementById(newId);
-  if (!inEl) return; // audio element missing
+  if (!inEl) return;
   inEl.volume = 0;
   inEl.currentTime = 0;
-  ensureLoaded(inEl).then(() => inEl.play().catch(() => {}));
+  if (!muted) {
+    ensureLoaded(inEl).then(() => inEl.play().catch(() => {}));
+  }
   musicFade = { out: outEl, inEl: inEl, inId: newId, timer: 0 };
 }
 
 function updateMusicFade(dt) {
   if (!musicFade) return;
-  const mv = getMusicVolume();
   musicFade.timer += dt;
   const t = Math.min(1, musicFade.timer / FADE_DURATION);
-  if (musicFade.out) musicFade.out.volume = mv * (1 - t);
-  musicFade.inEl.volume = mv * t;
+  if (!muted) {
+    const mv = getMusicVolume();
+    if (musicFade.out) musicFade.out.volume = mv * (1 - t);
+    musicFade.inEl.volume = mv * t;
+  }
   if (t >= 1) {
     if (musicFade.out) { musicFade.out.pause(); musicFade.out.currentTime = 0; }
     currentMusicId = musicFade.inId;
