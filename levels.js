@@ -2190,3 +2190,100 @@ npcDialogs[12] = [
   "Earth looks like a blue marble from here. I want to bat it around!",
   "Space is like the world's biggest cat tree — infinite climbing room!",
 ];
+
+// ── Level 13: Moon ──
+const MOON_WORLD_W = 5500;
+
+const level13Moon = {
+  worldW: MOON_WORLD_W,
+  platforms: [
+    { x: 250, y: 360, w: 90 },
+    { x: 550, y: 310, w: 85 },
+    { x: 850, y: 350, w: 80 },
+    { x: 1200, y: 280, w: 90 },
+    { x: 1600, y: 340, w: 85 },
+    { x: 2000, y: 300, w: 80 },
+    { x: 2500, y: 360, w: 95 },
+    { x: 3000, y: 290, w: 85 },
+    { x: 3400, y: 340, w: 80 },
+    { x: 3900, y: 310, w: 90 },
+    { x: 4400, y: 350, w: 85 },
+    { x: 4900, y: 280, w: 80 },
+  ],
+  yarnBalls: [],
+  npcs: [],
+  scenes: [
+    { type: 'crater', x: 400, r: 30 },
+    { type: 'crater', x: 1000, r: 45 },
+    { type: 'crater', x: 1800, r: 25 },
+    { type: 'crater', x: 2800, r: 50 },
+    { type: 'crater', x: 3600, r: 35 },
+    { type: 'crater', x: 4500, r: 40 },
+    { type: 'rock', x: 300 },
+    { type: 'rock', x: 1500 },
+    { type: 'rock', x: 2300 },
+    { type: 'rock', x: 3800 },
+    { type: 'rock', x: 5000 },
+    { type: 'smoothie_shop', x: 1400 },
+    { type: 'topgolf', x: 3200 },
+  ],
+};
+
+// Smoothie Shop position
+const SMOOTHIE_SHOP_POS = { x: 1400, w: 120 };
+// TopGolf position
+const TOPGOLF_POS = { x: 3200, w: 140 };
+
+// Moon yarn balls on elevated platforms
+for (const p of level13Moon.platforms) {
+  if (p.y < 350) {
+    level13Moon.yarnBalls.push({
+      x: p.x + p.w / 2,
+      y: p.y - 14,
+      color: yarnColors[level13Moon.yarnBalls.length % yarnColors.length],
+      collected: false,
+      bobPhase: Math.random() * Math.PI * 2
+    });
+  }
+}
+
+// Moon NPCs — mix of aliens and moon characters
+const moonNpcs = [];
+const moonNpcColors = ['#a78bfa', '#34d399', '#f472b6', '#e2e8f0', '#fbbf24'];
+const moonNpcAccessories = ['bow', 'glasses', 'scarf', 'flower', 'bow'];
+for (let i = 0; i < 5; i++) {
+  moonNpcs.push({
+    x: 300 + i * 1000 + Math.random() * 200,
+    y: GROUND_Y,
+    color: moonNpcColors[i],
+    accessory: moonNpcAccessories[i],
+    vx: (Math.random() - 0.5) * 0.8,
+    walkFrame: 0, walkTimer: 0,
+    facing: 1,
+    idleTimer: Math.random() * 200
+  });
+}
+level13Moon.npcs = moonNpcs;
+
+npcDialogs[13] = [
+  "Welcome to the Moon! The gravity here is out of this world!",
+  "I've been living here for eons. The Earth-watching is spectacular!",
+  "Try the smoothie shop! The dried space fruit is surprisingly delicious!",
+  "TopGolf on the Moon is AMAZING! Balls fly so far in low gravity!",
+  "We aliens have been waiting for you! Your cat friend is famous in space!",
+  "The craters make great hot tubs. Don't tell anyone I said that.",
+  "I came here for the cheese. Turns out the Moon isn't made of cheese. Disappointing!",
+  "Low gravity is purr-fect for high jumps! Try bouncing around!",
+  "The smoothies here are 75 points of pure deliciousness!",
+  "That golf dome over there? Best views in the solar system while you putt!",
+  "I miss Earth sometimes. Then I remember: no gravity, no rules!",
+  "My alien friends and I have a book club. Currently reading 'The Cat in the Spacesuit'.",
+  "Fun fact: you can jump 6 times higher on the Moon! Math is fun!",
+  "The dust here gets EVERYWHERE. My fur will never be the same.",
+  "Have you seen the Earth from here at night? It's like a giant nightlight!",
+  "This is the final frontier! Well, this level anyway. You made it!",
+  "I heard there's a secret smoothie recipe: moon dust + stardust + yarn fuzz!",
+  "TopGolf pro tip: the far target is worth 50 points but REALLY hard to hit!",
+  "The smoothie shop owner is an alien. Best barista in the galaxy!",
+  "Congratulations on making it to the Moon! You're officially an astro-cat!",
+];

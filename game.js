@@ -64,6 +64,8 @@ const Scene = {
   CAMP_CAMPER: 'campCamper',
   WATERING_HOLE: 'wateringHole',
   CAPE_LAUNCH: 'capeLaunch',
+  SMOOTHIE_SHOP: 'smoothieShop',
+  TOPGOLF: 'topGolf',
 };
 let currentScene = null;
 
@@ -151,6 +153,27 @@ let capeFueled = false;
 let capeLaunching = false;
 let capeCountdown = 10000; // 10 seconds
 let capeLaunchPower = 0;
+
+// Moon level constants
+const MOON_GRAVITY = 0.2;
+const MOON_JUMP_VEL = -16;
+const MOON_MOVE_SPEED = 3;
+
+// Smoothie minigame state
+let smoothieIngredients = 0;
+let smoothieYogurt = false;
+let smoothieBlending = false;
+let smoothieProgress = 0;
+let smoothieCount = 0;
+
+// TopGolf state
+let golfBall = { active: false, x: 0, y: 0, vx: 0, vy: 0 };
+let golfAngle = Math.PI / 4;
+let golfScore = 0;
+let golfPower = 0;
+let golfCharging = false;
+
+// Space flight alien collection — persists to Moon level (defined in level 12 section)
 
 let popups = []; // floating score popups
 let keys = {};
@@ -460,6 +483,16 @@ function completeTransition() {
     for (const yb of level12Space.yarnBalls) yb.collected = false;
     collectedAlienCount = 0;
   }
+  // Reset Moon state
+  smoothieIngredients = 0;
+  smoothieYogurt = false;
+  smoothieBlending = false;
+  smoothieProgress = 0;
+  smoothieCount = 0;
+  golfBall = { active: false, x: 0, y: 0, vx: 0, vy: 0 };
+  golfScore = 0;
+  golfPower = 0;
+  golfCharging = false;
   // Stop any looping SFX from previous level
   stopLoopSfx('sfxSailWind');
   stopLoopSfx('sfxWaterLapping');
@@ -1036,20 +1069,22 @@ function update(dt) {
 
   // Movement
   player.vx = 0;
-  if (keys['ArrowLeft']) { player.vx = -MOVE_SPEED; player.facing = -1; }
-  if (keys['ArrowRight']) { player.vx = MOVE_SPEED; player.facing = 1; }
+  const effectiveMoveSpeed = currentLevel === 13 ? MOON_MOVE_SPEED : MOVE_SPEED;
+  if (keys['ArrowLeft']) { player.vx = -effectiveMoveSpeed; player.facing = -1; }
+  if (keys['ArrowRight']) { player.vx = effectiveMoveSpeed; player.facing = 1; }
   if (keys['ArrowUp']) { player.vx += 0; } // up on land is no-op for now
   if (keys['ArrowDown']) { player.vx += 0; }
 
   // Jump
   if (keys['Space'] && player.onGround) {
-    player.vy = JUMP_VEL;
+    player.vy = currentLevel === 13 ? MOON_JUMP_VEL : JUMP_VEL;
     player.onGround = false;
     playMeow();
   }
 
   // Physics
-  player.vy = applyGravity(player.vy, GRAVITY);
+  const effectiveGravity = currentLevel === 13 ? MOON_GRAVITY : GRAVITY;
+  player.vy = applyGravity(player.vy, effectiveGravity);
   player.x += player.vx;
   player.y += player.vy;
 
@@ -2148,6 +2183,133 @@ function update(dt) {
     if (player.x > level12Space.worldW - 500 && keys['Enter']) {
       keys['Enter'] = false;
       switchToLevel(13);
+    }
+  }
+
+  // ── Moon interactions (level 13) ──
+  if (currentLevel === 13) {
+    // Smoothie Shop entry
+    if (Math.abs(player.x - SMOOTHIE_SHOP_POS.x) < BUILDING_RANGE && keys['Enter'] && currentScene === null) {
+      keys['Enter'] = false;
+      currentScene = Scene.SMOOTHIE_SHOP;
+      smoothieIngredients = 0;
+      smoothieYogurt = false;
+      smoothieBlending = false;
+      smoothieProgress = 0;
+    }
+
+    // TopGolf entry
+    if (Math.abs(player.x - TOPGOLF_POS.x) < BUILDING_RANGE && keys['Enter'] && currentScene === null) {
+      keys['Enter'] = false;
+      currentScene = Scene.TOPGOLF;
+      golfBall.active = false;
+      golfAngle = Math.PI / 4;
+    }
+
+    // Game completion at end of level
+    if (player.x > level13Moon.worldW - 200 && keys['Enter']) {
+      keys['Enter'] = false;
+      addPopup(player.x, player.y - 40, 'ADVENTURE COMPLETE! +500', '#fbbf24');
+      score += 500;
+    }
+  }
+
+  // Smoothie Shop minigame
+  if (currentScene === Scene.SMOOTHIE_SHOP) {
+    if (keys['KeyC'] && !smoothieBlending && smoothieIngredients < 3) {
+      keys['KeyC'] = false;
+      smoothieIngredients++;
+      addPopup(player.x, player.y - 30, 'Added fruit!', '#f59e0b');
+    }
+    if (keys['KeyY'] && !smoothieYogurt && !smoothieBlending) {
+      keys['KeyY'] = false;
+      smoothieYogurt = true;
+      addPopup(player.x, player.y - 30, 'Added yogurt!', '#f8fafc');
+    }
+    if (keys['KeyB'] && smoothieIngredients >= 2 && smoothieYogurt && !smoothieBlending) {
+      keys['KeyB'] = false;
+      smoothieBlending = true;
+      smoothieProgress = 0;
+    }
+    if (smoothieBlending) {
+      smoothieProgress += 16;
+      if (smoothieProgress >= 2000) {
+        smoothieBlending = false;
+        smoothieCount++;
+        score += 75;
+        addPopup(player.x, player.y - 40, '+75 Smoothie!', '#a78bfa');
+        playChaChing();
+        smoothieIngredients = 0;
+        smoothieYogurt = false;
+        smoothieProgress = 0;
+      }
+    }
+    if (keys['Enter'] && !smoothieBlending) {
+      keys['Enter'] = false;
+      currentScene = null;
+    }
+  }
+
+  // TopGolf minigame
+  if (currentScene === Scene.TOPGOLF) {
+    const tgCx = canvas.width / 2;
+    const tgCy = canvas.height / 2;
+
+    if (!golfBall.active) {
+      // Aiming
+      if (keys['ArrowUp']) golfAngle = Math.min(Math.PI * 0.45, golfAngle + 0.02);
+      if (keys['ArrowDown']) golfAngle = Math.max(Math.PI * 0.08, golfAngle - 0.02);
+
+      // Charging
+      if (keys['Space']) {
+        golfCharging = true;
+        golfPower = Math.min(1, golfPower + 0.02);
+      } else if (golfCharging) {
+        // Release — fire!
+        golfCharging = false;
+        golfBall.active = true;
+        golfBall.x = tgCx - 160;
+        golfBall.y = tgCy + 50;
+        const speed = 3 + golfPower * 5;
+        golfBall.vx = Math.cos(golfAngle) * speed;
+        golfBall.vy = -Math.sin(golfAngle) * speed;
+        golfPower = 0;
+      }
+    } else {
+      // Ball physics (low gravity!)
+      golfBall.x += golfBall.vx;
+      golfBall.y += golfBall.vy;
+      golfBall.vy += 0.08; // low moon gravity for golf
+
+      // Check target hits
+      const targets = [
+        { x: tgCx + 50, y: tgCy + 10, pts: 20 },
+        { x: tgCx + 130, y: tgCy + 10, pts: 30 },
+        { x: tgCx + 220, y: tgCy + 10, pts: 50 },
+      ];
+      for (const tgt of targets) {
+        const dx = golfBall.x - tgt.x;
+        const dy = golfBall.y - tgt.y;
+        if (dx * dx + dy * dy < 225) { // 15px radius
+          golfBall.active = false;
+          golfScore += tgt.pts;
+          score += tgt.pts;
+          addPopup(tgt.x, tgt.y - 20, '+' + tgt.pts + ' Target!', '#22c55e');
+          playChaChing();
+          break;
+        }
+      }
+
+      // Out of bounds
+      if (golfBall.y > tgCy + 100 || golfBall.x > tgCx + 280 || golfBall.x < tgCx - 250) {
+        golfBall.active = false;
+        addPopup(golfBall.x, golfBall.y, 'Miss!', '#ef4444');
+      }
+    }
+
+    if (keys['Enter'] && !golfBall.active) {
+      keys['Enter'] = false;
+      currentScene = null;
     }
   }
 
