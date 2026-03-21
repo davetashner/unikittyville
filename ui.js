@@ -463,15 +463,15 @@ function updatePrompt(near) {
       const pct = Math.min(100, (campCamperPasta.progress / 3000) * 100);
       el.textContent = `Making pasta... ${Math.round(pct)}%`;
       setAction(null, '');
-    } else if (campCamperPlayerX > 100 || campCamperPlayerX < -100) {
-      el.textContent = 'Press N to go to sleep!';
-      setAction('KeyN', 'Sleep');
+    } else if (campCamperPlayerX < -40) {
+      el.textContent = 'Press S to take a shower!';
+      setAction('KeyS', 'Shower');
     } else if (Math.abs(campCamperPlayerX) < 30) {
       el.textContent = 'Press C to get pasta from the fridge!';
       setAction('KeyC', 'Pasta');
-    } else if (campCamperPlayerX < -50 && campCamperPlayerX > -100) {
-      el.textContent = 'Press S to take a shower!';
-      setAction('KeyS', 'Shower');
+    } else if (campCamperPlayerX > 80) {
+      el.textContent = 'Press N to go to sleep!';
+      setAction('KeyN', 'Sleep');
     } else {
       el.textContent = 'Walk around the camper! (Enter to leave)';
       setAction('Enter', 'Exit');

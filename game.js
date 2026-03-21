@@ -775,8 +775,8 @@ function update(dt) {
         playChaChing();
       }
     }
-    // Bathroom — shower (left of center, around -60 to -90)
-    if (campCamperPlayerX < -50 && campCamperPlayerX > -100 && keys['KeyS']) {
+    // Bathroom — shower (left side of camper)
+    if (campCamperPlayerX < -40 && keys['KeyS']) {
       keys['KeyS'] = false;
       campCamperShowering = true;
       campCamperShowerTimer = 0;
