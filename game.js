@@ -20,6 +20,7 @@ const POINTS = {
   FRUIT: 10, ELEPHANT_BOOST: 15, RHINO_HIT: 15,
   SAFARI_PHOTO: 30, SAFARI_PHOTO_DUP: 5, SAFARI_COLLECTION: 100,
   CHEETAH_RIDE: 50, GIRAFFE_LIFT: 10,
+  TRAIN_PUZZLE: 25, TRAIN_PUZZLE_BONUS: 100,
 };
 
 // ── Timing durations (ms) ──
@@ -262,6 +263,52 @@ let golfPower = 0;
 let golfCharging = false;
 
 // Space flight alien collection — persists to Moon level (defined in level 12 section)
+
+// Train signal puzzle state (end of sledding level)
+let trainPuzzleActive = false;
+let trainPuzzleRound = 0; // 0-4 (5 puzzles)
+let trainPuzzleFeedback = ''; // '' | 'correct' | 'wrong'
+let trainPuzzleFeedbackTimer = 0;
+let trainPuzzleComplete = false;
+let trainPuzzleScore = 0; // track per-puzzle session score
+
+const TRAIN_PUZZLES = [
+  {
+    rule: 'IF the light is RED, THEN press 1 to STOP.\nIF GREEN, press 2 to GO.',
+    condition: 'RED light',
+    visual: 'red_light',
+    answer: 1,
+    hint: 'The light is RED — that means STOP!'
+  },
+  {
+    rule: 'IF the track goes LEFT, THEN press 1.\nIF RIGHT, press 2.',
+    condition: 'Track goes RIGHT',
+    visual: 'right_track',
+    answer: 2,
+    hint: 'The track points RIGHT — press 2!'
+  },
+  {
+    rule: 'IF train is FAST AND track is CURVED,\nTHEN press 1 to SLOW DOWN.\nOtherwise press 2.',
+    condition: 'FAST + CURVED',
+    visual: 'fast_curved',
+    answer: 1,
+    hint: 'The train is FAST and the track is CURVED — slow down!'
+  },
+  {
+    rule: 'IF it\'s SNOWING OR track is ICY,\nTHEN press 1 for SAND.\nOtherwise press 2.',
+    condition: 'SNOWING',
+    visual: 'snowing',
+    answer: 1,
+    hint: 'It\'s SNOWING — lay down sand!'
+  },
+  {
+    rule: 'IF NOT daytime,\nTHEN press 1 for HEADLIGHTS.\nOtherwise press 2.',
+    condition: 'NIGHTTIME',
+    visual: 'night',
+    answer: 1,
+    hint: 'It\'s NOT daytime — turn on the headlights!'
+  }
+];
 
 let popups = []; // floating score popups
 let keys = {};
@@ -572,6 +619,12 @@ function completeTransition() {
   alpsAirborne = false;
   alpsAirTimer = 0;
   sledding = false;
+  trainPuzzleActive = false;
+  trainPuzzleRound = 0;
+  trainPuzzleFeedback = '';
+  trainPuzzleFeedbackTimer = 0;
+  trainPuzzleComplete = false;
+  trainPuzzleScore = 0;
   hammockNapping = false;
   hammockNapTimer = 0;
   bigfootDrinking = false;
@@ -3019,9 +3072,55 @@ function update(dt) {
     if (player.x > SLED_WORLD_W - 200) {
       nearTrain = true;
       player.vx = 0;
-      if (keys['Enter']) {
+      if (!trainPuzzleActive && !trainPuzzleComplete && keys['Enter']) {
         keys['Enter'] = false;
-        switchToLevel(3); // go to NYC
+        trainPuzzleActive = true;
+        trainPuzzleRound = 0;
+        trainPuzzleFeedback = '';
+        trainPuzzleFeedbackTimer = 0;
+        trainPuzzleScore = 0;
+      }
+    }
+
+    // Train signal puzzle input handling
+    if (trainPuzzleActive && trainPuzzleFeedback !== 'correct' && trainPuzzleFeedback !== 'wrong') {
+      const puzzle = TRAIN_PUZZLES[trainPuzzleRound];
+      if (keys['Digit1'] || keys['Digit2']) {
+        const pressed = keys['Digit1'] ? 1 : 2;
+        keys['Digit1'] = false;
+        keys['Digit2'] = false;
+        if (pressed === puzzle.answer) {
+          trainPuzzleFeedback = 'correct';
+          trainPuzzleFeedbackTimer = 1200;
+          trainPuzzleScore += POINTS.TRAIN_PUZZLE;
+          score += POINTS.TRAIN_PUZZLE;
+          addPopup(player.x, player.y - 40, '+' + POINTS.TRAIN_PUZZLE + ' Correct!', '#4ade80');
+          playChaChing();
+        } else {
+          trainPuzzleFeedback = 'wrong';
+          trainPuzzleFeedbackTimer = 2000;
+        }
+      }
+    }
+
+    // Train puzzle feedback timer
+    if (trainPuzzleActive && trainPuzzleFeedbackTimer > 0) {
+      trainPuzzleFeedbackTimer -= dt;
+      if (trainPuzzleFeedbackTimer <= 0) {
+        if (trainPuzzleFeedback === 'correct') {
+          trainPuzzleRound++;
+          if (trainPuzzleRound >= TRAIN_PUZZLES.length) {
+            // All puzzles complete!
+            trainPuzzleActive = false;
+            trainPuzzleComplete = true;
+            score += POINTS.TRAIN_PUZZLE_BONUS;
+            addPopup(player.x, player.y - 60, '+' + POINTS.TRAIN_PUZZLE_BONUS + ' All signals set!', '#fbbf24');
+            playChaChing();
+            switchToLevel(3); // board the train to NYC
+          }
+        }
+        trainPuzzleFeedback = '';
+        trainPuzzleFeedbackTimer = 0;
       }
     }
   }

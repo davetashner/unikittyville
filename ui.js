@@ -835,6 +835,10 @@ function updatePrompt(near) {
     el.textContent = 'Press Enter to warm up in the chalet!';
     el.style.display = 'block';
     setAction('Enter', 'Enter');
+  } else if (near.nearTrain && trainPuzzleActive) {
+    el.textContent = 'Solve the signal puzzle! Press 1 or 2 to answer.';
+    el.style.display = 'block';
+    setAction(null, '');
   } else if (near.nearTrain) {
     el.textContent = 'Press Enter to take the train to NYC!';
     el.style.display = 'block';
