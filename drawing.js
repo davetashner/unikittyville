@@ -6479,10 +6479,10 @@ function drawMoonWorld(W, H, cam, cycle, isNight) {
 
   // Lunar ground
   ctx.fillStyle = '#6b7280';
-  ctx.fillRect(-cam, GROUND_Y, ww + 200, H - GROUND_Y + 10);
+  ctx.fillRect(0, GROUND_Y, ww + 200, H - GROUND_Y + 10);
   // Surface texture
   ctx.fillStyle = '#9ca3af';
-  ctx.fillRect(-cam, GROUND_Y, ww + 200, 3);
+  ctx.fillRect(0, GROUND_Y, ww + 200, 3);
 
   // Craters
   for (const scene of level13Moon.scenes) {
