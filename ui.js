@@ -82,6 +82,10 @@ window.addEventListener('keyup', e => { keys[e.code] = false; });
     function() { if (currentActionKey) keys[currentActionKey] = true; },
     function() { if (currentActionKey) keys[currentActionKey] = false; }
   );
+  bindTouch('touch-action2',
+    function() { if (currentAction2Key) keys[currentAction2Key] = true; },
+    function() { if (currentAction2Key) keys[currentAction2Key] = false; }
+  );
 })();
 
 // ── Mobile Fullscreen + Orientation Lock ──
@@ -202,16 +206,25 @@ function startGame() {
   requestAnimationFrame(loop);
 }
 
-function setAction(key, label) {
+function setAction(key, label, key2, label2) {
   currentActionKey = key;
   currentActionLabel = label;
+  currentAction2Key = key2 || null;
+  currentAction2Label = label2 || '';
   if (isMobile) {
     const btn = document.getElementById('touch-action');
+    const btn2 = document.getElementById('touch-action2');
     if (key) {
       btn.textContent = label;
       btn.style.display = 'flex';
     } else {
       btn.style.display = 'none';
+    }
+    if (key2) {
+      btn2.textContent = label2;
+      btn2.style.display = 'flex';
+    } else {
+      btn2.style.display = 'none';
     }
   }
 }
@@ -249,7 +262,7 @@ function updatePrompt(near) {
   if (currentScene === Scene.SWIMMING_IN_POOL) {
     el.textContent = 'Swimming in your pool! Q: Talk to Leprechaun | S: Get out';
     el.style.display = 'block';
-    setAction('KeyQ', 'Talk');
+    setAction('KeyQ', 'Talk', 'KeyS', 'Exit');
     return;
   }
   if (hammockNapping) {
@@ -269,7 +282,7 @@ function updatePrompt(near) {
       el.textContent = 'Drinking hot chocolate... mmm!';
     } else if (marshmallowScore >= 10 && !marshmallow.active) {
       el.textContent = 'Press D to drink the hot chocolate! (Enter to leave)';
-      setAction('KeyD', 'Drink');
+      setAction('KeyD', 'Drink', 'Enter', 'Exit');
     } else {
       el.textContent = marshmallow.active ? 'Tossing...' : 'Up/Down to aim, Space to toss! (Enter to leave)';
       setAction('Enter', 'Exit');
@@ -499,7 +512,7 @@ function updatePrompt(near) {
   } else if (near.nearCampCamper) {
     el.textContent = 'Press Enter to enter the camper! J: Safari jeep to Africa!';
     el.style.display = 'block';
-    setAction('Enter', 'Enter');
+    setAction('Enter', 'Enter', 'KeyJ', 'Jeep');
   } else if (currentScene === Scene.WATERING_HOLE) {
     el.textContent = 'Splashing in the watering hole! Press S to get out';
     el.style.display = 'block';
@@ -535,7 +548,7 @@ function updatePrompt(near) {
   } else if (near.nearElephant) {
     el.textContent = 'Press E for elephant boost! P: Photo!';
     el.style.display = 'block';
-    setAction('KeyE', 'Boost');
+    setAction('KeyE', 'Boost', 'KeyP', 'Photo');
   } else if (near.nearSafariJeep) {
     el.textContent = 'End of the safari! Great adventure!';
     el.style.display = 'block';
@@ -551,7 +564,7 @@ function updatePrompt(near) {
   } else if (currentScene === Scene.SCUBA_DIVING) {
     el.textContent = 'Swim with arrow keys! Collect pearls! Q: Talk to mercats | Enter: Surface';
     el.style.display = 'block';
-    setAction('Enter', 'Surface');
+    setAction('Enter', 'Surface', 'KeyQ', 'Talk');
     return;
   } else if (currentScene === Scene.SAILING) {
     el.textContent = 'Sailing the Neuse River! Left/Right to steer | Enter: Dock';
