@@ -4688,14 +4688,14 @@ function drawFlightWorld(W, H, cam, cycle, isNight) {
   const ww = level10Flight.worldW;
   const t = gameTime;
 
-  // Ocean — bottom third of screen
+  // Ocean — bottom third of screen (draw relative to cam so it fills the visible area)
   const oceanTop = H * 0.7;
   const oceanGrad = ctx.createLinearGradient(0, oceanTop, 0, H);
   oceanGrad.addColorStop(0, '#1d4ed8');
   oceanGrad.addColorStop(0.5, '#1e3a8a');
   oceanGrad.addColorStop(1, '#172554');
   ctx.fillStyle = oceanGrad;
-  ctx.fillRect(0, oceanTop, W, H - oceanTop);
+  ctx.fillRect(cam, oceanTop, W, H - oceanTop);
 
   // Animated wave patterns
   ctx.strokeStyle = 'rgba(96, 165, 250, 0.4)';
@@ -4703,9 +4703,9 @@ function drawFlightWorld(W, H, cam, cycle, isNight) {
   for (let row = 0; row < 4; row++) {
     ctx.beginPath();
     const wy = oceanTop + 15 + row * 18;
-    for (let x = -20; x < W + 20; x += 5) {
+    for (let x = cam - 20; x < cam + W + 20; x += 5) {
       const yOff = Math.sin((x + cam * 0.3 + t / 500 + row * 50) / 30) * 5;
-      if (x === -20) ctx.moveTo(x, wy + yOff);
+      if (x === cam - 20) ctx.moveTo(x, wy + yOff);
       else ctx.lineTo(x, wy + yOff);
     }
     ctx.stroke();
