@@ -2023,7 +2023,15 @@ function update(dt) {
   }
 
   // Prompt
-  updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf, nearAirport, nearChalet, nearTrain, nearNpc, nearStick, nearFirePit, nearHammock, nearBigfoot, nearDigSite, nearWaterPump, nearPool, nearCampCamper, nearSailboat, nearDiveSpot, nearBaobab, nearCheetah, nearSafariJeep, nearWateringHole, nearElephant);
+  updatePrompt({
+    inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive,
+    nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato,
+    nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf, nearAirport,
+    nearChalet, nearTrain, nearNpc, nearStick, nearFirePit, nearHammock,
+    nearBigfoot, nearDigSite, nearWaterPump, nearPool, nearCampCamper,
+    nearSailboat, nearDiveSpot, nearBaobab, nearCheetah, nearSafariJeep,
+    nearWateringHole, nearElephant
+  });
 }
 
 function getGroundLevel(x) {

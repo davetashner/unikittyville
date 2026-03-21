@@ -207,7 +207,7 @@ function setAction(key, label) {
   }
 }
 
-function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf, nearAirport, nearChalet, nearTrain, nearNpc, nearStick, nearFirePit, nearHammock, nearBigfoot, nearDigSite, nearWaterPump, nearPool, nearCampCamper, nearSailboat, nearDiveSpot, nearBaobab, nearCheetah, nearSafariJeep, nearWateringHole, nearElephant) {
+function updatePrompt(near) {
   const el = document.getElementById('prompt');
   if (currentScene === Scene.CAMP_CAMPER) {
     if (campCamperSleeping) {
@@ -351,83 +351,83 @@ function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, ne
     el.textContent = `Cooking... ${Math.round(pct)}%`;
     el.style.display = 'block';
     setAction(null, '');
-  } else if (inPond && !fishing.active) {
+  } else if (near.inPond && !fishing.active) {
     el.textContent = 'Press F to fish';
     el.style.display = 'block';
     setAction('KeyF', 'Fish');
-  } else if (nearGrill && !cooking.active) {
+  } else if (near.nearGrill && !cooking.active) {
     el.textContent = 'Press C to cook bacon';
     el.style.display = 'block';
     setAction('KeyC', 'Cook');
-  } else if (nearHouse) {
+  } else if (near.nearHouse) {
     el.textContent = 'Press Enter to go inside';
     el.style.display = 'block';
     setAction('Enter', 'Enter');
-  } else if (nearCamper) {
+  } else if (near.nearCamper) {
     el.textContent = 'Press Enter to enter the camper';
     el.style.display = 'block';
     setAction('Enter', 'Enter');
-  } else if (nearWindmill) {
+  } else if (near.nearWindmill) {
     el.textContent = 'Press Enter to enter the windmill';
     el.style.display = 'block';
     setAction('Enter', 'Enter');
-  } else if (nearBeehive) {
+  } else if (near.nearBeehive) {
     el.textContent = 'Press H to collect honey';
     el.style.display = 'block';
     setAction('KeyH', 'Honey');
-  } else if (nearPizza) {
+  } else if (near.nearPizza) {
     el.textContent = 'Press Enter to make pizza!';
     el.style.display = 'block';
     setAction('Enter', 'Pizza');
-  } else if (nearHotdog) {
+  } else if (near.nearHotdog) {
     el.textContent = score >= 10 ? 'Press C to buy a hot dog (-10 pts)' : 'Not enough points for a hot dog!';
     el.style.display = 'block';
     setAction(score >= 10 ? 'KeyC' : null, 'Buy');
-  } else if (nearPark) {
+  } else if (near.nearPark) {
     el.textContent = 'Press Enter to visit Central Park';
     el.style.display = 'block';
     setAction('Enter', 'Enter');
-  } else if (nearTaxi) {
+  } else if (near.nearTaxi) {
     el.textContent = 'Press Enter to take a taxi to Rome!';
     el.style.display = 'block';
     setAction('Enter', 'Taxi');
-  } else if (nearFountain) {
+  } else if (near.nearFountain) {
     el.textContent = 'Press S to go swimming!';
     el.style.display = 'block';
     setAction('KeyS', 'Swim');
-  } else if (nearGelato) {
+  } else if (near.nearGelato) {
     el.textContent = 'Press G for gelato! (+5 pts)';
     el.style.display = 'block';
     setAction('KeyG', 'Gelato');
-  } else if (nearPantheonDoor) {
+  } else if (near.nearPantheonDoor) {
     el.textContent = 'Press Enter to enter the Pantheon';
     el.style.display = 'block';
     setAction('Enter', 'Enter');
-  } else if (nearFiat) {
+  } else if (near.nearFiat) {
     el.textContent = 'Press Enter to take a Fiat to Hawaii!';
     el.style.display = 'block';
     setAction('Enter', 'Fiat');
-  } else if (nearTiki) {
+  } else if (near.nearTiki) {
     el.textContent = 'Press T to light tiki torch! (+15 pts)';
     el.style.display = 'block';
     setAction('KeyT', 'Tiki');
-  } else if (nearCoconut) {
+  } else if (near.nearCoconut) {
     el.textContent = 'Press C to collect coconut! (+10 pts)';
     el.style.display = 'block';
     setAction('KeyC', 'Coconut');
-  } else if (nearSurf) {
+  } else if (near.nearSurf) {
     el.textContent = 'Press S to go surfing!';
     el.style.display = 'block';
     setAction('KeyS', 'Surf');
-  } else if (nearAirport) {
+  } else if (near.nearAirport) {
     el.textContent = 'Press Enter to fly to Oriental, NC!';
     el.style.display = 'block';
     setAction('Enter', 'Fly');
-  } else if (nearChalet) {
+  } else if (near.nearChalet) {
     el.textContent = 'Press Enter to warm up in the chalet!';
     el.style.display = 'block';
     setAction('Enter', 'Enter');
-  } else if (nearTrain) {
+  } else if (near.nearTrain) {
     el.textContent = 'Press Enter to take the train to NYC!';
     el.style.display = 'block';
     setAction('Enter', 'Train');
@@ -451,43 +451,43 @@ function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, ne
     el.textContent = `Filling pool... ${Math.round(pct)}%`;
     el.style.display = 'block';
     setAction(null, '');
-  } else if (nearStick) {
+  } else if (near.nearStick) {
     el.textContent = 'Press C to collect sticks!';
     el.style.display = 'block';
     setAction('KeyC', 'Collect');
-  } else if (nearFirePit && !campfire.built && stickCount >= 5) {
+  } else if (near.nearFirePit && !campfire.built && stickCount >= 5) {
     el.textContent = 'Press B to build a campfire! (5 sticks)';
     el.style.display = 'block';
     setAction('KeyB', 'Build');
-  } else if (nearFirePit && !campfire.built && stickCount < 5) {
+  } else if (near.nearFirePit && !campfire.built && stickCount < 5) {
     el.textContent = `Need ${5 - stickCount} more sticks to build a fire!`;
     el.style.display = 'block';
     setAction(null, '');
-  } else if (nearFirePit && campfire.lit) {
+  } else if (near.nearFirePit && campfire.lit) {
     el.textContent = 'Press R to roast a marshmallow!';
     el.style.display = 'block';
     setAction('KeyR', 'Roast');
-  } else if (nearHammock) {
+  } else if (near.nearHammock) {
     el.textContent = 'Press N to nap in the hammock!';
     el.style.display = 'block';
     setAction('KeyN', 'Nap');
-  } else if (nearBigfoot) {
+  } else if (near.nearBigfoot) {
     el.textContent = 'Press M for chocolate milk with Bigfoot!';
     el.style.display = 'block';
     setAction('KeyM', 'Drink');
-  } else if (nearDigSite && !campPool.dug) {
+  } else if (near.nearDigSite && !campPool.dug) {
     el.textContent = 'Press D to dig a pool!';
     el.style.display = 'block';
     setAction('KeyD', 'Dig');
-  } else if (nearWaterPump && campPool.dug && !campPool.filled) {
+  } else if (near.nearWaterPump && campPool.dug && !campPool.filled) {
     el.textContent = 'Press W to fill the pool with water!';
     el.style.display = 'block';
     setAction('KeyW', 'Fill');
-  } else if (nearPool && campPool.filled) {
+  } else if (near.nearPool && campPool.filled) {
     el.textContent = 'Press S to swim in your pool!';
     el.style.display = 'block';
     setAction('KeyS', 'Swim');
-  } else if (nearCampCamper) {
+  } else if (near.nearCampCamper) {
     el.textContent = 'Press Enter to enter the camper! J: Safari jeep to Africa!';
     el.style.display = 'block';
     setAction('Enter', 'Enter');
@@ -503,39 +503,39 @@ function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, ne
     el.textContent = 'Riding the cheetah! G: Dismount | Yarn auto-collects nearby!';
     el.style.display = 'block';
     setAction('KeyG', 'Off');
-  } else if (nearBaobab) {
+  } else if (near.nearBaobab) {
     el.textContent = 'Press F to pick baobab fruit!';
     el.style.display = 'block';
     setAction('KeyF', 'Fruit');
-  } else if (nearCheetah && !ridingCheetah && cheetahYarnGiven < 5 && yarnCount > 0) {
+  } else if (near.nearCheetah && !ridingCheetah && cheetahYarnGiven < 5 && yarnCount > 0) {
     el.textContent = `Press Y to give yarn to cheetah (${cheetahYarnGiven}/5)`;
     el.style.display = 'block';
     setAction('KeyY', 'Yarn');
-  } else if (nearCheetah && !ridingCheetah && cheetahYarnGiven >= 5) {
+  } else if (near.nearCheetah && !ridingCheetah && cheetahYarnGiven >= 5) {
     el.textContent = 'Press G to ride the cheetah!';
     el.style.display = 'block';
     setAction('KeyG', 'Ride');
-  } else if (nearCheetah && !ridingCheetah && cheetahYarnGiven < 5 && yarnCount === 0) {
+  } else if (near.nearCheetah && !ridingCheetah && cheetahYarnGiven < 5 && yarnCount === 0) {
     el.textContent = `The cheetah wants yarn! (${cheetahYarnGiven}/5) Find more yarn balls!`;
     el.style.display = 'block';
     setAction(null, '');
-  } else if (nearWateringHole) {
+  } else if (near.nearWateringHole) {
     el.textContent = 'Press S to swim in the watering hole!';
     el.style.display = 'block';
     setAction('KeyS', 'Swim');
-  } else if (nearElephant) {
+  } else if (near.nearElephant) {
     el.textContent = 'Press E for elephant boost! P: Photo!';
     el.style.display = 'block';
     setAction('KeyE', 'Boost');
-  } else if (nearSafariJeep) {
+  } else if (near.nearSafariJeep) {
     el.textContent = 'End of the safari! Great adventure!';
     el.style.display = 'block';
     setAction(null, '');
-  } else if (nearNpc) {
+  } else if (near.nearNpc) {
     el.textContent = 'Press Q to talk!';
     el.style.display = 'block';
     setAction('KeyQ', 'Talk');
-  } else if (currentLevel === 2 && !nearTrain) {
+  } else if (currentLevel === 2 && !near.nearTrain) {
     el.textContent = 'Sled downhill! Dodge snowmen, collect snowballs!';
     el.style.display = 'block';
     setAction(null, '');
@@ -549,11 +549,11 @@ function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, ne
     el.style.display = 'block';
     setAction('Enter', 'Dock');
     return;
-  } else if (nearSailboat) {
+  } else if (near.nearSailboat) {
     el.textContent = 'Press Enter to go sailing!';
     el.style.display = 'block';
     setAction('Enter', 'Sail');
-  } else if (nearDiveSpot) {
+  } else if (near.nearDiveSpot) {
     el.textContent = 'Press Enter to go scuba diving!';
     el.style.display = 'block';
     setAction('Enter', 'Dive');
