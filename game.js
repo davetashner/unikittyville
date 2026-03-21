@@ -134,6 +134,14 @@ function playMeow() {
 
 // ── Generic SFX player ──
 const sfxCooldowns = {};
+function ensureLoaded(el) {
+  if (el.readyState >= 2) return Promise.resolve();
+  return new Promise(resolve => {
+    el.load();
+    el.addEventListener('canplay', resolve, { once: true });
+  });
+}
+
 function playSfx(id, cooldownMs = 500) {
   if (muted) return;
   const now = performance.now();
@@ -143,7 +151,7 @@ function playSfx(id, cooldownMs = 500) {
   if (!el) return;
   el.volume = getSfxVolume();
   el.currentTime = 0;
-  el.play().catch(() => {});
+  ensureLoaded(el).then(() => el.play().catch(() => {}));
 }
 
 function startLoopSfx(id) {
@@ -151,7 +159,7 @@ function startLoopSfx(id) {
   const el = document.getElementById(id);
   if (!el || !el.paused) return;
   el.volume = getSfxVolume() * 0.5;
-  el.play().catch(() => {});
+  ensureLoaded(el).then(() => el.play().catch(() => {}));
 }
 
 function stopLoopSfx(id) {
@@ -277,7 +285,7 @@ function startLevelMusic(level) {
   const el = document.getElementById(id);
   el.volume = getMusicVolume();
   el.currentTime = 0;
-  el.play().catch(() => {});
+  ensureLoaded(el).then(() => el.play().catch(() => {}));
   currentMusicId = id;
 }
 
@@ -293,7 +301,7 @@ function crossfadeToMusic(newId) {
   const inEl = document.getElementById(newId);
   inEl.volume = 0;
   inEl.currentTime = 0;
-  inEl.play().catch(() => {});
+  ensureLoaded(inEl).then(() => inEl.play().catch(() => {}));
   musicFade = { out: outEl, inEl: inEl, inId: newId, timer: 0 };
 }
 
