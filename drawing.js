@@ -46,6 +46,140 @@ function draw() {
   drawSpeechBubbles();
 
   ctx.restore();
+
+  // Photo gallery overlay (safari level)
+  if (photoGalleryOpen && currentLevel === 9) {
+    drawPhotoGallery(W, H);
+  }
+}
+
+function drawPhotoGallery(W, H) {
+  // Semi-transparent backdrop
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Title
+  ctx.fillStyle = '#fbbf24';
+  ctx.font = 'bold ' + Math.round(H * 0.06) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Safari Photo Album', W / 2, H * 0.12);
+
+  ctx.font = Math.round(H * 0.03) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.fillStyle = '#94a3b8';
+  ctx.fillText('Press V to close', W / 2, H * 0.18);
+
+  // Four polaroid-style frames
+  const animals = [
+    { key: 'elephant', label: 'Elephant', emoji: '', color: '#94a3b8' },
+    { key: 'rhino', label: 'Rhino', emoji: '', color: '#6b7280' },
+    { key: 'giraffe', label: 'Giraffe', emoji: '', color: '#fbbf24' },
+    { key: 'antelope', label: 'Antelope', emoji: '', color: '#a78bfa' },
+  ];
+
+  const frameW = Math.round(W * 0.18);
+  const frameH = Math.round(frameW * 1.2);
+  const gap = Math.round(W * 0.04);
+  const totalW = animals.length * frameW + (animals.length - 1) * gap;
+  const startX = (W - totalW) / 2;
+  const startY = H * 0.25;
+
+  for (let i = 0; i < animals.length; i++) {
+    const a = animals[i];
+    const fx = startX + i * (frameW + gap);
+    const fy = startY;
+    const taken = safariPhotosTaken[a.key];
+
+    // Polaroid frame
+    ctx.fillStyle = taken ? '#fefce8' : '#374151';
+    ctx.fillRect(fx, fy, frameW, frameH);
+
+    // Photo area
+    const photoX = fx + frameW * 0.1;
+    const photoY = fy + frameW * 0.1;
+    const photoW = frameW * 0.8;
+    const photoH = frameW * 0.7;
+
+    if (taken) {
+      // Draw a simple scene with the animal
+      // Savanna background
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillRect(photoX, photoY, photoW, photoH);
+      ctx.fillStyle = '#92400e';
+      ctx.fillRect(photoX, photoY + photoH * 0.7, photoW, photoH * 0.3);
+
+      // Sun
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath();
+      ctx.arc(photoX + photoW * 0.8, photoY + photoH * 0.2, photoH * 0.1, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Animal silhouette (simple shapes)
+      ctx.fillStyle = a.color;
+      const ax = photoX + photoW * 0.5;
+      const ay = photoY + photoH * 0.55;
+      if (a.key === 'elephant') {
+        ctx.fillRect(ax - 12, ay - 8, 24, 16);
+        ctx.fillRect(ax - 14, ay + 4, 6, 10);
+        ctx.fillRect(ax + 8, ay + 4, 6, 10);
+        ctx.fillRect(ax + 10, ay - 12, 8, 8);
+        ctx.fillRect(ax + 16, ay - 8, 3, 12);
+      } else if (a.key === 'rhino') {
+        ctx.fillRect(ax - 14, ay - 6, 28, 14);
+        ctx.fillRect(ax - 16, ay + 4, 6, 10);
+        ctx.fillRect(ax + 10, ay + 4, 6, 10);
+        ctx.fillRect(ax - 16, ay - 10, 6, 6);
+        // horn
+        ctx.fillStyle = '#d1d5db';
+        ctx.fillRect(ax - 18, ay - 14, 4, 6);
+      } else if (a.key === 'giraffe') {
+        ctx.fillRect(ax - 4, ay - 20, 8, 30);
+        ctx.fillRect(ax - 8, ay + 6, 6, 10);
+        ctx.fillRect(ax + 2, ay + 6, 6, 10);
+        ctx.fillRect(ax - 6, ay - 24, 12, 8);
+        // spots
+        ctx.fillStyle = '#92400e';
+        ctx.fillRect(ax - 2, ay - 14, 3, 3);
+        ctx.fillRect(ax + 1, ay - 6, 3, 3);
+        ctx.fillRect(ax - 3, ay, 3, 3);
+      } else if (a.key === 'antelope') {
+        ctx.fillRect(ax - 10, ay - 4, 20, 10);
+        ctx.fillRect(ax - 12, ay + 2, 4, 10);
+        ctx.fillRect(ax + 8, ay + 2, 4, 10);
+        ctx.fillRect(ax - 12, ay - 8, 8, 6);
+        // horns
+        ctx.fillStyle = '#78716c';
+        ctx.fillRect(ax - 12, ay - 16, 2, 10);
+        ctx.fillRect(ax - 6, ay - 16, 2, 10);
+      }
+
+      // Checkmark
+      ctx.fillStyle = '#4ade80';
+      ctx.font = 'bold ' + Math.round(frameW * 0.15) + 'px sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText('\u2713', fx + frameW - 6, fy + 16);
+    } else {
+      // Empty — question mark
+      ctx.fillStyle = '#1f2937';
+      ctx.fillRect(photoX, photoY, photoW, photoH);
+      ctx.fillStyle = '#4b5563';
+      ctx.font = 'bold ' + Math.round(photoH * 0.5) + 'px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('?', photoX + photoW / 2, photoY + photoH * 0.65);
+    }
+
+    // Label
+    ctx.fillStyle = taken ? '#1e1b4b' : '#9ca3af';
+    ctx.font = 'bold ' + Math.round(frameW * 0.12) + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(a.label, fx + frameW / 2, fy + frameH - frameW * 0.08);
+  }
+
+  // Collection progress
+  const count = Object.values(safariPhotosTaken).filter(v => v).length;
+  ctx.fillStyle = count >= 4 ? '#4ade80' : '#e2e8f0';
+  ctx.font = 'bold ' + Math.round(H * 0.04) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(count + '/4 species photographed' + (count >= 4 ? ' — Collection complete!' : ''), W / 2, H * 0.88);
 }
 
 function drawSpeechBubbles() {

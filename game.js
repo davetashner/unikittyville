@@ -522,6 +522,7 @@ let cheetahSpeech = { text: '', timer: 0 };
 let safariPhotography = { active: false, timer: 0, targetAnimal: '' };
 const SAFARI_PHOTO_DURATION = 1500; // 1.5s timing window
 let safariPhotosTaken = { elephant: false, rhino: false, antelope: false, giraffe: false };
+let photoGalleryOpen = false;
 let dustParticles = []; // cheetah ride dust trail
 const CHEETAH_SPEED = 6.5; // faster than normal 4px
 const CHEETAH_YARN_MAGNET = 80; // auto-collect radius while riding
@@ -1819,6 +1820,12 @@ function update(dt) {
           ant.x = Math.max(50, Math.min(SAFARI_WORLD_W - 50, ant.x));
         }
       }
+    }
+
+    // Photo gallery toggle — press V to view/close
+    if (keys['KeyV']) {
+      keys['KeyV'] = false;
+      photoGalleryOpen = !photoGalleryOpen;
     }
 
     // Safari photography — press P near animals to photograph
