@@ -76,6 +76,38 @@ const Scene = {
 };
 let currentScene = null;
 
+// ── Fact Notebook ──
+let factNotebook = JSON.parse(localStorage.getItem('factNotebook') || '[]');
+let notebookOpen = false;
+let notebookCategory = 'All';
+let notebookScroll = 0;
+const NOTEBOOK_CATEGORIES = ['All', 'Geography', 'History', 'Science', 'Culture', 'Language'];
+const NOTEBOOK_LINES_PER_PAGE = 8;
+
+function categorizeFact(text) {
+  const t = text.toLowerCase();
+  // History keywords
+  if (/\b(years? old|ancient|centur|history|built in|founded|histor|dynasty|empire|medieval|pharaoh|king|queen|war|battle|invented)\b/.test(t)) return 'History';
+  // Geography keywords
+  if (/\b(miles?|meters?|feet|mountain|ocean|river|island|continent|country|lake|valley|volcano|desert|north|south|east|west|elevation|altitude|tall|deep|wide|long)\b/.test(t)) return 'Geography';
+  // Science keywords
+  if (/\b(species|animal|fish|bird|turtle|whale|dolphin|elephant|giraffe|rhino|cheetah|coral|reef|plant|tree|flower|mineral|crystal|fossil|dinosaur|star|planet|moon|sun|gravity|orbit|rocket|space|atom|cell|dna|evolv)\b/.test(t)) return 'Science';
+  // Language keywords
+  if (/\b(means?|word for|translat|language|dialect|speak|phrase|say|greeting|hello|goodbye|aloha|mahalo|ciao|bongiorno|guten|bonjour|merci|gracias|danke)\b/.test(t)) return 'Language';
+  // Culture keywords
+  if (/\b(tradition|festival|celebrat|custom|music|dance|art|food|recipe|cook|dish|cuisine|temple|shrine|church|cathedral|museum|paint|sculpt|legend|myth|folk|story|song)\b/.test(t)) return 'Culture';
+  return 'Culture'; // default
+}
+
+function addFactToNotebook(text, level) {
+  // Don't add duplicates
+  if (factNotebook.some(f => f.text === text)) return;
+  const category = categorizeFact(text);
+  const levelName = levelRegistry[level] ? levelRegistry[level].name : ('Level ' + level);
+  factNotebook.push({ text, level, levelName, category });
+  localStorage.setItem('factNotebook', JSON.stringify(factNotebook));
+}
+
 // ── State ──
 let playerName = 'Sparkle';
 let score = 0, fishCount = 0, baconCount = 0, yarnCount = 0;
@@ -833,6 +865,31 @@ function update(dt) {
     return;
   }
 
+  // Fact Notebook overlay — N to toggle (only when not in a scene/minigame)
+  if (notebookOpen) {
+    if (keys['KeyN'] || keys['Enter'] || keys['Escape']) {
+      keys['KeyN'] = false;
+      keys['Enter'] = false;
+      keys['Escape'] = false;
+      notebookOpen = false;
+    }
+    if (keys['ArrowUp']) { keys['ArrowUp'] = false; notebookScroll = Math.max(0, notebookScroll - 1); }
+    if (keys['ArrowDown']) { keys['ArrowDown'] = false; notebookScroll++; }
+    if (keys['ArrowLeft']) {
+      keys['ArrowLeft'] = false;
+      const idx = NOTEBOOK_CATEGORIES.indexOf(notebookCategory);
+      notebookCategory = NOTEBOOK_CATEGORIES[(idx - 1 + NOTEBOOK_CATEGORIES.length) % NOTEBOOK_CATEGORIES.length];
+      notebookScroll = 0;
+    }
+    if (keys['ArrowRight']) {
+      keys['ArrowRight'] = false;
+      const idx = NOTEBOOK_CATEGORIES.indexOf(notebookCategory);
+      notebookCategory = NOTEBOOK_CATEGORIES[(idx + 1) % NOTEBOOK_CATEGORIES.length];
+      notebookScroll = 0;
+    }
+    return; // freeze the game while notebook is open
+  }
+
   if (currentScene === Scene.CAMP_CAMPER) {
     // Sleeping in bed
     if (campCamperSleeping) {
@@ -959,6 +1016,7 @@ function update(dt) {
             const text = dialogs[Math.floor(Math.random() * dialogs.length)];
             activeSpeechBubbles.push({ npc: mc, text, life: TIMING.SPEECH_BUBBLE_LIFE });
             playSfx('sfxMercatChirp');
+            addFactToNotebook(text, 6); // Oriental level
           }
         }
       }
@@ -3074,11 +3132,19 @@ function update(dt) {
             const text = levelDialogs[Math.floor(Math.random() * levelDialogs.length)];
             activeSpeechBubbles.push({ npc, text, life: TIMING.SPEECH_BUBBLE_LIFE });
             npc.facing = player.x < npc.x ? -1 : 1;
+            addFactToNotebook(text, currentLevel);
           }
         }
         break;
       }
     }
+  }
+
+  // Notebook toggle — N key when not in a scene
+  if (currentScene === null && keys['KeyN']) {
+    keys['KeyN'] = false;
+    notebookOpen = true;
+    notebookScroll = 0;
   }
 
   // Update speech bubbles
