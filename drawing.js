@@ -45,6 +45,7 @@ function draw() {
       [Scene.GRAND_CENTRAL]: () => drawGrandCentralInterior(cam, W, H),
       [Scene.THE_MET]: () => drawMetMuseumInterior(cam, W, H),
       [Scene.NASA_MUSEUM]: () => drawNasaMuseumInterior(cam, W, H),
+      [Scene.TELEGRAM]: () => drawTelegramOffice(cam, W, H),
     };
     if (sceneDrawMap[currentScene]) sceneDrawMap[currentScene]();
   } else {
