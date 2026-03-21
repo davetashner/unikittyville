@@ -501,11 +501,11 @@ function drawLevelTransition(W, H) {
     ctx.textBaseline = 'middle';
     const textAlpha = Math.min(1, (t - 0.4) / 0.3);
     ctx.globalAlpha = textAlpha;
-    const levelNames = { 1: 'Back to the Meadow!', 2: 'Time to Sled!', 3: 'Welcome to NYC!', 4: 'Benvenuto a Roma!', 5: 'Aloha Hawaii!', 6: 'Welcome to the Alps!', 7: 'Welcome to Camp!' };
-    const levelSubtitles = { 1: playerName + ' returns home!', 2: playerName + ' hits the snowy hills!', 3: playerName + ' arrives in the big city!', 4: playerName + ' explores the Eternal City!', 5: playerName + ' hits the beach!', 6: playerName + ' hits the slopes!', 7: playerName + ' goes camping!' };
-    ctx.fillText(levelNames[levelTransition.toLevel] || 'New Level!', W / 2, H / 2 - 20);
+    const lvl = levelTransition.toLevel;
+    const name = (LEVEL_NAMES[lvl - 1]) || 'Level ' + lvl;
+    ctx.fillText(name, W / 2, H / 2 - 20);
     ctx.font = '20px system-ui';
-    ctx.fillText(levelSubtitles[levelTransition.toLevel] || '', W / 2, H / 2 + 20);
+    ctx.fillText(playerName + ' is on the way!', W / 2, H / 2 + 20);
     ctx.globalAlpha = 1;
     ctx.textBaseline = 'alphabetic';
   }

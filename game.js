@@ -1153,8 +1153,8 @@ function update(dt) {
     score += POINTS.YARN_BONUS;
     addPopup(player.x, player.y - 60, '+' + POINTS.YARN_BONUS + ' ALL YARN BONUS!', '#fbbf24');
     playChaChing();
-    // Big glitter celebration from the horn
-    if (!prefersReducedMotion) {
+    // Big glitter celebration from the horn (cap at 120 particles)
+    if (!prefersReducedMotion && glitterParticles.length < 120) {
       const colors = ['#f472b6', '#a78bfa', '#38bdf8', '#fbbf24', '#4ade80', '#fb923c', '#e879f9'];
       for (let i = 0; i < 40; i++) {
         const angle = Math.random() * Math.PI * 2;
