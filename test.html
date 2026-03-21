@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head><title>Physics Tests</title></head>
+<body>
+<pre id="results"></pre>
+<script src="physics.js"></script>
+<script>
+let passed = 0, failed = 0;
+function assert(desc, condition) {
+  if (condition) { passed++; log('PASS ' + desc); }
+  else { failed++; log('FAIL ' + desc); }
+}
+function log(msg) { document.getElementById('results').textContent += msg + '\n'; }
+
+// Gravity
+assert('applyGravity adds gravity to vy', applyGravity(0, 0.6) === 0.6);
+assert('applyGravity accumulates', applyGravity(1.2, 0.6) === 1.7999999999999998);
+
+// Platform collision
+const platforms = [{ x: 100, y: 300, w: 80 }];
+assert('collision detected when falling onto platform',
+  checkPlatformCollision(140, 300, 5, platforms) !== null);
+assert('collision sets y to platform y',
+  checkPlatformCollision(140, 300, 5, platforms).y === 300);
+assert('collision sets vy to 0',
+  checkPlatformCollision(140, 300, 5, platforms).vy === 0);
+assert('collision sets onGround true',
+  checkPlatformCollision(140, 300, 5, platforms).onGround === true);
+assert('no collision when moving up',
+  checkPlatformCollision(140, 300, -5, platforms) === null);
+assert('no collision when not over platform',
+  checkPlatformCollision(50, 300, 5, platforms) === null);
+assert('no collision when vy is exactly 0',
+  checkPlatformCollision(140, 300, 0, platforms) !== null);
+
+// World bounds
+assert('applyWorldBounds clamps left', applyWorldBounds(5, 4800) === 20);
+assert('applyWorldBounds clamps right', applyWorldBounds(4790, 4800) === 4780);
+assert('applyWorldBounds no change in middle', applyWorldBounds(500, 4800) === 500);
+assert('applyWorldBounds exact left edge', applyWorldBounds(20, 4800) === 20);
+assert('applyWorldBounds exact right edge', applyWorldBounds(4780, 4800) === 4780);
+
+// Swimming physics
+const swimResult = applySwimmingPhysics(
+  {x: 100, y: 100}, {vx: 0, vy: 0},
+  {left: false, right: true, up: false, down: false},
+  -0.15, 0.4, 0.96
+);
+assert('swimming right increases vx', swimResult.vx > 0);
+assert('swimming buoyancy decreases vy', swimResult.vy < 0);
+assert('swimming updates x position', swimResult.x > 100);
+
+const swimIdle = applySwimmingPhysics(
+  {x: 100, y: 100}, {vx: 0, vy: 0},
+  {left: false, right: false, up: false, down: false},
+  -0.15, 0.4, 0.96
+);
+assert('idle swimming only has buoyancy on vy', swimIdle.vx === 0);
+assert('idle swimming buoyancy moves up', swimIdle.y < 100);
+
+// Swimming bounds
+const bounds = applySwimmingBounds(5, 5, 1200, 500);
+assert('swimming bounds clamps x left', bounds.x === 20);
+assert('swimming bounds clamps y top', bounds.y === 20);
+const boundsR = applySwimmingBounds(1190, 480, 1200, 500);
+assert('swimming bounds clamps x right', boundsR.x === 1180);
+assert('swimming bounds clamps y bottom', boundsR.y === 460);
+
+log('\n' + passed + ' passed, ' + failed + ' failed');
+</script>
+</body>
+</html>
