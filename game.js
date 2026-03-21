@@ -19,7 +19,7 @@ const POINTS = {
   YARN_BONUS: 100, LEPRECHAUN_GOLD: 50,
   FRUIT: 10, ELEPHANT_BOOST: 15, RHINO_HIT: 15,
   SAFARI_PHOTO: 30, SAFARI_PHOTO_DUP: 5, SAFARI_COLLECTION: 100,
-  CHEETAH_RIDE: 50, GIRAFFE_LIFT: 10,
+  CHEETAH_RIDE: 50, GIRAFFE_LIFT: 10, JOURNAL_BONUS: 20,
 };
 
 // ── Timing durations (ms) ──
@@ -601,6 +601,10 @@ function completeTransition() {
   campCamperShowerTimer = 0;
   ridingCheetah = false;
   safariPhotography = { active: false, timer: 0, targetAnimal: '' };
+  journalActive = false;
+  journalAnimal = '';
+  journalResult = '';
+  journalResultTimer = 0;
   cheetahSpeech = { text: '', timer: 0 };
   dustParticles = [];
   // Keep space suit on for levels 11-13 (Cape → Space → Moon)
@@ -713,8 +717,22 @@ let ridingCheetah = false;
 let cheetahSpeech = { text: '', timer: 0 };
 let safariPhotography = { active: false, timer: 0, targetAnimal: '' };
 const SAFARI_PHOTO_DURATION = 1500; // 1.5s timing window
-let safariPhotosTaken = { elephant: false, rhino: false, antelope: false, giraffe: false };
+let safariPhotosTaken = { elephant: false, rhino: false, antelope: false, giraffe: false, cheetah: false };
 let photoGalleryOpen = false;
+// Safari Field Journal — fill-in-the-blank observations after photos
+const JOURNAL_ENTRIES = {
+  elephant: { sentence: 'The elephant uses its long ____ to drink water.', choices: ['tail', 'trunk', 'ears'], correct: 1 },
+  giraffe:  { sentence: 'Giraffes have ____ spots, and no two patterns are alike.', choices: ['striped', 'brown', 'square'], correct: 1 },
+  cheetah:  { sentence: 'The cheetah is the ____ land animal on Earth.', choices: ['slowest', 'biggest', 'fastest'], correct: 2 },
+  rhino:    { sentence: "A rhino's horn is made of the same material as your ____.", choices: ['fingernails', 'teeth', 'bones'], correct: 0 },
+  antelope: { sentence: 'Antelopes can ____ very high to escape predators.', choices: ['swim', 'dig', 'jump'], correct: 2 },
+};
+let journalActive = false;
+let journalAnimal = '';
+let journalResult = ''; // '', 'correct', 'wrong'
+let journalResultTimer = 0;
+const JOURNAL_RESULT_DURATION = 1500;
+let journalCompleted = new Set(); // animals whose journal entry is done
 let dustParticles = []; // cheetah ride dust trail
 const CHEETAH_SPEED = 6.5; // faster than normal 4px
 const CHEETAH_YARN_MAGNET = 80; // auto-collect radius while riding
@@ -1555,8 +1573,11 @@ function update(dt) {
     return;
   }
 
-  // Movement
+  // Movement (frozen while journal overlay is active)
   player.vx = 0;
+  if (journalActive) {
+    // Block all movement/jumping during journal
+  } else {
   const effectiveMoveSpeed = currentLevel === 13 ? MOON_MOVE_SPEED : MOVE_SPEED;
   if (keys['ArrowLeft']) { player.vx = -effectiveMoveSpeed; player.facing = -1; }
   if (keys['ArrowRight']) { player.vx = effectiveMoveSpeed; player.facing = 1; }
@@ -1569,6 +1590,7 @@ function update(dt) {
     player.onGround = false;
     playMeow();
   }
+  } // end journalActive else block
 
   // Flight levels: override velocity and gravity before physics
   if (currentLevel === 10) {
@@ -2539,8 +2561,8 @@ function update(dt) {
       }
     }
 
-    // Photo gallery toggle — press V to view/close
-    if (keys['KeyV']) {
+    // Photo gallery toggle — press V to view/close (not during journal)
+    if (keys['KeyV'] && !journalActive) {
       keys['KeyV'] = false;
       photoGalleryOpen = !photoGalleryOpen;
     }
@@ -2559,8 +2581,15 @@ function update(dt) {
             score += POINTS.SAFARI_PHOTO;
             addPopup(player.x, player.y - 40, '+' + POINTS.SAFARI_PHOTO + ' Great photo!', '#fbbf24');
             playSfx('sfxPhotoSuccess');
-            // Bonus for all 4 species
-            if (safariPhotoCount >= 4) {
+            // Activate field journal entry if not already completed
+            if (JOURNAL_ENTRIES[animal] && !journalCompleted.has(animal)) {
+              journalActive = true;
+              journalAnimal = animal;
+              journalResult = '';
+              journalResultTimer = 0;
+            }
+            // Bonus for all 5 species
+            if (safariPhotoCount >= 5) {
               score += POINTS.SAFARI_COLLECTION;
               addPopup(player.x, player.y - 60, '+' + POINTS.SAFARI_COLLECTION + ' Safari collection complete!', '#f97316');
               playChaChing();
@@ -2576,7 +2605,7 @@ function update(dt) {
         }
       }
     }
-    if (!safariPhotography.active && keys['KeyP']) {
+    if (!safariPhotography.active && !journalActive && keys['KeyP']) {
       keys['KeyP'] = false;
       // Check if near any animal for photography
       let targetAnimal = '';
@@ -2592,11 +2621,49 @@ function update(dt) {
       for (const gx of GIRAFFE_POSITIONS) {
         if (Math.abs(player.x - gx) < 80) targetAnimal = 'giraffe';
       }
+      if (Math.abs(player.x - CHEETAH_POS.x) < 80 && !ridingCheetah) targetAnimal = 'cheetah';
       if (targetAnimal) {
         safariPhotography.active = true;
         safariPhotography.timer = 0;
         safariPhotography.targetAnimal = targetAnimal;
         playSfx('sfxCameraShutter');
+      }
+    }
+
+    // Safari Field Journal — handle answer input
+    if (journalActive) {
+      if (journalResult === '') {
+        // Waiting for player to pick 1, 2, or 3
+        for (let i = 0; i < 3; i++) {
+          if (keys['Digit' + (i + 1)]) {
+            keys['Digit' + (i + 1)] = false;
+            const entry = JOURNAL_ENTRIES[journalAnimal];
+            if (i === entry.correct) {
+              journalResult = 'correct';
+              journalCompleted.add(journalAnimal);
+              score += POINTS.JOURNAL_BONUS;
+              addPopup(player.x, player.y - 40, '+' + POINTS.JOURNAL_BONUS + ' Journal complete!', '#4ade80');
+              playChaChing();
+            } else {
+              journalResult = 'wrong';
+            }
+            journalResultTimer = JOURNAL_RESULT_DURATION;
+            break;
+          }
+        }
+      } else {
+        // Showing result feedback
+        journalResultTimer -= dt;
+        if (journalResultTimer <= 0) {
+          if (journalResult === 'wrong') {
+            // Let them try again
+            journalResult = '';
+          } else {
+            // Correct — close journal
+            journalActive = false;
+            journalAnimal = '';
+          }
+        }
       }
     }
 

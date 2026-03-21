@@ -911,6 +911,16 @@ function updatePrompt(near) {
       setAction('KeyS', 'Exit');
     }
     el.style.display = 'block';
+  } else if (journalActive) {
+    if (journalResult === '') {
+      el.textContent = 'Field Journal: Press 1, 2, or 3 to answer!';
+    } else if (journalResult === 'correct') {
+      el.textContent = 'Correct! Journal entry complete!';
+    } else {
+      el.textContent = 'Not quite — try again!';
+    }
+    el.style.display = 'block';
+    setAction(null, '');
   } else if (safariPhotography.active) {
     el.textContent = 'Taking photo... hold steady!';
     el.style.display = 'block';
