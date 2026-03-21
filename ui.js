@@ -312,6 +312,50 @@ window.addEventListener('keydown', e => {
       kitNameInput += e.key;
     }
   }
+  // Mission Control typing minigame
+  if (currentScene === Scene.MISSION_CONTROL && missionControl.active && !missionControl.complete && !missionControl.failed && !e.repeat) {
+    const mc = missionControl;
+    const currentCmd = MISSION_COMMANDS[mc.round];
+    if (e.key === 'Backspace') {
+      e.preventDefault();
+      mc.typed = mc.typed.slice(0, -1);
+    } else if (e.key.length === 1 && /[a-zA-Z ]/.test(e.key)) {
+      e.preventDefault();
+      const typedChar = e.key.toUpperCase();
+      const expectedChar = currentCmd[mc.typed.length];
+      if (typedChar === expectedChar) {
+        mc.typed += typedChar;
+      } else {
+        mc.errors++;
+      }
+    }
+  }
+  // Fuel calculator digit input — consume keys to prevent game actions
+  if (fuelCalcActive && !e.repeat) {
+    keys[e.code] = false; // block game from seeing these keys
+    if (fuelCalcFeedbackTimer <= 0) {
+      if (/^[0-9]$/.test(e.key) && fuelCalcAnswer.length < 6) {
+        fuelCalcAnswer += e.key;
+      } else if (e.key === 'Backspace') {
+        fuelCalcAnswer = fuelCalcAnswer.slice(0, -1);
+      } else if (e.key === 'Enter' && fuelCalcAnswer.length > 0) {
+        const correctAnswer = FUEL_CALC_PROBLEMS[fuelCalcProblem].answer;
+        if (parseInt(fuelCalcAnswer) === correctAnswer) {
+          fuelCalcFeedback = 'correct';
+          fuelCalcCorrect++;
+          fuelCalcProblem++;
+          fuelCalcAnswer = '';
+          fuelCalcFeedbackTimer = 1200;
+        } else {
+          fuelCalcFeedback = 'wrong';
+          fuelCalcAnswer = '';
+          fuelCalcFeedbackTimer = 1200;
+        }
+      } else if (e.key === 'Escape') {
+        fuelCalcActive = false;
+      }
+    }
+  }
   // Telegram typing input
   if (currentScene === Scene.TELEGRAM && telegramActive && !telegramComplete && !e.repeat) {
     if (e.key.length === 1) {
@@ -365,6 +409,53 @@ window.addEventListener('keyup', e => { keys[e.code] = false; });
     function() { if (currentAction2Key) keys[currentAction2Key] = false; }
   );
 })();
+
+// Tour guide: canvas tap to advance, double-tap to skip (mobile)
+let tourGuideTapTime = 0;
+canvas.addEventListener('touchstart', function(e) {
+  if (!tourGuideActive) return;
+  e.preventDefault();
+  const now = Date.now();
+  if (now - tourGuideTapTime < 350) {
+    // Double-tap: skip all
+    keys['Enter'] = true;
+    setTimeout(() => { keys['Enter'] = false; }, 50);
+  } else {
+    // Single tap: next fact
+    keys['Space'] = true;
+    setTimeout(() => { keys['Space'] = false; }, 50);
+  }
+  tourGuideTapTime = now;
+}, { passive: false });
+
+// ── Quiz touch support ──
+// Tapping the canvas answer buttons triggers quiz answers (works on mobile and desktop)
+canvas.addEventListener('click', function(e) {
+  if (!quizActive) return;
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const tx = (e.clientX - rect.left) * scaleX;
+  const ty = (e.clientY - rect.top) * scaleY;
+  const W = canvas.width, H = canvas.height;
+  // Match button layout from drawQuizOverlay
+  const boxW = Math.min(W * 0.85, 420);
+  const bx = (W - boxW) / 2;
+  const boxH = 180;
+  const by = (H - boxH) / 2 - 20;
+  // answerY uses 2 lines as estimate (question text wrap); buttons start ~76px from box top
+  const answerY = by + 76;
+  const btnH = 26;
+  const btnW = boxW - 40;
+  for (let i = 0; i < 3; i++) {
+    const btnY = answerY + i * (btnH + 4);
+    if (tx > bx + 20 && tx < bx + 20 + btnW && ty > btnY && ty < btnY + btnH) {
+      keys['Digit' + (i + 1)] = true;
+      setTimeout(() => { keys['Digit' + (i + 1)] = false; }, 100);
+      break;
+    }
+  }
+});
 
 // ── Mobile Fullscreen + Orientation Lock ──
 if (isMobile) {
@@ -433,6 +524,7 @@ function startGameAtLevel(lvl) {
   document.getElementById('volumeControl').style.display = 'flex';
   document.getElementById('hudName').textContent = playerName;
   initMeows();
+  loadAchievements();
   for (const sfx of [...meowSounds, chaChingSound]) {
     if (sfx) {
       const p = sfx.play();
@@ -448,6 +540,12 @@ function startGameAtLevel(lvl) {
   player.y = GROUND_Y;
   player.vy = 0;
   player.onGround = true;
+  // Activate tour guide for starting level
+  if (!tourGuideSeen.has(lvl)) {
+    tourGuideActive = true;
+    tourGuideStep = 0;
+    tourGuideSeen.add(lvl);
+  }
   startLevelMusic(lvl);
   requestAnimationFrame(loop);
 }
@@ -473,6 +571,7 @@ function startGame() {
   document.getElementById('volumeControl').style.display = 'flex';
   document.getElementById('hudName').textContent = playerName;
   initMeows();
+  loadAchievements();
   // Unlock audio on mobile: browsers require a user gesture before playing audio.
   // The Play button click/tap is that gesture. We briefly play/pause SFX elements
   // so subsequent play() calls succeed even outside a direct gesture context.
@@ -487,6 +586,12 @@ function startGame() {
   player.color = selectedFurColor;
   playerEyeColor = selectedEyeColor;
   playerHornColors = hornGradientFromColor(selectedHornColor);
+  // Activate tour guide for level 1
+  if (!tourGuideSeen.has(1)) {
+    tourGuideActive = true;
+    tourGuideStep = 0;
+    tourGuideSeen.add(1);
+  }
   // Start music (requires user gesture, which the click/enter provides)
   startLevelMusic(1);
   requestAnimationFrame(loop);
@@ -517,6 +622,19 @@ function setAction(key, label, key2, label2) {
 
 function updatePrompt(near) {
   const el = document.getElementById('prompt');
+  // Hide prompt during hot dog math overlay (UI is drawn on canvas)
+  if (hotdogMath.active) {
+    el.style.display = 'none';
+    setAction(null, '');
+    return;
+  }
+  // Quiz mode overrides all other prompts
+  if (quizActive) {
+    el.textContent = 'Quiz! Press 1, 2, or 3 to answer!';
+    el.style.display = 'block';
+    setAction(null, '');
+    return;
+  }
   if (currentScene === Scene.CAMP_CAMPER) {
     if (campCamperSleeping) {
       el.textContent = 'Sleeping... zzz (Press N to wake up)';
@@ -763,6 +881,11 @@ function updatePrompt(near) {
       return;
     }
     el.style.display = 'block';
+  } else if (bugCatcherActive) {
+    el.textContent = bugCatcherRule ? bugCatcherRule.text + ' (Space to catch)' : 'Bug Catcher!';
+    el.style.display = 'block';
+    setAction('Space', 'Catch');
+    return;
   } else if (fishing.active) {
     el.textContent = 'Fishing...';
     el.style.display = 'block';
@@ -796,6 +919,14 @@ function updatePrompt(near) {
     el.textContent = 'Press H to collect honey';
     el.style.display = 'block';
     setAction('KeyH', 'Honey');
+  } else if (near.nearBugNet) {
+    el.textContent = 'Press Space to pick up the Bug Net!';
+    el.style.display = 'block';
+    setAction('Space', 'Pick up');
+  } else if (currentLevel === 1 && hasBugNet && !bugCatcherActive && !bugCatcherFinished && Math.abs(player.x - BUG_NET_POS.x) < 120) {
+    el.textContent = 'Press B to start Bug Catcher!';
+    el.style.display = 'block';
+    setAction('KeyB', 'Bugs');
   } else if (near.nearPizza) {
     el.textContent = 'Press Enter to make pizza!';
     el.style.display = 'block';
@@ -825,9 +956,13 @@ function updatePrompt(near) {
     el.style.display = 'block';
     setAction('Enter', 'Enter');
   } else if (near.nearHotdog) {
-    el.textContent = score >= 10 ? 'Press C to buy a hot dog (-10 pts)' : 'Not enough points for a hot dog!';
+    if (hotdogMath.complete) {
+      el.textContent = 'You already bought all 5 hot dogs here!';
+    } else {
+      el.textContent = 'Press H for Hot Dog Math Challenge!';
+    }
     el.style.display = 'block';
-    setAction(score >= 10 ? 'KeyC' : null, 'Buy');
+    setAction(hotdogMath.complete ? null : 'KeyH', 'Math');
   } else if (near.nearPark) {
     el.textContent = 'Press Enter to visit Central Park';
     el.style.display = 'block';
@@ -841,9 +976,9 @@ function updatePrompt(near) {
     el.style.display = 'block';
     setAction('KeyS', 'Swim');
   } else if (near.nearGelato) {
-    el.textContent = 'Press G for gelato! (+5 pts)';
+    el.textContent = 'Press G for gelato (+5 pts) | Enter for Gelato Shop';
     el.style.display = 'block';
-    setAction('KeyG', 'Gelato');
+    setAction('Enter', 'Shop');
   } else if (near.nearPantheonDoor) {
     el.textContent = 'Press Enter to enter the Pantheon';
     el.style.display = 'block';
@@ -908,10 +1043,22 @@ function updatePrompt(near) {
     el.textContent = `Need ${5 - stickCount} more sticks to build a fire!`;
     el.style.display = 'block';
     setAction(null, '');
-  } else if (near.nearFirePit && campfire.lit) {
-    el.textContent = 'Press R to roast a marshmallow!';
+  } else if (near.nearFirePit && campfire.lit && lightShowActive) {
+    el.textContent = 'Light Show mode! Type colors to program the fire.';
+    el.style.display = 'block';
+    setAction(null, '');
+  } else if (near.nearFirePit && campfire.lit && !near.nearGeometry) {
+    el.textContent = 'Press R to roast a marshmallow! Press L for Light Show!';
     el.style.display = 'block';
     setAction('KeyR', 'Roast');
+  } else if (near.nearGeometry) {
+    el.textContent = 'Press G for Campfire Geometry! Build shapes with sticks!';
+    el.style.display = 'block';
+    setAction('KeyG', 'Geometry');
+  } else if (geometryActive) {
+    el.textContent = 'Arrows: Rotate | Space: Place stick | Esc: Exit';
+    el.style.display = 'block';
+    setAction(null, '');
   } else if (near.nearHammock) {
     el.textContent = 'Press N to nap in the hammock!';
     el.style.display = 'block';
@@ -948,6 +1095,16 @@ function updatePrompt(near) {
       setAction('KeyS', 'Exit');
     }
     el.style.display = 'block';
+  } else if (journalActive) {
+    if (journalResult === '') {
+      el.textContent = 'Field Journal: Press 1, 2, or 3 to answer!';
+    } else if (journalResult === 'correct') {
+      el.textContent = 'Correct! Journal entry complete!';
+    } else {
+      el.textContent = 'Not quite — try again!';
+    }
+    el.style.display = 'block';
+    setAction(null, '');
   } else if (safariPhotography.active) {
     el.textContent = 'Taking photo... hold steady!';
     el.style.display = 'block';
@@ -1054,6 +1211,19 @@ function updatePrompt(near) {
     el.style.display = 'block';
     setAction('Enter', 'Exit');
     return;
+  } else if (currentScene === Scene.MISSION_CONTROL) {
+    if (missionControl.complete || missionControl.failed) {
+      el.textContent = 'Press Enter to exit Mission Control';
+    } else {
+      el.textContent = 'Type the command! Backspace to correct.';
+    }
+    el.style.display = 'block';
+    setAction('Enter', 'Exit');
+    return;
+  } else if (currentLevel === 11 && Math.abs(player.x - MISSION_CONTROL_POS.x - MISSION_CONTROL_POS.w / 2) < BUILDING_RANGE && currentScene === null) {
+    el.textContent = 'Press Enter to enter Mission Control!';
+    el.style.display = 'block';
+    setAction('Enter', 'Enter');
   } else if (currentLevel === 11 && Math.abs(player.x - NASA_BUILDING_POS.x - NASA_BUILDING_POS.w / 2) < BUILDING_RANGE && currentScene === null) {
     el.textContent = 'Press Enter to visit the NASA Museum!';
     el.style.display = 'block';
@@ -1062,8 +1232,12 @@ function updatePrompt(near) {
     el.textContent = 'Press S to put on Space Suit!';
     el.style.display = 'block';
     setAction('KeyS', 'Suit');
+  } else if (currentLevel === 11 && fuelCalcActive) {
+    el.textContent = 'Type your answer and press Enter (Esc to exit)';
+    el.style.display = 'block';
+    setAction('Enter', 'Submit');
   } else if (currentLevel === 11 && Math.abs(player.x - ROCKET_POS.x) < BUILDING_RANGE && !capeFueled) {
-    el.textContent = 'Hold P to fuel the rocket!';
+    el.textContent = 'Press P to calculate rocket fuel!';
     el.style.display = 'block';
     setAction('KeyP', 'Fuel');
   } else if (currentLevel === 11 && capeFueled && capeSpaceSuit && Math.abs(player.x - ROCKET_POS.x) < BUILDING_RANGE && !capeLaunching) {
@@ -1094,6 +1268,28 @@ function updatePrompt(near) {
     setAction('Enter', 'Enter');
   } else if (currentLevel === 13 && Math.abs(player.x - TOPGOLF_POS.x) < BUILDING_RANGE) {
     el.textContent = 'Press Enter for TopGolf!';
+    el.style.display = 'block';
+    setAction('Enter', 'Enter');
+  } else if (currentScene === Scene.APOLLO_MISSION) {
+    const am = apolloMission;
+    if (am.celebrateTimer > 0) {
+      el.textContent = 'Apollo Mission Complete! +300 points!';
+    } else if (am.step === 0) {
+      el.textContent = 'Press Space when the boot reaches the green zone!';
+      setAction('Space', 'Step');
+    } else if (am.step === 1) {
+      el.textContent = 'Hold Space to plant the flag!';
+      setAction('Space', 'Plant');
+    } else if (am.step === 2) {
+      el.textContent = 'Left/Right to collect moon rocks! ' + am.rocksCollected + '/5';
+      setAction(null, '');
+    } else if (am.step === 3) {
+      el.textContent = 'Press S to salute the flag!';
+      setAction('KeyS', 'Salute');
+    }
+    el.style.display = 'block';
+  } else if (currentLevel === 13 && Math.abs(player.x - APOLLO_SITE_POS.x) < BUILDING_RANGE && !apolloMission.complete) {
+    el.textContent = 'Press Enter for Apollo Landing Recreation!';
     el.style.display = 'block';
     setAction('Enter', 'Enter');
   } else if (currentLevel === 13 && player.x > level13Moon.worldW - 300) {
