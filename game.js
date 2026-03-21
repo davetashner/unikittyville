@@ -1579,6 +1579,12 @@ function update(dt) {
   player.x += player.vx;
   player.y += player.vy;
 
+  // Moon: prevent jumping off the top of the screen
+  if (currentLevel === 13 && player.y < 40) {
+    player.y = 40;
+    player.vy = 0;
+  }
+
   // Platform collision (only when falling)
   let onPlatform = false;
   const collision = checkPlatformCollision(player.x, player.y, player.vy, getCurrentPlatforms());
