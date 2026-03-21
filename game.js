@@ -313,6 +313,69 @@ let smoothieBlending = false;
 let smoothieProgress = 0;
 let smoothieCount = 0;
 
+// Recipe Mode state
+let recipeModeActive = false;
+let recipeRound = 0;       // 0-2
+let recipeSteps = [];       // current shuffled order
+let recipeCorrectOrder = [];
+let recipeFirstSwap = null; // null or index of first selected step
+let recipeComplete = false; // current round solved
+let recipeSolved = 0;       // count of rounds solved (0-3)
+let recipeCompleteTimer = 0; // animation timer after solving
+let recipeAllDone = false;  // all 3 rounds finished
+let recipeBlendAnim = 0;    // blender spin animation frame
+
+const RECIPE_DATA = [
+  {
+    name: 'Strawberry Smoothie',
+    color: '#ef4444',
+    steps: ['Add strawberries', 'Add yogurt', 'Add ice', 'Blend']
+  },
+  {
+    name: 'Tropical Smoothie',
+    color: '#f59e0b',
+    steps: ['Peel banana', 'Slice mango', 'Add coconut milk', 'Add ice', 'Blend']
+  },
+  {
+    name: 'Power Smoothie',
+    color: '#22c55e',
+    steps: ['Add spinach', 'Add blueberries', 'Add protein powder', 'Add almond milk', 'Add honey', 'Blend']
+  }
+];
+
+function shuffleRecipeSteps(correctSteps) {
+  const arr = correctSteps.slice();
+  // Do 3-4 random swaps to ensure it's shuffled but solvable
+  const swaps = 3 + Math.floor(Math.random() * 2);
+  for (let s = 0; s < swaps; s++) {
+    const i = Math.floor(Math.random() * arr.length);
+    let j = Math.floor(Math.random() * arr.length);
+    while (j === i) j = Math.floor(Math.random() * arr.length);
+    const tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+  }
+  // Ensure it's actually different from correct order
+  const same = arr.every((s, i) => s === correctSteps[i]);
+  if (same) {
+    // swap first two
+    const tmp = arr[0]; arr[0] = arr[1]; arr[1] = tmp;
+  }
+  return arr;
+}
+
+function startRecipeRound(round) {
+  recipeRound = round;
+  recipeCorrectOrder = RECIPE_DATA[round].steps.slice();
+  recipeSteps = shuffleRecipeSteps(recipeCorrectOrder);
+  recipeFirstSwap = null;
+  recipeComplete = false;
+  recipeCompleteTimer = 0;
+  recipeBlendAnim = 0;
+}
+
+function checkRecipeOrder() {
+  return recipeSteps.every((s, i) => s === recipeCorrectOrder[i]);
+}
+
 // TopGolf state
 let golfBall = { active: false, x: 0, y: 0, vx: 0, vy: 0 };
 let golfAngle = Math.PI / 4;
@@ -685,6 +748,16 @@ function completeTransition() {
   smoothieBlending = false;
   smoothieProgress = 0;
   smoothieCount = 0;
+  recipeModeActive = false;
+  recipeRound = 0;
+  recipeSteps = [];
+  recipeCorrectOrder = [];
+  recipeFirstSwap = null;
+  recipeComplete = false;
+  recipeSolved = 0;
+  recipeCompleteTimer = 0;
+  recipeAllDone = false;
+  recipeBlendAnim = 0;
   golfBall = { active: false, x: 0, y: 0, vx: 0, vy: 0 };
   golfScore = 0;
   golfPower = 0;
@@ -3009,37 +3082,108 @@ function update(dt) {
 
   // Smoothie Shop minigame
   if (currentScene === Scene.SMOOTHIE_SHOP) {
-    if (keys['KeyC'] && !smoothieBlending && smoothieIngredients < 3) {
-      keys['KeyC'] = false;
-      smoothieIngredients++;
-      addPopup(player.x, player.y - 30, 'Added fruit!', '#f59e0b');
-    }
-    if (keys['KeyY'] && !smoothieYogurt && !smoothieBlending) {
-      keys['KeyY'] = false;
-      smoothieYogurt = true;
-      addPopup(player.x, player.y - 30, 'Added yogurt!', '#f8fafc');
-    }
-    if (keys['KeyB'] && smoothieIngredients >= 2 && smoothieYogurt && !smoothieBlending) {
-      keys['KeyB'] = false;
-      smoothieBlending = true;
-      smoothieProgress = 0;
-    }
-    if (smoothieBlending) {
-      smoothieProgress += 16;
-      if (smoothieProgress >= 2000) {
-        smoothieBlending = false;
-        smoothieCount++;
-        score += 75;
-        addPopup(player.x, player.y - 40, '+75 Smoothie!', '#a78bfa');
-        playChaChing();
-        smoothieIngredients = 0;
-        smoothieYogurt = false;
+    if (recipeModeActive) {
+      // Recipe Mode logic
+      if (recipeComplete) {
+        recipeCompleteTimer += 16;
+        recipeBlendAnim += 0.3;
+        if (recipeCompleteTimer >= 2000) {
+          // Move to next round or finish
+          if (recipeRound < 2) {
+            startRecipeRound(recipeRound + 1);
+          } else {
+            // All rounds done
+            recipeAllDone = true;
+            if (recipeSolved === 3) {
+              score += 100;
+              addPopup(player.x, player.y - 40, '+100 All Recipes Bonus!', '#fbbf24');
+              playChaChing();
+            }
+            recipeModeActive = false;
+          }
+        }
+      } else {
+        // Handle number key presses for swapping steps
+        const maxStep = recipeSteps.length;
+        for (let n = 1; n <= maxStep; n++) {
+          const keyCode = 'Digit' + n;
+          if (keys[keyCode]) {
+            keys[keyCode] = false;
+            const idx = n - 1;
+            if (recipeFirstSwap === null) {
+              recipeFirstSwap = idx;
+            } else if (recipeFirstSwap === idx) {
+              // Deselect if same step pressed
+              recipeFirstSwap = null;
+            } else {
+              // Swap the two steps
+              const tmp = recipeSteps[recipeFirstSwap];
+              recipeSteps[recipeFirstSwap] = recipeSteps[idx];
+              recipeSteps[idx] = tmp;
+              recipeFirstSwap = null;
+              // Check if order is now correct
+              if (checkRecipeOrder()) {
+                recipeComplete = true;
+                recipeCompleteTimer = 0;
+                recipeSolved++;
+                score += 50;
+                addPopup(player.x, player.y - 40, '+50 Recipe Fixed!', '#22c55e');
+                playChaChing();
+              }
+            }
+          }
+        }
+      }
+      // Exit recipe mode with Escape
+      if (keys['Escape']) {
+        keys['Escape'] = false;
+        recipeModeActive = false;
+      }
+      // Exit shop with Enter when not completing
+      if (keys['Enter'] && !recipeComplete) {
+        keys['Enter'] = false;
+        recipeModeActive = false;
+      }
+    } else {
+      // Normal smoothie shop mode
+      if (keys['KeyR'] && !smoothieBlending && !recipeAllDone) {
+        keys['KeyR'] = false;
+        recipeModeActive = true;
+        recipeSolved = 0;
+        startRecipeRound(0);
+      }
+      if (keys['KeyC'] && !smoothieBlending && smoothieIngredients < 3) {
+        keys['KeyC'] = false;
+        smoothieIngredients++;
+        addPopup(player.x, player.y - 30, 'Added fruit!', '#f59e0b');
+      }
+      if (keys['KeyY'] && !smoothieYogurt && !smoothieBlending) {
+        keys['KeyY'] = false;
+        smoothieYogurt = true;
+        addPopup(player.x, player.y - 30, 'Added yogurt!', '#f8fafc');
+      }
+      if (keys['KeyB'] && smoothieIngredients >= 2 && smoothieYogurt && !smoothieBlending) {
+        keys['KeyB'] = false;
+        smoothieBlending = true;
         smoothieProgress = 0;
       }
-    }
-    if (keys['Enter'] && !smoothieBlending) {
-      keys['Enter'] = false;
-      currentScene = null;
+      if (smoothieBlending) {
+        smoothieProgress += 16;
+        if (smoothieProgress >= 2000) {
+          smoothieBlending = false;
+          smoothieCount++;
+          score += 75;
+          addPopup(player.x, player.y - 40, '+75 Smoothie!', '#a78bfa');
+          playChaChing();
+          smoothieIngredients = 0;
+          smoothieYogurt = false;
+          smoothieProgress = 0;
+        }
+      }
+      if (keys['Enter'] && !smoothieBlending) {
+        keys['Enter'] = false;
+        currentScene = null;
+      }
     }
   }
 

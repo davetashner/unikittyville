@@ -6968,7 +6968,145 @@ function drawSmoothieShopInterior(cam, W, H) {
   ctx.font = 'bold 12px system-ui';
   ctx.fillText('Smoothies made: ' + smoothieCount, cx, cy + 105);
 
+  // Recipe Mode hint (when not in recipe mode and not all done)
+  if (!recipeModeActive && !recipeAllDone) {
+    ctx.fillStyle = '#a78bfa';
+    ctx.font = 'bold 11px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('Press R for Recipe Mode!', cx, cy + 145);
+  }
+  if (recipeAllDone) {
+    ctx.fillStyle = '#22c55e';
+    ctx.font = 'bold 11px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('All recipes completed!', cx, cy + 145);
+  }
+
+  // Recipe Mode overlay
+  if (recipeModeActive) {
+    drawRecipeCard(cx, cy);
+  }
+
   ctx.textAlign = 'left';
+}
+
+function drawRecipeCard(cx, cy) {
+  const recipe = RECIPE_DATA[recipeRound];
+  const cardW = 360;
+  const cardH = 260;
+  const cardX = cx - cardW / 2;
+  const cardY = cy - cardH / 2;
+
+  // Semi-transparent backdrop
+  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  ctx.fillRect(cx - 220, cy - 140, 440, 300);
+
+  // Index card background — cream colored
+  ctx.fillStyle = '#fef3c7';
+  ctx.fillRect(cardX, cardY, cardW, cardH);
+
+  // Card border
+  ctx.strokeStyle = '#d97706';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(cardX, cardY, cardW, cardH);
+
+  // Lined paper effect
+  ctx.strokeStyle = 'rgba(147,130,115,0.3)';
+  ctx.lineWidth = 1;
+  const lineStart = cardY + 45;
+  const lineSpacing = 28;
+  for (let i = 0; i < recipeSteps.length + 1; i++) {
+    const ly = lineStart + i * lineSpacing;
+    ctx.beginPath();
+    ctx.moveTo(cardX + 10, ly);
+    ctx.lineTo(cardX + cardW - 10, ly);
+    ctx.stroke();
+  }
+
+  // Red margin line
+  ctx.strokeStyle = 'rgba(239,68,68,0.4)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(cardX + 35, cardY);
+  ctx.lineTo(cardX + 35, cardY + cardH);
+  ctx.stroke();
+
+  // Title
+  ctx.fillStyle = '#92400e';
+  ctx.font = 'bold 16px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText('Debug the Recipe: ' + recipe.name, cx, cardY + 22);
+
+  // Round indicator
+  ctx.fillStyle = '#78716c';
+  ctx.font = '11px system-ui';
+  ctx.fillText('Round ' + (recipeRound + 1) + ' of 3', cx, cardY + 38);
+
+  // Steps
+  ctx.textAlign = 'left';
+  const stepStartY = lineStart + 18;
+  for (let i = 0; i < recipeSteps.length; i++) {
+    const sy = stepStartY + i * lineSpacing;
+    const isCorrect = recipeSteps[i] === recipeCorrectOrder[i];
+    const isSelected = recipeFirstSwap === i;
+
+    // Highlight selected step
+    if (isSelected) {
+      ctx.fillStyle = 'rgba(99,102,241,0.2)';
+      ctx.fillRect(cardX + 38, sy - 16, cardW - 48, lineSpacing);
+      ctx.strokeStyle = '#6366f1';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(cardX + 38, sy - 16, cardW - 48, lineSpacing);
+    }
+
+    // Step number
+    ctx.fillStyle = '#1f2937';
+    ctx.font = 'bold 14px system-ui';
+    ctx.fillText((i + 1) + ')', cardX + 42, sy);
+
+    // Step text
+    ctx.fillStyle = isCorrect ? '#166534' : '#1f2937';
+    ctx.font = '14px system-ui';
+    ctx.fillText(recipeSteps[i], cardX + 68, sy);
+
+    // Green checkmark for correctly placed steps
+    if (isCorrect) {
+      ctx.fillStyle = '#22c55e';
+      ctx.font = 'bold 16px system-ui';
+      ctx.fillText('\u2713', cardX + cardW - 30, sy);
+    }
+  }
+
+  // Instruction text at bottom
+  ctx.textAlign = 'center';
+  if (recipeComplete) {
+    // Success animation — spinning blender
+    ctx.fillStyle = '#22c55e';
+    ctx.font = 'bold 14px system-ui';
+    ctx.fillText('Correct! Blending ' + recipe.name + '...', cx, cardY + cardH - 20);
+
+    // Blender animation
+    const blenderX = cx + 130;
+    const blenderY = cardY + cardH - 40;
+    ctx.save();
+    ctx.translate(blenderX, blenderY);
+    ctx.rotate(recipeBlendAnim);
+    ctx.fillStyle = recipe.color;
+    ctx.fillRect(-8, -8, 16, 16);
+    ctx.restore();
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillRect(blenderX - 10, blenderY + 5, 20, 8);
+  } else {
+    ctx.fillStyle = '#78716c';
+    ctx.font = '12px system-ui';
+    ctx.fillText('Press two numbers to swap steps! | Enter/Esc = Exit', cx, cardY + cardH - 20);
+
+    if (recipeFirstSwap !== null) {
+      ctx.fillStyle = '#6366f1';
+      ctx.font = 'bold 12px system-ui';
+      ctx.fillText('Step ' + (recipeFirstSwap + 1) + ' selected — press another number to swap', cx, cardY + cardH - 6);
+    }
+  }
 }
 
 // TopGolf Interior

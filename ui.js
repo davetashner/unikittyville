@@ -1063,7 +1063,15 @@ function updatePrompt(near) {
     el.style.display = 'block';
     setAction('Enter', 'Board');
   } else if (currentScene === Scene.SMOOTHIE_SHOP) {
-    el.textContent = 'C = Fruit | Y = Yogurt | B = Blend | Enter = Exit';
+    if (recipeModeActive) {
+      if (recipeComplete) {
+        el.textContent = 'Blending... next recipe coming up!';
+      } else {
+        el.textContent = 'Press numbers to swap steps | Enter/Esc = Exit';
+      }
+    } else {
+      el.textContent = 'C = Fruit | Y = Yogurt | B = Blend | R = Recipes | Enter = Exit';
+    }
     el.style.display = 'block';
     setAction('KeyC', 'Fruit');
     return;
