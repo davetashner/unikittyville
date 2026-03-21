@@ -107,6 +107,11 @@ function draw() {
   if (lightShowActive && currentLevel === 8) {
     drawLightShowOverlay(W, H);
   }
+
+  // Safari Field Journal overlay
+  if (journalActive && currentLevel === 9) {
+    drawFieldJournal(W, H);
+  }
 }
 
 function drawPhotoGallery(W, H) {
@@ -130,11 +135,12 @@ function drawPhotoGallery(W, H) {
     { key: 'rhino', label: 'Rhino', emoji: '', color: '#6b7280' },
     { key: 'giraffe', label: 'Giraffe', emoji: '', color: '#fbbf24' },
     { key: 'antelope', label: 'Antelope', emoji: '', color: '#a78bfa' },
+    { key: 'cheetah', label: 'Cheetah', emoji: '', color: '#fbbf24' },
   ];
 
-  const frameW = Math.round(W * 0.18);
+  const frameW = Math.round(W * 0.14);
   const frameH = Math.round(frameW * 1.2);
-  const gap = Math.round(W * 0.04);
+  const gap = Math.round(W * 0.03);
   const totalW = animals.length * frameW + (animals.length - 1) * gap;
   const startX = (W - totalW) / 2;
   const startY = H * 0.25;
@@ -206,6 +212,18 @@ function drawPhotoGallery(W, H) {
         ctx.fillStyle = '#78716c';
         ctx.fillRect(ax - 12, ay - 16, 2, 10);
         ctx.fillRect(ax - 6, ay - 16, 2, 10);
+      } else if (a.key === 'cheetah') {
+        ctx.fillRect(ax - 12, ay - 4, 24, 10);
+        ctx.fillRect(ax - 14, ay + 2, 4, 10);
+        ctx.fillRect(ax + 10, ay + 2, 4, 10);
+        ctx.fillRect(ax + 10, ay - 8, 8, 6);
+        // spots
+        ctx.fillStyle = '#1c1917';
+        ctx.fillRect(ax - 8, ay - 2, 2, 2);
+        ctx.fillRect(ax - 2, ay, 2, 2);
+        ctx.fillRect(ax + 4, ay - 2, 2, 2);
+        // tail
+        ctx.fillRect(ax - 16, ay - 6, 6, 3);
       }
 
       // Checkmark
@@ -232,10 +250,173 @@ function drawPhotoGallery(W, H) {
 
   // Collection progress
   const count = Object.values(safariPhotosTaken).filter(v => v).length;
-  ctx.fillStyle = count >= 4 ? '#4ade80' : '#e2e8f0';
+  ctx.fillStyle = count >= 5 ? '#4ade80' : '#e2e8f0';
   ctx.font = 'bold ' + Math.round(H * 0.04) + 'px "Segoe UI", system-ui, sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText(count + '/4 species photographed' + (count >= 4 ? ' — Collection complete!' : ''), W / 2, H * 0.88);
+  ctx.fillText(count + '/5 species photographed' + (count >= 5 ? ' — Collection complete!' : ''), W / 2, H * 0.88);
+}
+
+function drawFieldJournal(W, H) {
+  // Semi-transparent backdrop
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+  ctx.fillRect(0, 0, W, H);
+
+  const entry = JOURNAL_ENTRIES[journalAnimal];
+  if (!entry) return;
+
+  // Notebook page dimensions
+  const pageW = Math.round(W * 0.55);
+  const pageH = Math.round(H * 0.65);
+  const pageX = (W - pageW) / 2;
+  const pageY = (H - pageH) / 2;
+
+  // Notebook page — cream background with rough edges
+  ctx.save();
+  ctx.fillStyle = '#fdf6e3';
+  ctx.beginPath();
+  ctx.moveTo(pageX + 3, pageY);
+  ctx.lineTo(pageX + pageW - 2, pageY + 1);
+  ctx.lineTo(pageX + pageW, pageY + pageH - 3);
+  ctx.lineTo(pageX + 1, pageY + pageH);
+  ctx.closePath();
+  ctx.fill();
+
+  // Slight shadow
+  ctx.shadowColor = 'rgba(0,0,0,0.3)';
+  ctx.shadowBlur = 12;
+  ctx.shadowOffsetX = 4;
+  ctx.shadowOffsetY = 4;
+  ctx.fill();
+  ctx.shadowColor = 'transparent';
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 0;
+
+  // Page border (hand-drawn look)
+  ctx.strokeStyle = '#c9b99a';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Red margin line
+  ctx.strokeStyle = '#e8a0a0';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(pageX + pageW * 0.12, pageY + 10);
+  ctx.lineTo(pageX + pageW * 0.12, pageY + pageH - 10);
+  ctx.stroke();
+
+  // Ruled lines (faint blue)
+  ctx.strokeStyle = 'rgba(140, 170, 210, 0.3)';
+  ctx.lineWidth = 1;
+  const lineSpacing = Math.round(pageH * 0.06);
+  for (let ly = pageY + lineSpacing * 2; ly < pageY + pageH - 20; ly += lineSpacing) {
+    ctx.beginPath();
+    ctx.moveTo(pageX + 20, ly);
+    ctx.lineTo(pageX + pageW - 20, ly);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // Title: "Field Journal"
+  const titleSize = Math.round(H * 0.045);
+  ctx.fillStyle = '#5c4033';
+  ctx.font = 'bold ' + titleSize + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Field Journal', W / 2, pageY + lineSpacing * 1.5);
+
+  // Animal name
+  const animalName = journalAnimal.charAt(0).toUpperCase() + journalAnimal.slice(1);
+  const nameSize = Math.round(H * 0.035);
+  ctx.fillStyle = '#8b6914';
+  ctx.font = 'bold italic ' + nameSize + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.fillText('Observation: ' + animalName, W / 2, pageY + lineSpacing * 2.8);
+
+  // Sentence with blank
+  const sentSize = Math.round(H * 0.028);
+  ctx.fillStyle = '#2c1810';
+  ctx.font = sentSize + 'px "Segoe UI", system-ui, sans-serif';
+
+  // Word-wrap the sentence within the page
+  const maxTextW = pageW * 0.78;
+  const words = entry.sentence.split(' ');
+  const sentLines = [];
+  let currentLine = '';
+  for (const word of words) {
+    const testLine = currentLine ? currentLine + ' ' + word : word;
+    if (ctx.measureText(testLine).width > maxTextW) {
+      sentLines.push(currentLine);
+      currentLine = word;
+    } else {
+      currentLine = testLine;
+    }
+  }
+  if (currentLine) sentLines.push(currentLine);
+
+  const sentStartY = pageY + lineSpacing * 3.8;
+  for (let i = 0; i < sentLines.length; i++) {
+    ctx.fillText(sentLines[i], W / 2, sentStartY + i * (sentSize + 6));
+  }
+
+  // Answer buttons
+  const btnY = sentStartY + sentLines.length * (sentSize + 6) + Math.round(H * 0.04);
+  const btnW = Math.round(pageW * 0.22);
+  const btnH = Math.round(H * 0.06);
+  const btnGap = Math.round(pageW * 0.04);
+  const totalBtnW = 3 * btnW + 2 * btnGap;
+  const btnStartX = (W - totalBtnW) / 2;
+  const btnFontSize = Math.round(H * 0.024);
+
+  for (let i = 0; i < 3; i++) {
+    const bx = btnStartX + i * (btnW + btnGap);
+
+    // Button background
+    ctx.fillStyle = journalResult === 'correct' && i === entry.correct ? '#86efac'
+      : journalResult === 'wrong' && i === entry.correct ? '#fde68a'
+      : '#e8dcc8';
+    ctx.beginPath();
+    ctx.roundRect(bx, btnY, btnW, btnH, 6);
+    ctx.fill();
+    ctx.strokeStyle = '#a89070';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Button text
+    ctx.fillStyle = '#2c1810';
+    ctx.font = 'bold ' + btnFontSize + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText((i + 1) + ') ' + entry.choices[i], bx + btnW / 2, btnY + btnH * 0.65);
+  }
+
+  // Result feedback
+  if (journalResult === 'correct') {
+    const checkSize = Math.round(H * 0.05);
+    ctx.fillStyle = '#16a34a';
+    ctx.font = 'bold ' + checkSize + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('\u2713 Correct! +' + POINTS.JOURNAL_BONUS + ' bonus!', W / 2, btnY + btnH + Math.round(H * 0.06));
+  } else if (journalResult === 'wrong') {
+    const trySize = Math.round(H * 0.035);
+    ctx.fillStyle = '#b45309';
+    ctx.font = 'bold ' + trySize + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Not quite — try again!', W / 2, btnY + btnH + Math.round(H * 0.06));
+  } else {
+    // Instruction
+    const instrSize = Math.round(H * 0.025);
+    ctx.fillStyle = '#78716c';
+    ctx.font = instrSize + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Press 1, 2, or 3 to answer', W / 2, btnY + btnH + Math.round(H * 0.05));
+  }
+
+  // Journal completion count
+  const jCount = journalCompleted.size;
+  const jTotal = Object.keys(JOURNAL_ENTRIES).length;
+  const countSize = Math.round(H * 0.02);
+  ctx.fillStyle = '#a89070';
+  ctx.font = countSize + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Journal entries: ' + jCount + '/' + jTotal, W / 2, pageY + pageH - 15);
 }
 
 function drawNotebook(W, H) {
