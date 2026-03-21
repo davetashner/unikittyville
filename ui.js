@@ -312,6 +312,19 @@ window.addEventListener('keydown', e => {
       kitNameInput += e.key;
     }
   }
+  // Telegram typing input
+  if (currentScene === Scene.TELEGRAM && telegramActive && !telegramComplete && !e.repeat) {
+    if (e.key.length === 1) {
+      e.preventDefault();
+      const expectedChar = telegramText[telegramTyped.length];
+      if (e.key === expectedChar) {
+        telegramTyped += e.key;
+      } else {
+        telegramErrors++;
+        telegramErrorFlash = performance.now();
+      }
+    }
+  }
 });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 
@@ -694,11 +707,27 @@ function updatePrompt(near) {
   }
   if (currentScene === Scene.GRAND_CENTRAL) {
     if (!grandCentralWhisper) {
-      el.textContent = 'Grand Central Terminal! Press W to whisper in the gallery | Enter to leave';
-      setAction('KeyW', 'Whisper', 'Enter', 'Exit');
+      el.textContent = 'Grand Central Terminal! W to whisper | T for Telegram office | Enter to leave';
+      setAction('KeyW', 'Whisper', 'KeyT', 'Telegram');
     } else {
-      el.textContent = 'You whispered: "' + grandCentralWhisper + '" — it echoed! Enter to leave';
-      setAction('Enter', 'Exit');
+      el.textContent = 'You whispered: "' + grandCentralWhisper + '" — it echoed! T for Telegram | Enter to leave';
+      setAction('KeyT', 'Telegram', 'Enter', 'Exit');
+    }
+    el.style.display = 'block';
+    return;
+  }
+  if (currentScene === Scene.TELEGRAM) {
+    const levels = ['Easy', 'Medium', 'Hard'];
+    if (!telegramActive && !telegramComplete) {
+      el.textContent = 'Telegram Office (' + levels[telegramLevel] + ') — Left/Right to change difficulty | Enter to start | Esc to go back';
+      setAction('Enter', 'Start');
+    } else if (telegramActive) {
+      const progress = telegramTyped.length + '/' + telegramText.length;
+      el.textContent = 'Type the telegram! (' + progress + ') | Esc to cancel';
+      setAction(null, '');
+    } else {
+      el.textContent = 'Telegram sent! Enter for another | Esc to go back';
+      setAction('Enter', 'Again');
     }
     el.style.display = 'block';
     return;

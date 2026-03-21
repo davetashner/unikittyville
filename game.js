@@ -20,6 +20,7 @@ const POINTS = {
   FRUIT: 10, ELEPHANT_BOOST: 15, RHINO_HIT: 15,
   SAFARI_PHOTO: 30, SAFARI_PHOTO_DUP: 5, SAFARI_COLLECTION: 100,
   CHEETAH_RIDE: 50, GIRAFFE_LIFT: 10,
+  TELEGRAM_BASE: 30,
 };
 
 // ── Timing durations (ms) ──
@@ -73,6 +74,7 @@ const Scene = {
   GRAND_CENTRAL: 'grandCentral',
   THE_MET: 'theMet',
   NASA_MUSEUM: 'nasaMuseum',
+  TELEGRAM: 'telegram',
 };
 let currentScene = null;
 
@@ -181,6 +183,31 @@ let empireAtTop = false;
 let thirtyRockDance = { active: false, sequence: [], input: [], timer: 0, score: 0, showing: true };
 // Grand Central
 let grandCentralWhisper = '';
+// Grand Central Telegram
+const TELEGRAM_MESSAGES = [
+  // Level 1 — easy (3-5 word phrases, uppercase)
+  'HELLO NEW YORK', 'SEND HELP SOON', 'ARRIVED SAFELY STOP',
+  'MEET ME AT NOON', 'YARN SHIPMENT COMING', 'ALL IS WELL HERE',
+  'NEED MORE FISH', 'WEATHER IS GREAT',
+  // Level 2 — medium (short sentences)
+  'THE TRAIN ARRIVES AT NOON', 'PLEASE SEND SUPPLIES QUICKLY',
+  'GRAND CENTRAL IS BEAUTIFUL', 'THE CITY NEVER SLEEPS',
+  'SPARKLE LOVES NEW YORK CITY', 'UNICORNS ARE REAL I SAW ONE',
+  // Level 3 — hard (longer with punctuation)
+  'Dear Mom, NYC is amazing! Love, Sparkle.',
+  'The fog rolled in at midnight, hiding the stars.',
+  'Pack the yarn, fish, and bacon for the trip!',
+  'Wish you were here! The city lights are magical.',
+];
+const TELEGRAM_LEVEL_RANGES = [[0, 8], [8, 14], [14, 18]]; // [start, end) indices per difficulty
+let telegramActive = false;
+let telegramText = '';
+let telegramTyped = '';
+let telegramErrors = 0;
+let telegramStartTime = 0;
+let telegramComplete = false;
+let telegramLevel = 0; // 0-2 (difficulty)
+let telegramErrorFlash = 0; // timestamp of last error for red flash
 // Met Museum
 let metPaintingIndex = 0;
 const MET_PAINTINGS = [
@@ -1344,7 +1371,66 @@ function update(dt) {
       score += 15;
       addPopup(player.x, player.y - 40, '+15 Echo!', '#a78bfa');
     }
+    // Enter telegram office
+    if (keys['KeyT']) {
+      keys['KeyT'] = false;
+      currentScene = Scene.TELEGRAM;
+      telegramActive = false;
+      telegramComplete = false;
+      telegramTyped = '';
+      telegramErrors = 0;
+      grandCentralWhisper = '';
+    }
     if (keys['Enter']) { keys['Enter'] = false; currentScene = null; grandCentralWhisper = ''; }
+    return;
+  }
+
+  // Grand Central Telegram — typing practice
+  if (currentScene === Scene.TELEGRAM) {
+    if (!telegramActive && !telegramComplete) {
+      // Start a new telegram when player presses Enter
+      if (keys['Enter']) {
+        keys['Enter'] = false;
+        const range = TELEGRAM_LEVEL_RANGES[telegramLevel];
+        const idx = range[0] + Math.floor(Math.random() * (range[1] - range[0]));
+        telegramText = TELEGRAM_MESSAGES[idx];
+        telegramTyped = '';
+        telegramErrors = 0;
+        telegramStartTime = performance.now();
+        telegramActive = true;
+        telegramComplete = false;
+        telegramErrorFlash = 0;
+      }
+      // Change difficulty with left/right
+      if (keys['ArrowLeft']) { keys['ArrowLeft'] = false; telegramLevel = Math.max(0, telegramLevel - 1); }
+      if (keys['ArrowRight']) { keys['ArrowRight'] = false; telegramLevel = Math.min(2, telegramLevel + 1); }
+      // Exit with Escape
+      if (keys['Escape']) { keys['Escape'] = false; currentScene = Scene.GRAND_CENTRAL; }
+    } else if (telegramActive && !telegramComplete) {
+      // Typing is handled by the keydown listener in ui.js
+      // Check completion
+      if (telegramTyped.length === telegramText.length) {
+        telegramComplete = true;
+        telegramActive = false;
+        const elapsed = (performance.now() - telegramStartTime) / 1000; // seconds
+        const words = telegramText.split(' ').length;
+        const wpm = Math.round((words / elapsed) * 60);
+        const accuracy = Math.round(((telegramText.length - telegramErrors) / telegramText.length) * 100);
+        const speedBonus = Math.max(0, Math.min(20, Math.round(wpm / 5)));
+        const accuracyBonus = accuracy === 100 ? 10 : 0;
+        const pts = POINTS.TELEGRAM_BASE + speedBonus + accuracyBonus;
+        score += pts;
+        addPopup(player.x, player.y - 40, '+' + pts + ' Telegram sent!', '#fbbf24');
+        // Unlock next difficulty after completing current
+        if (telegramLevel < 2) telegramLevel++;
+      }
+      // Allow Escape to cancel current telegram
+      if (keys['Escape']) { keys['Escape'] = false; telegramActive = false; telegramTyped = ''; }
+    } else if (telegramComplete) {
+      // After completion, Enter starts a new telegram or Escape goes back
+      if (keys['Enter']) { keys['Enter'] = false; telegramComplete = false; }
+      if (keys['Escape']) { keys['Escape'] = false; currentScene = Scene.GRAND_CENTRAL; telegramComplete = false; }
+    }
     return;
   }
 
