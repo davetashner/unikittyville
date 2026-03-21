@@ -658,6 +658,28 @@ let dustParticles = []; // cheetah ride dust trail
 const CHEETAH_SPEED = 6.5; // faster than normal 4px
 const CHEETAH_YARN_MAGNET = 80; // auto-collect radius while riding
 const SAFARI_JEEP_POS_GAME = { x: 5200 };
+// Watering hole crocodile and parrot
+let wateringHoleTimer = 0; // ms spent in the watering hole
+let crocVisible = false;
+let crocSpeech = { text: '', timer: 0 };
+const crocDialogs = [
+  "Hey there! Remember to floss every day!",
+  "Did you know crocodiles have been around for 200 million years? We're basically dinosaurs!",
+  "I only bite on Tuesdays. Today is... uh... not Tuesday. Probably.",
+  "My dentist says I have the best teeth in the river. All 80 of them!",
+  "Drink plenty of water! ...Well, I guess you're IN the water. Good job!",
+  "Always eat your vegetables! I eat fish but the principle is the same!",
+  "Be kind to others! Even if they're a different species!",
+  "Get 8 hours of sleep! I nap with one eye open. Very efficient!",
+  "Sunscreen is important! My scales are naturally UV-resistant though. Lucky me!",
+  "Read a book every week! I can't hold books but I respect the hustle!",
+  "Exercise daily! I do tail curls. Very effective!",
+  "Wash behind your ears! I don't have ears but I support the message!",
+];
+let parrotState = 'hidden'; // 'hidden' | 'arriving' | 'shoulder' | 'naming' | 'named'
+let parrotName = '';
+let parrotArrivalTimer = 0;
+let parrotBobPhase = 0;
 
 const CAMP_WORLD_W = 5000;
 const FIRE_PIT_POS = { x: 1200 };
@@ -2099,9 +2121,60 @@ function update(dt) {
         currentScene = Scene.WATERING_HOLE;
       }
     }
-    if (currentScene === Scene.WATERING_HOLE && keys['KeyS']) {
-      keys['KeyS'] = false;
-      currentScene = null;
+    if (currentScene === Scene.WATERING_HOLE) {
+      wateringHoleTimer += dt;
+      // Crocodile appears after 3 seconds
+      if (wateringHoleTimer >= 3000 && !crocVisible) {
+        crocVisible = true;
+        crocSpeech.text = crocDialogs[Math.floor(Math.random() * crocDialogs.length)];
+        crocSpeech.timer = TIMING.SPEECH_BUBBLE_LIFE;
+      }
+      // Cycle croc dialogue
+      if (crocVisible) {
+        crocSpeech.timer -= dt;
+        if (crocSpeech.timer <= 0) {
+          crocSpeech.text = crocDialogs[Math.floor(Math.random() * crocDialogs.length)];
+          crocSpeech.timer = TIMING.SPEECH_BUBBLE_LIFE;
+        }
+      }
+      // Parrot arrives after 5 seconds
+      if (wateringHoleTimer >= 5000 && parrotState === 'hidden') {
+        parrotState = 'arriving';
+        parrotArrivalTimer = 0;
+      }
+      if (parrotState === 'arriving') {
+        parrotArrivalTimer += dt;
+        if (parrotArrivalTimer >= 1500) {
+          parrotState = 'shoulder';
+          addPopup(player.x, player.y - 60, 'A parrot landed on your shoulder!', '#22c55e');
+        }
+      }
+      // Press N to name the parrot
+      if (parrotState === 'shoulder' && keys['KeyN']) {
+        keys['KeyN'] = false;
+        parrotState = 'naming';
+        const name = prompt('Name your parrot:');
+        if (name && name.trim()) {
+          parrotName = name.trim().slice(0, 16);
+          parrotState = 'named';
+          addPopup(player.x, player.y - 60, parrotName + ' will fly with you!', '#fbbf24');
+          score += 25;
+        } else {
+          parrotState = 'shoulder';
+        }
+      }
+      // Exit watering hole
+      if (keys['KeyS']) {
+        keys['KeyS'] = false;
+        currentScene = null;
+        wateringHoleTimer = 0;
+        crocVisible = false;
+        crocSpeech.timer = 0;
+        // If parrot was on shoulder but not named, it flies away
+        if (parrotState === 'shoulder' || parrotState === 'arriving') {
+          parrotState = 'hidden';
+        }
+      }
     }
 
     // Elephant water launch — press E near elephant to get launched high

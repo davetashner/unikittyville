@@ -806,9 +806,17 @@ function updatePrompt(near) {
     el.style.display = 'block';
     setAction('Enter', 'Enter', 'KeyJ', 'Jeep');
   } else if (currentScene === Scene.WATERING_HOLE) {
-    el.textContent = 'Splashing in the watering hole! Press S to get out';
+    if (parrotState === 'shoulder') {
+      el.textContent = 'A parrot landed on your shoulder! N: Name it | S: Exit';
+      setAction('KeyN', 'Name', 'KeyS', 'Exit');
+    } else if (parrotState === 'named') {
+      el.textContent = parrotName + ' is your new friend! S: Exit';
+      setAction('KeyS', 'Exit');
+    } else {
+      el.textContent = 'Splashing in the watering hole! Press S to get out';
+      setAction('KeyS', 'Exit');
+    }
     el.style.display = 'block';
-    setAction('KeyS', 'Exit');
   } else if (safariPhotography.active) {
     el.textContent = 'Taking photo... hold steady!';
     el.style.display = 'block';
