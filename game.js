@@ -133,15 +133,15 @@ let grandCentralWhisper = '';
 // Met Museum
 let metPaintingIndex = 0;
 const MET_PAINTINGS = [
-  { title: 'Meadow at Sunrise', level: 'Meadow', color: '#86efac' },
-  { title: 'Snow on the Mountain', level: 'Sledding', color: '#bae6fd' },
-  { title: 'City That Never Sleeps', level: 'NYC', color: '#fca5a5' },
-  { title: 'Roman Holiday', level: 'Rome', color: '#fde68a' },
-  { title: 'Aloha Paradise', level: 'Hawaii', color: '#38bdf8' },
-  { title: 'Sailors of Oriental', level: 'Oriental', color: '#67e8f9' },
-  { title: 'Alpine Descent', level: 'Alps', color: '#ddd6fe' },
-  { title: 'Campfire Dreams', level: 'Campground', color: '#bbf7d0' },
-  { title: 'Safari Sunset', level: 'Safari', color: '#f59e0b' },
+  { title: 'Meadow at Sunrise', artist: 'Claude Meownet', level: 'Meadow', color: '#86efac', draw: 'meadow' },
+  { title: 'Starry Sled Night', artist: 'Vincent van Paw', level: 'Sledding', color: '#1e3a5f', draw: 'sled' },
+  { title: 'City That Never Sleeps', artist: 'Andy Pawrhol', level: 'NYC', color: '#1a1a2e', draw: 'nyc' },
+  { title: 'The Colosseum Cat', artist: 'Meowchelangelo', level: 'Rome', color: '#fde68a', draw: 'rome' },
+  { title: 'Aloha Paradise', artist: 'Georgia O\'Kitty', level: 'Hawaii', color: '#38bdf8', draw: 'hawaii' },
+  { title: 'Sailors at Sunset', artist: 'J.M.W. Purrer', level: 'Oriental', color: '#f59e0b', draw: 'oriental' },
+  { title: 'The Great Wave off Alps', artist: 'Katushika Hokusai', level: 'Alps', color: '#e0f2fe', draw: 'alps' },
+  { title: 'Campfire Under Stars', artist: 'Bob Paws', level: 'Campground', color: '#0f172a', draw: 'camp' },
+  { title: 'Safari Sunset', artist: 'Henri Meowtisse', level: 'Safari', color: '#f97316', draw: 'safari' },
 ];
 
 // Hospital delivery minigame

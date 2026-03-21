@@ -1983,29 +1983,328 @@ function drawGrandCentralInterior(cam, W, H) {
 // ── The Metropolitan Museum of Art ──
 function drawMetMuseumInterior(cam, W, H) {
   const cx = cam + W / 2;
+  // Museum walls
   ctx.fillStyle = '#f5f5f4'; ctx.fillRect(cam, 0, W, H);
   ctx.fillStyle = '#d6d3d1'; ctx.fillRect(cam, H * 0.75, W, H * 0.25);
+  // Red banner
   ctx.fillStyle = '#dc2626'; ctx.fillRect(cam, 0, W, 45);
   ctx.fillStyle = '#fff'; ctx.font = 'bold 22px system-ui'; ctx.textAlign = 'center';
   ctx.fillText('The Metropolitan Museum of Art', cx, 30);
+
   const p = MET_PAINTINGS[metPaintingIndex];
-  const frameW = W * 0.5, frameH = H * 0.4;
-  const frameX = cx - frameW / 2, frameY = H * 0.15;
-  ctx.fillStyle = '#92400e'; ctx.fillRect(frameX - 10, frameY - 10, frameW + 20, frameH + 20);
-  ctx.fillStyle = '#b45309'; ctx.fillRect(frameX - 5, frameY - 5, frameW + 10, frameH + 10);
-  ctx.fillStyle = p.color; ctx.fillRect(frameX, frameY, frameW, frameH);
-  ctx.fillStyle = 'rgba(0,0,0,0.08)'; ctx.fillRect(frameX, frameY + frameH * 0.7, frameW, frameH * 0.3);
-  ctx.fillStyle = '#fff'; ctx.font = 'italic 14px system-ui';
-  ctx.fillText('"' + p.title + '"', cx, frameY + frameH * 0.4);
-  ctx.font = '12px system-ui'; ctx.fillText('Inspired by: ' + p.level, cx, frameY + frameH * 0.55);
-  ctx.fillStyle = '#fbbf24'; ctx.fillRect(cx - 60, frameY + frameH + 20, 120, 25);
-  ctx.fillStyle = '#1e1b4b'; ctx.font = 'bold 11px system-ui';
-  ctx.fillText(p.title, cx, frameY + frameH + 36);
+  const frameW = W * 0.55, frameH = H * 0.42;
+  const frameX = cx - frameW / 2, frameY = H * 0.13;
+
+  // Ornate gilded frame
+  ctx.fillStyle = '#92400e'; ctx.fillRect(frameX - 12, frameY - 12, frameW + 24, frameH + 24);
+  ctx.fillStyle = '#b45309'; ctx.fillRect(frameX - 6, frameY - 6, frameW + 12, frameH + 12);
+  // Inner gold edge
+  ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 2;
+  ctx.strokeRect(frameX - 3, frameY - 3, frameW + 6, frameH + 6);
+
+  // Canvas background
+  ctx.fillStyle = p.color;
+  ctx.fillRect(frameX, frameY, frameW, frameH);
+
+  // Save and clip to frame
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(frameX, frameY, frameW, frameH);
+  ctx.clip();
+
+  // Draw the actual painting scene
+  drawMetPaintingScene(p.draw, frameX, frameY, frameW, frameH);
+
+  ctx.restore();
+
+  // Title plaque
+  ctx.fillStyle = '#fbbf24'; ctx.fillRect(cx - 90, frameY + frameH + 18, 180, 35);
+  ctx.strokeStyle = '#92400e'; ctx.lineWidth = 1;
+  ctx.strokeRect(cx - 90, frameY + frameH + 18, 180, 35);
+  ctx.fillStyle = '#1e1b4b'; ctx.font = 'bold 12px system-ui';
+  ctx.fillText('"' + p.title + '"', cx, frameY + frameH + 33);
+  ctx.fillStyle = '#78716c'; ctx.font = 'italic 10px system-ui';
+  ctx.fillText(p.artist, cx, frameY + frameH + 47);
+
+  // Navigation arrows
   ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 30px system-ui';
-  if (metPaintingIndex > 0) ctx.fillText('\u2190', cam + 40, H * 0.4);
-  if (metPaintingIndex < MET_PAINTINGS.length - 1) ctx.fillText('\u2192', cam + W - 60, H * 0.4);
+  if (metPaintingIndex > 0) ctx.fillText('\u2190', cam + 30, H * 0.38);
+  if (metPaintingIndex < MET_PAINTINGS.length - 1) ctx.fillText('\u2192', cam + W - 50, H * 0.38);
+  // Counter
   ctx.fillStyle = '#78716c'; ctx.font = '14px system-ui';
   ctx.fillText((metPaintingIndex + 1) + ' of ' + MET_PAINTINGS.length, cx, H * 0.72);
+  // Player viewing
   drawKitty(cx, H * 0.85, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
   ctx.textAlign = 'left';
+}
+
+function drawMetPaintingScene(type, fx, fy, fw, fh) {
+  const cx = fx + fw / 2;
+  const t = gameTime;
+
+  if (type === 'meadow') {
+    // Impressionist meadow — soft sky, rolling green hills, wildflowers, sun
+    const skyGrad = ctx.createLinearGradient(fx, fy, fx, fy + fh * 0.5);
+    skyGrad.addColorStop(0, '#fef3c7'); skyGrad.addColorStop(1, '#bef264');
+    ctx.fillStyle = skyGrad; ctx.fillRect(fx, fy, fw, fh * 0.5);
+    // Sun
+    ctx.fillStyle = '#fbbf24'; ctx.beginPath(); ctx.arc(fx + fw * 0.8, fy + fh * 0.15, fh * 0.08, 0, Math.PI * 2); ctx.fill();
+    // Sun rays
+    ctx.strokeStyle = '#fde68a'; ctx.lineWidth = 1.5;
+    for (let r = 0; r < 8; r++) {
+      const a = r * Math.PI / 4;
+      ctx.beginPath(); ctx.moveTo(fx + fw * 0.8 + Math.cos(a) * fh * 0.1, fy + fh * 0.15 + Math.sin(a) * fh * 0.1);
+      ctx.lineTo(fx + fw * 0.8 + Math.cos(a) * fh * 0.14, fy + fh * 0.15 + Math.sin(a) * fh * 0.14); ctx.stroke();
+    }
+    // Rolling hills
+    ctx.fillStyle = '#86efac';
+    ctx.beginPath(); ctx.moveTo(fx, fy + fh * 0.5);
+    for (let hx = fx; hx <= fx + fw; hx += 10) ctx.lineTo(hx, fy + fh * 0.5 + Math.sin((hx - fx) / fw * Math.PI * 2) * fh * 0.05 - 5);
+    ctx.lineTo(fx + fw, fy + fh); ctx.lineTo(fx, fy + fh); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#4ade80';
+    ctx.beginPath(); ctx.moveTo(fx, fy + fh * 0.6);
+    for (let hx = fx; hx <= fx + fw; hx += 10) ctx.lineTo(hx, fy + fh * 0.6 + Math.sin((hx - fx) / fw * Math.PI * 3 + 1) * fh * 0.04);
+    ctx.lineTo(fx + fw, fy + fh); ctx.lineTo(fx, fy + fh); ctx.closePath(); ctx.fill();
+    // Wildflowers (dots)
+    const flowerColors = ['#ef4444','#f472b6','#fbbf24','#a855f7','#3b82f6','#fff'];
+    for (let i = 0; i < 40; i++) {
+      ctx.fillStyle = flowerColors[i % flowerColors.length];
+      const flx = fx + (i * 67 + 20) % fw;
+      const fly = fy + fh * 0.55 + (i * 31) % (fh * 0.35);
+      ctx.beginPath(); ctx.arc(flx, fly, 2 + (i % 3), 0, Math.PI * 2); ctx.fill();
+    }
+    // Butterfly
+    ctx.fillStyle = '#c084fc';
+    const bx = cx + Math.sin(t / 1000) * fw * 0.15;
+    const by = fy + fh * 0.35 + Math.sin(t / 700) * 10;
+    ctx.beginPath(); ctx.ellipse(bx - 4, by, 4, 3, -0.3, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(bx + 4, by, 4, 3, 0.3, 0, Math.PI * 2); ctx.fill();
+
+  } else if (type === 'sled') {
+    // Van Gogh-style starry night with snowy mountain
+    // Swirly dark sky
+    ctx.fillStyle = '#1e3a5f'; ctx.fillRect(fx, fy, fw, fh);
+    // Stars with swirl halos
+    const starColors = ['#fef08a', '#fbbf24', '#fff'];
+    for (let i = 0; i < 15; i++) {
+      const sx = fx + (i * 97 + 30) % fw;
+      const sy = fy + (i * 53 + 15) % (fh * 0.5);
+      ctx.fillStyle = starColors[i % 3];
+      ctx.beginPath(); ctx.arc(sx, sy, 2 + (i % 3), 0, Math.PI * 2); ctx.fill();
+      // Swirl
+      ctx.strokeStyle = starColors[i % 3] + '60'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.arc(sx, sy, 5 + (i % 4) * 2, i * 0.5, i * 0.5 + 3); ctx.stroke();
+    }
+    // Moon
+    ctx.fillStyle = '#fef9c3'; ctx.beginPath(); ctx.arc(fx + fw * 0.2, fy + fh * 0.2, fh * 0.08, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#1e3a5f'; ctx.beginPath(); ctx.arc(fx + fw * 0.18, fy + fh * 0.18, fh * 0.06, 0, Math.PI * 2); ctx.fill();
+    // Snowy mountains
+    ctx.fillStyle = '#94a3b8';
+    ctx.beginPath(); ctx.moveTo(fx, fy + fh * 0.7); ctx.lineTo(fx + fw * 0.3, fy + fh * 0.35); ctx.lineTo(fx + fw * 0.5, fy + fh * 0.55);
+    ctx.lineTo(fx + fw * 0.7, fy + fh * 0.3); ctx.lineTo(fx + fw, fy + fh * 0.6);
+    ctx.lineTo(fx + fw, fy + fh); ctx.lineTo(fx, fy + fh); ctx.closePath(); ctx.fill();
+    // Snow caps
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.moveTo(fx + fw * 0.25, fy + fh * 0.4); ctx.lineTo(fx + fw * 0.3, fy + fh * 0.35); ctx.lineTo(fx + fw * 0.35, fy + fh * 0.42); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(fx + fw * 0.65, fy + fh * 0.35); ctx.lineTo(fx + fw * 0.7, fy + fh * 0.3); ctx.lineTo(fx + fw * 0.75, fy + fh * 0.37); ctx.closePath(); ctx.fill();
+    // Tiny sled figure
+    ctx.fillStyle = '#e879f9';
+    ctx.beginPath(); ctx.arc(fx + fw * 0.6, fy + fh * 0.65, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#dc2626'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(fx + fw * 0.56, fy + fh * 0.68); ctx.lineTo(fx + fw * 0.64, fy + fh * 0.68); ctx.stroke();
+
+  } else if (type === 'nyc') {
+    // Warhol-style pop art NYC skyline — bold colors, repeated pattern
+    ctx.fillStyle = '#1a1a2e'; ctx.fillRect(fx, fy, fw, fh);
+    // Grid of colored skyline squares
+    const popColors = [['#ef4444','#1a1a2e'],['#3b82f6','#1a1a2e'],['#fbbf24','#1a1a2e'],['#22c55e','#1a1a2e']];
+    const qw = fw / 2, qh = fh / 2;
+    for (let r = 0; r < 2; r++) {
+      for (let c = 0; c < 2; c++) {
+        const qx = fx + c * qw, qy = fy + r * qh;
+        const pc = popColors[r * 2 + c];
+        ctx.fillStyle = pc[1]; ctx.fillRect(qx, qy, qw, qh);
+        // Skyline in each quadrant
+        ctx.fillStyle = pc[0];
+        for (let i = 0; i < 8; i++) {
+          const bx = qx + i * qw / 8;
+          const bh = qh * 0.2 + (i * 31 % 17) * qh / 60;
+          ctx.fillRect(bx + 1, qy + qh - bh, qw / 8 - 2, bh);
+        }
+        // Stars
+        ctx.fillStyle = '#fff';
+        for (let s = 0; s < 4; s++) {
+          ctx.beginPath(); ctx.arc(qx + (s * 47 + 15) % qw, qy + 5 + (s * 23) % (qh * 0.4), 1, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+    }
+    // Grid lines
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(cx, fy); ctx.lineTo(cx, fy + fh); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(fx, fy + fh / 2); ctx.lineTo(fx + fw, fy + fh / 2); ctx.stroke();
+
+  } else if (type === 'rome') {
+    // Warm golden scene with Colosseum
+    const skyGrad = ctx.createLinearGradient(fx, fy, fx, fy + fh * 0.5);
+    skyGrad.addColorStop(0, '#fef3c7'); skyGrad.addColorStop(1, '#fed7aa');
+    ctx.fillStyle = skyGrad; ctx.fillRect(fx, fy, fw, fh * 0.5);
+    ctx.fillStyle = '#d4a76a'; ctx.fillRect(fx, fy + fh * 0.5, fw, fh * 0.5);
+    // Colosseum arches
+    ctx.fillStyle = '#c8a06e';
+    ctx.fillRect(cx - fw * 0.3, fy + fh * 0.25, fw * 0.6, fh * 0.35);
+    ctx.fillStyle = '#a0845a';
+    for (let i = 0; i < 5; i++) {
+      const ax = cx - fw * 0.25 + i * fw * 0.12;
+      ctx.beginPath(); ctx.arc(ax, fy + fh * 0.42, fw * 0.04, Math.PI, 0); ctx.fill();
+    }
+    for (let i = 0; i < 4; i++) {
+      const ax = cx - fw * 0.2 + i * fw * 0.13;
+      ctx.beginPath(); ctx.arc(ax, fy + fh * 0.32, fw * 0.03, Math.PI, 0); ctx.fill();
+    }
+    // Cat silhouette on top
+    ctx.fillStyle = '#1e1b4b';
+    ctx.beginPath(); ctx.arc(cx + fw * 0.15, fy + fh * 0.22, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx + fw * 0.15, fy + fh * 0.27, 4, 6, 0, 0, Math.PI * 2); ctx.fill();
+    // Ears
+    ctx.beginPath(); ctx.moveTo(cx + fw * 0.15 - 4, fy + fh * 0.18); ctx.lineTo(cx + fw * 0.15 - 2, fy + fh * 0.14); ctx.lineTo(cx + fw * 0.15, fy + fh * 0.18); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(cx + fw * 0.15, fy + fh * 0.18); ctx.lineTo(cx + fw * 0.15 + 2, fy + fh * 0.14); ctx.lineTo(cx + fw * 0.15 + 4, fy + fh * 0.18); ctx.fill();
+
+  } else if (type === 'hawaii') {
+    // Vivid tropical beach with palm and wave
+    ctx.fillStyle = '#38bdf8'; ctx.fillRect(fx, fy, fw, fh * 0.55);
+    // Ocean
+    ctx.fillStyle = '#0ea5e9'; ctx.fillRect(fx, fy + fh * 0.55, fw, fh * 0.15);
+    // Waves
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+    for (let w = 0; w < 3; w++) {
+      ctx.beginPath();
+      for (let wx = fx; wx < fx + fw; wx += 5) {
+        ctx.lineTo(wx, fy + fh * (0.56 + w * 0.04) + Math.sin((wx - fx) / 20 + w) * 3);
+      }
+      ctx.stroke();
+    }
+    // Sand
+    ctx.fillStyle = '#fbbf24'; ctx.fillRect(fx, fy + fh * 0.7, fw, fh * 0.3);
+    // Palm tree
+    ctx.fillStyle = '#92400e'; ctx.fillRect(fx + fw * 0.2, fy + fh * 0.2, 5, fh * 0.55);
+    ctx.fillStyle = '#22c55e';
+    for (let leaf = 0; leaf < 5; leaf++) {
+      const la = leaf * Math.PI / 2.5 - Math.PI / 2;
+      ctx.beginPath(); ctx.ellipse(fx + fw * 0.2 + 2, fy + fh * 0.2, fw * 0.08, 5, la, 0, Math.PI * 2); ctx.fill();
+    }
+    // Sunset
+    ctx.fillStyle = '#f97316'; ctx.beginPath(); ctx.arc(fx + fw * 0.75, fy + fh * 0.55, fh * 0.1, Math.PI, 0); ctx.fill();
+    // Surfboard in sand
+    ctx.fillStyle = '#ef4444'; ctx.save();
+    ctx.translate(fx + fw * 0.65, fy + fh * 0.8); ctx.rotate(-0.3);
+    ctx.beginPath(); ctx.ellipse(0, 0, 4, 18, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+
+  } else if (type === 'oriental') {
+    // Turner-style sunset over water — golden light, silhouette boats
+    const skyGrad = ctx.createLinearGradient(fx, fy, fx, fy + fh);
+    skyGrad.addColorStop(0, '#fbbf24'); skyGrad.addColorStop(0.3, '#f97316'); skyGrad.addColorStop(0.5, '#ef4444');
+    skyGrad.addColorStop(0.6, '#0ea5e9'); skyGrad.addColorStop(1, '#1e3a5f');
+    ctx.fillStyle = skyGrad; ctx.fillRect(fx, fy, fw, fh);
+    // Sun reflection on water
+    ctx.fillStyle = '#fbbf2440';
+    ctx.fillRect(cx - 15, fy + fh * 0.5, 30, fh * 0.5);
+    // Sun
+    ctx.fillStyle = '#fef08a'; ctx.beginPath(); ctx.arc(cx, fy + fh * 0.35, fh * 0.07, 0, Math.PI * 2); ctx.fill();
+    // Silhouette sailboats
+    ctx.fillStyle = '#1e1b4b';
+    for (let i = 0; i < 3; i++) {
+      const bx = fx + fw * 0.2 + i * fw * 0.25;
+      const by = fy + fh * 0.55 + i * 5;
+      ctx.fillRect(bx - 8, by, 16, 5);
+      ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx, by - 20 + i * 3); ctx.lineTo(bx + 10, by); ctx.closePath(); ctx.fill();
+    }
+
+  } else if (type === 'alps') {
+    // Hokusai-style great wave but with snow
+    ctx.fillStyle = '#e0f2fe'; ctx.fillRect(fx, fy, fw, fh);
+    // Large wave/snow drift
+    ctx.fillStyle = '#bae6fd';
+    ctx.beginPath(); ctx.moveTo(fx, fy + fh * 0.6);
+    ctx.bezierCurveTo(fx + fw * 0.2, fy + fh * 0.1, fx + fw * 0.4, fy + fh * 0.15, fx + fw * 0.5, fy + fh * 0.3);
+    ctx.bezierCurveTo(fx + fw * 0.55, fy + fh * 0.35, fx + fw * 0.5, fy + fh * 0.5, fx + fw * 0.45, fy + fh * 0.45);
+    ctx.lineTo(fx + fw, fy + fh * 0.7); ctx.lineTo(fx + fw, fy + fh); ctx.lineTo(fx, fy + fh); ctx.closePath(); ctx.fill();
+    // Wave crest curl
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.moveTo(fx + fw * 0.45, fy + fh * 0.28);
+    ctx.quadraticCurveTo(fx + fw * 0.52, fy + fh * 0.22, fx + fw * 0.48, fy + fh * 0.35);
+    ctx.quadraticCurveTo(fx + fw * 0.44, fy + fh * 0.32, fx + fw * 0.45, fy + fh * 0.28);
+    ctx.fill();
+    // Spray drops
+    for (let i = 0; i < 8; i++) {
+      ctx.beginPath(); ctx.arc(fx + fw * 0.42 + (i * 7) % 30, fy + fh * 0.2 + (i * 11) % 15, 2, 0, Math.PI * 2); ctx.fill();
+    }
+    // Mountain in background
+    ctx.fillStyle = '#94a3b8';
+    ctx.beginPath(); ctx.moveTo(fx + fw * 0.6, fy + fh * 0.6); ctx.lineTo(fx + fw * 0.75, fy + fh * 0.25); ctx.lineTo(fx + fw * 0.9, fy + fh * 0.5); ctx.lineTo(fx + fw, fy + fh * 0.6); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.moveTo(fx + fw * 0.72, fy + fh * 0.3); ctx.lineTo(fx + fw * 0.75, fy + fh * 0.25); ctx.lineTo(fx + fw * 0.78, fy + fh * 0.3); ctx.closePath(); ctx.fill();
+
+  } else if (type === 'camp') {
+    // Bob Ross-style — dark sky, happy little trees, campfire glow
+    ctx.fillStyle = '#0f172a'; ctx.fillRect(fx, fy, fw, fh);
+    // Stars
+    ctx.fillStyle = '#fff';
+    for (let i = 0; i < 20; i++) {
+      ctx.beginPath(); ctx.arc(fx + (i * 83 + 20) % fw, fy + 5 + (i * 47) % (fh * 0.4), 1 + (i % 2), 0, Math.PI * 2); ctx.fill();
+    }
+    // Milky Way band
+    ctx.fillStyle = 'rgba(167,139,250,0.15)';
+    ctx.beginPath();
+    ctx.moveTo(fx, fy + fh * 0.1);
+    ctx.quadraticCurveTo(cx, fy + fh * 0.25, fx + fw, fy + fh * 0.05);
+    ctx.lineTo(fx + fw, fy + fh * 0.15); ctx.quadraticCurveTo(cx, fy + fh * 0.35, fx, fy + fh * 0.2);
+    ctx.closePath(); ctx.fill();
+    // Dark tree silhouettes — happy little trees
+    ctx.fillStyle = '#1e3a2f';
+    for (let i = 0; i < 6; i++) {
+      const tx = fx + fw * 0.1 + i * fw * 0.15;
+      const th = fh * 0.2 + (i * 17 % 11) * fh / 80;
+      ctx.beginPath(); ctx.moveTo(tx - 8, fy + fh * 0.65); ctx.lineTo(tx, fy + fh * 0.65 - th); ctx.lineTo(tx + 8, fy + fh * 0.65); ctx.closePath(); ctx.fill();
+    }
+    // Ground
+    ctx.fillStyle = '#1a3320'; ctx.fillRect(fx, fy + fh * 0.65, fw, fh * 0.35);
+    // Campfire glow
+    ctx.fillStyle = '#f9731640'; ctx.beginPath(); ctx.arc(cx, fy + fh * 0.75, fh * 0.15, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#fbbf2430'; ctx.beginPath(); ctx.arc(cx, fy + fh * 0.75, fh * 0.1, 0, Math.PI * 2); ctx.fill();
+    // Campfire
+    ctx.fillStyle = '#f97316'; ctx.beginPath(); ctx.moveTo(cx - 6, fy + fh * 0.78); ctx.lineTo(cx, fy + fh * 0.68); ctx.lineTo(cx + 6, fy + fh * 0.78); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#fbbf24'; ctx.beginPath(); ctx.moveTo(cx - 3, fy + fh * 0.78); ctx.lineTo(cx, fy + fh * 0.72); ctx.lineTo(cx + 3, fy + fh * 0.78); ctx.closePath(); ctx.fill();
+    // Reflection in lake
+    ctx.fillStyle = '#1e3a5f'; ctx.fillRect(fx + fw * 0.6, fy + fh * 0.7, fw * 0.35, fh * 0.2);
+    ctx.fillStyle = '#fbbf2420'; ctx.fillRect(cx + fw * 0.08, fy + fh * 0.72, 6, fh * 0.15);
+
+  } else if (type === 'safari') {
+    // Matisse-style bold cutout shapes — safari sunset
+    const grad = ctx.createLinearGradient(fx, fy, fx, fy + fh);
+    grad.addColorStop(0, '#f97316'); grad.addColorStop(0.4, '#ef4444'); grad.addColorStop(0.6, '#1e1b4b');
+    ctx.fillStyle = grad; ctx.fillRect(fx, fy, fw, fh);
+    // Large sun
+    ctx.fillStyle = '#fbbf24'; ctx.beginPath(); ctx.arc(cx, fy + fh * 0.4, fh * 0.12, 0, Math.PI * 2); ctx.fill();
+    // Ground
+    ctx.fillStyle = '#92400e'; ctx.fillRect(fx, fy + fh * 0.65, fw, fh * 0.35);
+    // Acacia tree silhouette (flat African style)
+    ctx.fillStyle = '#1e1b4b';
+    ctx.fillRect(fx + fw * 0.3, fy + fh * 0.35, 4, fh * 0.3);
+    ctx.beginPath(); ctx.ellipse(fx + fw * 0.3 + 2, fy + fh * 0.35, fw * 0.08, fh * 0.06, 0, 0, Math.PI * 2); ctx.fill();
+    // Giraffe silhouette
+    ctx.fillRect(fx + fw * 0.65, fy + fh * 0.35, 4, fh * 0.3);
+    ctx.beginPath(); ctx.arc(fx + fw * 0.65 + 2, fy + fh * 0.33, 5, 0, Math.PI * 2); ctx.fill();
+    // Elephant silhouette
+    ctx.beginPath(); ctx.ellipse(fx + fw * 0.5, fy + fh * 0.6, 15, 10, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillRect(fx + fw * 0.5 - 12, fy + fh * 0.62, 4, 10);
+    ctx.fillRect(fx + fw * 0.5 + 8, fy + fh * 0.62, 4, 10);
+    // Birds in V formation
+    ctx.strokeStyle = '#1e1b4b'; ctx.lineWidth = 1.5;
+    for (let b = 0; b < 5; b++) {
+      const bx = fx + fw * 0.55 + b * 12 - 24;
+      const by = fy + fh * 0.2 + Math.abs(b - 2) * 6;
+      ctx.beginPath(); ctx.moveTo(bx - 4, by + 2); ctx.lineTo(bx, by); ctx.lineTo(bx + 4, by + 2); ctx.stroke();
+    }
+  }
 }
