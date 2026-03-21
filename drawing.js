@@ -5740,15 +5740,15 @@ function drawCapeWorld(W, H, cam, cycle, isNight) {
   const ww = level11Cape.worldW;
   const t = gameTime;
 
-  // Ocean in background (far right and left edges)
+  // Ocean in background (visible area)
   ctx.fillStyle = '#2563eb';
-  ctx.fillRect(0, GROUND_Y + 10, W, H - GROUND_Y);
+  ctx.fillRect(cam, GROUND_Y + 10, W, H - GROUND_Y);
 
   // Sandy ground
   ctx.fillStyle = '#fbbf24';
-  ctx.fillRect(-cam, GROUND_Y, ww, 20);
+  ctx.fillRect(0, GROUND_Y, ww, 20);
   ctx.fillStyle = '#d97706';
-  ctx.fillRect(-cam, GROUND_Y + 20, ww, H);
+  ctx.fillRect(0, GROUND_Y + 20, ww, H);
 
   // Concrete launch area (near rocket)
   const concreteX = ROCKET_POS.x - 200;
@@ -6004,18 +6004,18 @@ function drawCapeWorld(W, H, cam, cycle, isNight) {
 
 // Cape Canaveral Launch Scene (interior)
 function drawCapeLaunchScene(cam, W, H) {
-  const cx = W / 2;
+  const cx = cam + W / 2;
   const cy = H / 2;
 
   // Dark sky background
   ctx.fillStyle = '#0f172a';
-  ctx.fillRect(0, 0, W, H);
+  ctx.fillRect(cam, 0, W, H);
 
   // Stars
   for (let i = 0; i < 50; i++) {
     ctx.fillStyle = 'rgba(255,255,255,' + (0.3 + Math.random() * 0.7) + ')';
     ctx.beginPath();
-    ctx.arc((i * 97 + 30) % W, (i * 61 + 15) % H, 1, 0, Math.PI * 2);
+    ctx.arc(cam + (i * 97 + 30) % W, (i * 61 + 15) % H, 1, 0, Math.PI * 2);
     ctx.fill();
   }
 
@@ -6570,7 +6570,7 @@ function drawMoonWorld(W, H, cam, cycle, isNight) {
 
 // Smoothie Shop Interior
 function drawSmoothieShopInterior(cam, W, H) {
-  const cx = W / 2;
+  const cx = cam + W / 2;
   const cy = H / 2;
 
   // Background — futuristic purple interior
@@ -6655,7 +6655,7 @@ function drawSmoothieShopInterior(cam, W, H) {
 
 // TopGolf Interior
 function drawTopGolfInterior(cam, W, H) {
-  const cx = W / 2;
+  const cx = cam + W / 2;
   const cy = H / 2;
 
   // Dark backdrop with lunar landscape visible through dome

@@ -185,8 +185,8 @@ let capeCountdown = 10000; // 10 seconds
 let capeLaunchPower = 0;
 
 // Moon level constants
-const MOON_GRAVITY = 0.2;
-const MOON_JUMP_VEL = -16;
+const MOON_GRAVITY = 0.1;
+const MOON_JUMP_VEL = -12;
 const MOON_MOVE_SPEED = 3;
 
 // Smoothie minigame state
