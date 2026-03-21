@@ -651,9 +651,158 @@ function drawPantheonInterior(cam, W, H) {
   }
   ctx.fillStyle = '#fff'; ctx.font = 'bold 18px system-ui'; ctx.textAlign = 'center';
   ctx.fillText('The Pantheon', cx, cy - 130);
-  ctx.font = '13px system-ui'; ctx.fillStyle = 'rgba(100,100,100,0.8)';
-  ctx.fillText('Press Enter to leave', cx, cy + 145);
-  drawKitty(cx, cy + 60, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
+
+  // ── Pantheon Architecture Puzzle ──
+  if (pantheonPuzzle.active) {
+    // Draw puzzle overlay — cross-section of the Pantheon dome
+    // Background overlay
+    ctx.fillStyle = 'rgba(30,20,10,0.85)';
+    ctx.fillRect(cam + 20, 20, W - 40, H - 40);
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#fde68a';
+    ctx.font = 'bold 16px system-ui';
+    ctx.fillText('Pantheon Architecture Puzzle', cx, 50);
+
+    // Dome cross-section dimensions
+    const domeX = cx;
+    const domeBottom = cy + 50;
+    const bandHeight = 36;
+    const domeW = 240; // full width at base
+
+    // Piece colors (placed)
+    const pieceColors = ['#78716c', '#a8a29e', '#d6d3d1', '#e7e5e4', '#87ceeb'];
+    // Piece outline colors (unplaced)
+    const outlineColor = 'rgba(200,180,140,0.4)';
+
+    for (let i = 0; i < 5; i++) {
+      const y = domeBottom - (i + 1) * bandHeight;
+      const isPlaced = i < pantheonPuzzle.placed;
+      const isAnimating = i === pantheonPuzzle.placed - 1 && pantheonPuzzle.animating;
+
+      // Each band gets narrower as we go up (dome shape)
+      let bw;
+      if (i === 0) bw = domeW;          // Foundation — full width
+      else if (i === 1) bw = domeW - 20; // Walls
+      else if (i === 2) bw = domeW - 60; // Lower dome
+      else if (i === 3) bw = domeW - 110; // Upper dome
+      else bw = 54;                       // Oculus — small circle
+
+      if (i === 4) {
+        // Oculus — draw as circle at top
+        if (isPlaced) {
+          let drawY = y + bandHeight / 2;
+          if (isAnimating) {
+            const t = pantheonPuzzle.animProgress;
+            drawY = drawY - 60 * (1 - t); // slide down from above
+          }
+          ctx.fillStyle = pieceColors[i];
+          ctx.beginPath(); ctx.arc(domeX, drawY, 27, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#fde68a';
+          ctx.globalAlpha = 0.3;
+          ctx.beginPath(); ctx.arc(domeX, drawY, 27, 0, Math.PI * 2); ctx.fill();
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = '#1e293b';
+          ctx.font = 'bold 10px system-ui';
+          ctx.fillText('OCULUS', domeX, drawY + 4);
+        } else {
+          ctx.strokeStyle = outlineColor;
+          ctx.lineWidth = 2;
+          ctx.setLineDash([4, 4]);
+          ctx.beginPath(); ctx.arc(domeX, y + bandHeight / 2, 27, 0, Math.PI * 2); ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle = 'rgba(200,180,140,0.3)';
+          ctx.font = '9px system-ui';
+          ctx.fillText('5: Oculus', domeX, y + bandHeight / 2 + 4);
+        }
+      } else {
+        // Rectangular/trapezoidal bands
+        const nextBw = (i === 0) ? domeW - 20 : (i === 1) ? domeW - 60 : (i === 2) ? domeW - 110 : 54;
+        if (isPlaced) {
+          let drawY = y;
+          if (isAnimating) {
+            const t = pantheonPuzzle.animProgress;
+            drawY = drawY - 60 * (1 - t);
+          }
+          // Draw as trapezoid
+          ctx.fillStyle = pieceColors[i];
+          ctx.beginPath();
+          ctx.moveTo(domeX - bw / 2, drawY + bandHeight);
+          ctx.lineTo(domeX + bw / 2, drawY + bandHeight);
+          ctx.lineTo(domeX + nextBw / 2, drawY);
+          ctx.lineTo(domeX - nextBw / 2, drawY);
+          ctx.closePath();
+          ctx.fill();
+          // Label
+          ctx.fillStyle = '#1e293b';
+          ctx.font = 'bold 10px system-ui';
+          ctx.fillText(PANTHEON_PIECES[i].name.toUpperCase(), domeX, drawY + bandHeight / 2 + 4);
+        } else {
+          // Dotted outline
+          ctx.strokeStyle = outlineColor;
+          ctx.lineWidth = 2;
+          ctx.setLineDash([4, 4]);
+          ctx.beginPath();
+          ctx.moveTo(domeX - bw / 2, y + bandHeight);
+          ctx.lineTo(domeX + bw / 2, y + bandHeight);
+          ctx.lineTo(domeX + nextBw / 2, y);
+          ctx.lineTo(domeX - nextBw / 2, y);
+          ctx.closePath();
+          ctx.stroke();
+          ctx.setLineDash([]);
+          // Hint label
+          ctx.fillStyle = 'rgba(200,180,140,0.3)';
+          ctx.font = '9px system-ui';
+          ctx.fillText((i + 1) + ': ' + PANTHEON_PIECES[i].name, domeX, y + bandHeight / 2 + 4);
+        }
+      }
+    }
+
+    // Draw ground line
+    ctx.strokeStyle = '#a8a29e';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx - domeW / 2 - 20, domeBottom);
+    ctx.lineTo(cx + domeW / 2 + 20, domeBottom);
+    ctx.stroke();
+
+    // Feedback text
+    if (pantheonPuzzle.feedback) {
+      ctx.fillStyle = '#fde68a';
+      ctx.font = '12px system-ui';
+      ctx.textAlign = 'center';
+      // Word-wrap the fact text
+      const words = pantheonPuzzle.feedback.split(' ');
+      let lines = [];
+      let line = '';
+      for (const w of words) {
+        if ((line + ' ' + w).length > 50) { lines.push(line); line = w; }
+        else { line = line ? line + ' ' + w : w; }
+      }
+      if (line) lines.push(line);
+      for (let li = 0; li < lines.length; li++) {
+        ctx.fillText(lines[li], cx, domeBottom + 30 + li * 16);
+      }
+    }
+
+    // Instructions
+    ctx.fillStyle = '#d6d3d1';
+    ctx.font = '11px system-ui';
+    if (pantheonPuzzle.complete) {
+      ctx.fillText('Complete! You rebuilt the Pantheon dome!', cx, H - 50);
+    } else {
+      ctx.fillText('Press 1-5 to place pieces (bottom to top)', cx, H - 50);
+    }
+    ctx.fillStyle = 'rgba(100,100,100,0.8)';
+    ctx.font = '11px system-ui';
+    ctx.fillText('Press Enter to leave', cx, H - 30);
+  } else {
+    // Normal Pantheon interior — show puzzle prompt
+    ctx.font = '13px system-ui'; ctx.fillStyle = 'rgba(100,100,100,0.8)';
+    ctx.fillText('Press A to start Architecture Puzzle', cx, cy + 130);
+    ctx.fillText('Press Enter to leave', cx, cy + 145);
+    drawKitty(cx, cy + 60, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
+  }
 }
 
 function drawSwimmingScene(cam, W, H) {
