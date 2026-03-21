@@ -403,8 +403,8 @@ function drawPlayerAndUI() {
   const sledOffset = (currentLevel === 2 && sledding) ? 5 : 0;
   drawKitty(player.x, player.y - (ridingCheetah ? 15 : sledOffset), player.color, player.facing, player.walkFrame, 'horn', playerEyeColor, playerHornColors);
 
-  // Draw stroller behind player on NYC street
-  if (hasStroller && currentLevel === 3 && currentScene === null) {
+  // Draw Kit's stroller behind player (all levels except flight/space where player is in a vehicle)
+  if (hasStroller && currentLevel !== 10 && currentLevel !== 12 && currentScene === null) {
     drawStroller(player.x - player.facing * 25, player.y, kitFurColor);
   }
 
