@@ -242,6 +242,19 @@ let capeLaunching = false;
 let capeCountdown = 10000; // 10 seconds
 let capeLaunchPower = 0;
 
+// Fuel calculator math problems
+let fuelCalcActive = false;
+let fuelCalcProblem = 0; // 0-2
+let fuelCalcAnswer = '';
+let fuelCalcCorrect = 0; // how many solved
+let fuelCalcFeedback = ''; // 'correct' | 'wrong' | ''
+let fuelCalcFeedbackTimer = 0;
+const FUEL_CALC_PROBLEMS = [
+  { question: 'Each fuel tank holds 5 gallons.\nWe need 4 tanks.\nHow many gallons total?', answer: 20 },
+  { question: '30 oxygen canisters split equally\namong 6 astronauts.\nHow many each?', answer: 5 },
+  { question: 'The rocket burns 8 gallons per minute.\nHow many gallons for a 7-minute burn?', answer: 56 },
+];
+
 // Moon level constants
 const MOON_GRAVITY = 0.1;
 const MOON_JUMP_VEL = -12;
@@ -612,6 +625,12 @@ function completeTransition() {
   capeLaunching = false;
   capeCountdown = 10000;
   capeLaunchPower = 0;
+  fuelCalcActive = false;
+  fuelCalcProblem = 0;
+  fuelCalcAnswer = '';
+  fuelCalcCorrect = 0;
+  fuelCalcFeedback = '';
+  fuelCalcFeedbackTimer = 0;
   // Reset space flight obstacles when re-entering level 12
   if (levelTransition.toLevel === 12) {
     spaceInvulnTimer = 0;
@@ -1555,16 +1574,16 @@ function update(dt) {
     return;
   }
 
-  // Movement
+  // Movement (blocked during fuel calculator overlay)
   player.vx = 0;
   const effectiveMoveSpeed = currentLevel === 13 ? MOON_MOVE_SPEED : MOVE_SPEED;
-  if (keys['ArrowLeft']) { player.vx = -effectiveMoveSpeed; player.facing = -1; }
-  if (keys['ArrowRight']) { player.vx = effectiveMoveSpeed; player.facing = 1; }
+  if (!fuelCalcActive && keys['ArrowLeft']) { player.vx = -effectiveMoveSpeed; player.facing = -1; }
+  if (!fuelCalcActive && keys['ArrowRight']) { player.vx = effectiveMoveSpeed; player.facing = 1; }
   if (keys['ArrowUp']) { player.vx += 0; } // up on land is no-op for now
   if (keys['ArrowDown']) { player.vx += 0; }
 
   // Jump
-  if (keys['Space'] && player.onGround) {
+  if (!fuelCalcActive && keys['Space'] && player.onGround) {
     player.vy = currentLevel === 13 ? MOON_JUMP_VEL : JUMP_VEL;
     player.onGround = false;
     playMeow();
@@ -2743,17 +2762,34 @@ function update(dt) {
       addPopup(player.x, player.y - 30, 'Space Suit ON!', '#60a5fa');
     }
 
-    // Fuel rocket
-    if (Math.abs(player.x - ROCKET_POS.x) < BUILDING_RANGE && !capeFueled) {
+    // Fuel rocket — start fuel calculator
+    if (Math.abs(player.x - ROCKET_POS.x) < BUILDING_RANGE && !capeFueled && !fuelCalcActive) {
       if (keys['KeyP']) {
-        capeFueling += 16; // ~dt
-        if (capeFueling >= 3000) {
-          capeFueled = true;
-          capeFueling = 3000;
-          addPopup(ROCKET_POS.x, GROUND_Y - 200, 'Rocket Fueled!', '#22c55e');
+        keys['KeyP'] = false;
+        fuelCalcActive = true;
+        fuelCalcProblem = 0;
+        fuelCalcAnswer = '';
+        fuelCalcCorrect = 0;
+        fuelCalcFeedback = '';
+        fuelCalcFeedbackTimer = 0;
+      }
+    }
+
+    // Fuel calculator logic
+    if (fuelCalcActive) {
+      // Feedback timer
+      if (fuelCalcFeedbackTimer > 0) {
+        fuelCalcFeedbackTimer -= 16;
+        if (fuelCalcFeedbackTimer <= 0) {
+          fuelCalcFeedback = '';
+          if (fuelCalcCorrect >= 3) {
+            // All problems solved — rocket fully fueled!
+            fuelCalcActive = false;
+            capeFueled = true;
+            capeFueling = 3000;
+            addPopup(ROCKET_POS.x, GROUND_Y - 200, 'Rocket Fueled!', '#22c55e');
+          }
         }
-      } else {
-        capeFueling = Math.max(0, capeFueling - 8); // drain if not holding
       }
     }
 
