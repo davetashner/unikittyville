@@ -304,6 +304,65 @@ window.addEventListener('orientationchange', () => { setTimeout(resize, 100); })
 window.addEventListener('keydown', e => {
   if (!e.repeat) keys[e.code] = true;
   if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'ArrowDown') e.preventDefault();
+
+  // Postcard writer — capture typing when open in write mode
+  if (postcardOpen && postcardMode === 'write' && !postcardJustSent && !e.repeat) {
+    e.preventDefault();
+    if (e.key === 'Escape') {
+      postcardOpen = false;
+      postcardText = '';
+    } else if (e.key === 'Enter' && postcardText.length > 0) {
+      // Send postcard
+      const theme = POSTCARD_THEMES[currentLevel];
+      const levelName = LEVEL_NAMES[currentLevel - 1] || 'Level ' + currentLevel;
+      const isNew = !postcardSentLevels.has(currentLevel);
+      postcardsSent.push({ level: currentLevel, text: postcardText, levelName: levelName });
+      postcardSentLevels.add(currentLevel);
+      savePostcards();
+      if (isNew) {
+        score += POSTCARD_POINTS;
+        addPopup(player.x, player.y - 40, '+' + POSTCARD_POINTS + ' Postcard sent!', '#fbbf24');
+        playChaChing();
+      } else {
+        addPopup(player.x, player.y - 40, 'Postcard sent!', '#86efac');
+      }
+      postcardJustSent = true;
+      postcardSentTimer = 1200;
+      postcardText = '';
+    } else if (e.key === 'Backspace') {
+      postcardText = postcardText.slice(0, -1);
+    } else if (e.key === 'Tab') {
+      // Switch to gallery mode
+      postcardMode = 'gallery';
+      postcardGalleryScroll = 0;
+    } else if (e.key.length === 1 && postcardText.length < 140 && /[a-zA-Z0-9 !?.,;:'"()\-]/.test(e.key)) {
+      postcardText += e.key;
+    }
+    return;
+  }
+  // Postcard gallery — navigation
+  if (postcardOpen && postcardMode === 'gallery' && !e.repeat) {
+    e.preventDefault();
+    if (e.key === 'Escape') {
+      postcardOpen = false;
+    } else if (e.key === 'Tab') {
+      postcardMode = 'write';
+    } else if (e.key === 'ArrowUp') {
+      postcardGalleryScroll = Math.max(0, postcardGalleryScroll - 1);
+    } else if (e.key === 'ArrowDown') {
+      postcardGalleryScroll = Math.min(Math.max(0, postcardsSent.length - 4), postcardGalleryScroll + 1);
+    }
+    return;
+  }
+  // Postcard "just sent" confirmation — any key dismisses
+  if (postcardOpen && postcardJustSent && !e.repeat) {
+    e.preventDefault();
+    postcardJustSent = false;
+    postcardSentTimer = 0;
+    postcardOpen = false;
+    return;
+  }
+
   // Baby name typing in hospital name_pick stage
   if (hospitalStage === 'name_pick' && !e.repeat) {
     if (e.key === 'Backspace') {
@@ -436,6 +495,7 @@ function startGameAtLevel(lvl) {
   player.vy = 0;
   player.onGround = true;
   startLevelMusic(lvl);
+  loadPostcards();
   requestAnimationFrame(loop);
 }
 
@@ -476,6 +536,7 @@ function startGame() {
   playerHornColors = hornGradientFromColor(selectedHornColor);
   // Start music (requires user gesture, which the click/enter provides)
   startLevelMusic(1);
+  loadPostcards();
   requestAnimationFrame(loop);
 }
 
