@@ -148,4 +148,84 @@ var summaryClass = failed === 0 ? 'all-pass' : 'has-fail';
 log('<div class="summary ' + summaryClass + '">Results: ' + passed + '/' + total + ' passed, ' + failed + ' failed</div>');
 
 // Set document title to reflect results (useful for automation)
+// ============================================================
+// Platform Reachability Tests
+// ============================================================
+section('Platform Reachability');
+
+// Physics constants for reachability calculation
+var g = GRAVITY;       // 0.6
+var jumpV = -JUMP_VEL; // 12 (positive = upward speed)
+var moveSpd = MOVE_SPEED; // 4
+
+// Calculate whether a player can jump from one surface to another.
+// srcY/dstY are screen Y coords (lower value = higher on screen).
+// hGap = horizontal distance the player must cross in the air (edge-to-edge).
+function canReach(srcY, dstY, hGap) {
+  var heightNeeded = srcY - dstY; // positive = jumping up
+  if (heightNeeded < 0) {
+    // Jumping/falling down — always reachable if horizontal gap is crossable.
+    var airTime = 2 * jumpV / g;
+    return hGap <= moveSpd * airTime;
+  }
+  // Jumping up: need enough velocity to reach heightNeeded
+  var maxH = (jumpV * jumpV) / (2 * g);
+  if (heightNeeded > maxH) return false;
+
+  // Time to reach heightNeeded on the way down (more air time = more horizontal range)
+  var disc = jumpV * jumpV - 2 * g * heightNeeded;
+  if (disc < 0) return false;
+  var tDown = (jumpV + Math.sqrt(disc)) / g;
+  return hGap <= moveSpd * tDown;
+}
+
+for (var lvl = 1; lvl <= TOTAL_LEVELS; lvl++) {
+  var reg = levelRegistry[lvl];
+  var plats = reg.platforms;
+  if (!plats || plats.length === 0) continue;
+
+  // BFS: mark platforms reachable from the ground, then from other reachable platforms
+  var reached = [];
+  for (var j = 0; j < plats.length; j++) reached[j] = false;
+
+  // First pass: mark all platforms reachable directly from the ground
+  for (var j = 0; j < plats.length; j++) {
+    if (canReach(GROUND_Y, plats[j].y, 0)) reached[j] = true;
+  }
+
+  // BFS: repeatedly check unreached platforms against reached ones
+  var changed = true;
+  while (changed) {
+    changed = false;
+    for (var j = 0; j < plats.length; j++) {
+      if (reached[j]) continue;
+      for (var k = 0; k < plats.length; k++) {
+        if (!reached[k]) continue;
+        var src = plats[k], dst = plats[j];
+        var hGap = 0;
+        if (dst.x > src.x + src.w) hGap = dst.x - (src.x + src.w);
+        else if (src.x > dst.x + dst.w) hGap = src.x - (dst.x + dst.w);
+        if (canReach(src.y, dst.y, hGap)) {
+          reached[j] = true;
+          changed = true;
+          break;
+        }
+      }
+    }
+  }
+
+  for (var j = 0; j < plats.length; j++) {
+    assert(
+      'Level ' + lvl + ' (' + reg.name + ') plat[' + j + '] at (' + plats[j].x + ',' + plats[j].y + ') reachable',
+      reached[j]
+    );
+  }
+}
+
+// ============================================================
+// Summary
+// ============================================================
+var summaryClass = failed === 0 ? 'all-pass' : 'has-fail';
+log('<div class="summary ' + summaryClass + '">Results: ' + passed + '/' + total + ' passed, ' + failed + ' failed</div>');
+
 document.title = (failed === 0 ? 'PASS' : 'FAIL') + ' - Unikittyville Tests (' + passed + '/' + total + ')';
