@@ -45,6 +45,11 @@ function draw() {
       [Scene.GRAND_CENTRAL]: () => drawGrandCentralInterior(cam, W, H),
       [Scene.THE_MET]: () => drawMetMuseumInterior(cam, W, H),
       [Scene.NASA_MUSEUM]: () => drawNasaMuseumInterior(cam, W, H),
+      [Scene.TELEGRAM]: () => drawTelegramOffice(cam, W, H),
+
+      [Scene.APOLLO_MISSION]: () => drawApolloMissionScene(cam, W, H),
+
+      [Scene.GELATO_SHOP]: () => drawGelatoShopInterior(cam, W, H),
     };
     if (sceneDrawMap[currentScene]) sceneDrawMap[currentScene]();
   } else {
@@ -59,6 +64,38 @@ function draw() {
   // Photo gallery overlay (safari level)
   if (photoGalleryOpen && currentLevel === 9) {
     drawPhotoGallery(W, H);
+  }
+
+  // Fact Notebook overlay
+  if (notebookOpen) {
+    drawNotebook(W, H);
+  }
+
+  // Achievement screen overlay
+  if (achievementScreenOpen) {
+    drawAchievements(W, H);
+  }
+
+  // Achievement unlock popup banner
+  if (achievementPopup) {
+    drawAchievementPopup(W, H);
+  }
+
+  // NPC Quiz overlay
+  if (quizActive) {
+    drawQuizOverlay(W, H);
+  } else if (quizResultTimer > 0) {
+    drawQuizResult(W, H);
+  }
+
+  // Geometry minigame overlay (campground level)
+  if (geometryActive && currentLevel === 8) {
+    drawGeometryOverlay(W, H);
+  }
+
+  // Bug catcher overlay (level 1)
+  if (bugCatcherActive && currentLevel === 1) {
+    drawBugCatcherOverlay(W, H);
   }
 
   // Tour guide overlay
@@ -194,6 +231,788 @@ function drawPhotoGallery(W, H) {
   ctx.font = 'bold ' + Math.round(H * 0.04) + 'px "Segoe UI", system-ui, sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText(count + '/4 species photographed' + (count >= 4 ? ' — Collection complete!' : ''), W / 2, H * 0.88);
+}
+
+function drawNotebook(W, H) {
+  // Semi-transparent backdrop
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Notebook parchment background
+  const pad = Math.round(W * 0.06);
+  const nbX = pad, nbY = pad;
+  const nbW = W - pad * 2, nbH = H - pad * 2;
+
+  // Parchment fill
+  ctx.fillStyle = '#fef3c7';
+  ctx.fillRect(nbX, nbY, nbW, nbH);
+
+  // Subtle border
+  ctx.strokeStyle = '#d97706';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(nbX, nbY, nbW, nbH);
+
+  // Spine line (left margin)
+  const spineX = nbX + Math.round(nbW * 0.06);
+  ctx.strokeStyle = '#fca5a5';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(spineX, nbY);
+  ctx.lineTo(spineX, nbY + nbH);
+  ctx.stroke();
+
+  // Title
+  const titleSize = Math.round(H * 0.055);
+  ctx.fillStyle = '#92400e';
+  ctx.font = 'bold ' + titleSize + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Fact Notebook', W / 2, nbY + titleSize + 10);
+
+  // Category tabs
+  const tabY = nbY + titleSize + 25;
+  const tabH = Math.round(H * 0.045);
+  const tabFont = Math.round(tabH * 0.6);
+  ctx.font = 'bold ' + tabFont + 'px "Segoe UI", system-ui, sans-serif';
+
+  const tabColors = { All: '#78716c', Geography: '#3b82f6', History: '#dc2626', Science: '#16a34a', Culture: '#a855f7', Language: '#f59e0b' };
+  const tabTotalW = nbW - 20;
+  const tabW = Math.floor(tabTotalW / NOTEBOOK_CATEGORIES.length);
+  const tabStartX = nbX + 10;
+
+  for (let i = 0; i < NOTEBOOK_CATEGORIES.length; i++) {
+    const cat = NOTEBOOK_CATEGORIES[i];
+    const tx = tabStartX + i * tabW;
+    const isActive = cat === notebookCategory;
+
+    // Tab background
+    ctx.fillStyle = isActive ? tabColors[cat] : '#e7e5e4';
+    ctx.fillRect(tx + 2, tabY, tabW - 4, tabH);
+
+    // Tab text
+    ctx.fillStyle = isActive ? '#ffffff' : '#57534e';
+    ctx.textAlign = 'center';
+    ctx.fillText(cat, tx + tabW / 2, tabY + tabH * 0.72);
+  }
+
+  // Filter facts by category
+  const filteredFacts = notebookCategory === 'All'
+    ? factNotebook
+    : factNotebook.filter(f => f.category === notebookCategory);
+
+  // Fact list area
+  const listY = tabY + tabH + 15;
+  const listH = nbY + nbH - listY - Math.round(H * 0.08);
+  const lineH = Math.round(H * 0.055);
+  const maxLines = Math.floor(listH / lineH);
+  const maxScroll = Math.max(0, filteredFacts.length - maxLines);
+  if (notebookScroll > maxScroll) notebookScroll = maxScroll;
+
+  // Horizontal ruled lines
+  ctx.strokeStyle = '#ddd6cb';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= maxLines; i++) {
+    const ly = listY + i * lineH;
+    if (ly > nbY + nbH - 30) break;
+    ctx.beginPath();
+    ctx.moveTo(nbX + 10, ly);
+    ctx.lineTo(nbX + nbW - 10, ly);
+    ctx.stroke();
+  }
+
+  // Draw facts
+  const factFont = Math.round(lineH * 0.45);
+  const labelFont = Math.round(lineH * 0.35);
+  ctx.textAlign = 'left';
+
+  if (filteredFacts.length === 0) {
+    ctx.fillStyle = '#a8a29e';
+    ctx.font = 'italic ' + Math.round(H * 0.035) + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(factNotebook.length === 0 ? 'No facts yet! Talk to NPCs with Q to learn things.' : 'No facts in this category.', W / 2, listY + lineH * 2);
+  } else {
+    for (let i = 0; i < maxLines && (i + notebookScroll) < filteredFacts.length; i++) {
+      const fact = filteredFacts[i + notebookScroll];
+      const fy = listY + i * lineH + lineH * 0.65;
+
+      // Category dot
+      ctx.fillStyle = tabColors[fact.category] || '#78716c';
+      ctx.beginPath();
+      ctx.arc(spineX + 14, fy - factFont * 0.25, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Fact text (truncate if too long)
+      ctx.fillStyle = '#44403c';
+      ctx.font = factFont + 'px "Segoe UI", system-ui, sans-serif';
+      const maxTextW = nbX + nbW - spineX - 130;
+      let displayText = fact.text;
+      while (ctx.measureText(displayText).width > maxTextW && displayText.length > 10) {
+        displayText = displayText.slice(0, -4) + '...';
+      }
+      ctx.fillText(displayText, spineX + 24, fy);
+
+      // Level label (right-aligned)
+      ctx.fillStyle = '#a8a29e';
+      ctx.font = labelFont + 'px "Segoe UI", system-ui, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(fact.levelName, nbX + nbW - 15, fy);
+      ctx.textAlign = 'left';
+    }
+  }
+
+  // Scroll indicators
+  if (notebookScroll > 0) {
+    ctx.fillStyle = '#92400e';
+    ctx.font = 'bold ' + Math.round(H * 0.035) + 'px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('\u25B2', nbX + nbW - 25, listY + 15);
+  }
+  if (notebookScroll < maxScroll) {
+    ctx.fillStyle = '#92400e';
+    ctx.font = 'bold ' + Math.round(H * 0.035) + 'px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('\u25BC', nbX + nbW - 25, nbY + nbH - Math.round(H * 0.06));
+  }
+
+  // Footer: fact count + close hint
+  const footerY = nbY + nbH - 12;
+  ctx.fillStyle = '#78716c';
+  ctx.font = Math.round(H * 0.03) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(factNotebook.length + ' fact' + (factNotebook.length !== 1 ? 's' : '') + ' collected', nbX + 15, footerY);
+  ctx.textAlign = 'right';
+  ctx.fillText('N / Enter to close  |  \u2190\u2192 categories  |  \u2191\u2193 scroll', nbX + nbW - 15, footerY);
+  ctx.textAlign = 'left';
+}
+
+function drawAchievements(W, H) {
+  // Semi-transparent backdrop
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.82)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Title
+  ctx.fillStyle = '#fbbf24';
+  ctx.font = 'bold ' + Math.round(H * 0.07) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Achievement Badges', W / 2, H * 0.1);
+
+  ctx.font = Math.round(H * 0.03) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.fillStyle = '#94a3b8';
+  ctx.fillText('Press B to close', W / 2, H * 0.16);
+
+  // Grid layout: 4 columns x 2 rows
+  const cols = 4;
+  const rows = 2;
+  const cardW = Math.round(W * 0.19);
+  const cardH = Math.round(H * 0.3);
+  const gapX = Math.round(W * 0.03);
+  const gapY = Math.round(H * 0.04);
+  const totalW = cols * cardW + (cols - 1) * gapX;
+  const startX = (W - totalW) / 2;
+  const startY = H * 0.22;
+
+  for (let i = 0; i < achievements.length; i++) {
+    const a = achievements[i];
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const cx = startX + col * (cardW + gapX);
+    const cy = startY + row * (cardH + gapY);
+
+    // Card background
+    if (a.earned) {
+      // Colorful earned card
+      const grad = ctx.createLinearGradient(cx, cy, cx + cardW, cy + cardH);
+      grad.addColorStop(0, 'rgba(124, 58, 237, 0.5)');
+      grad.addColorStop(1, 'rgba(251, 191, 36, 0.4)');
+      ctx.fillStyle = grad;
+    } else {
+      ctx.fillStyle = 'rgba(55, 65, 81, 0.6)';
+    }
+    // Rounded rect
+    const r = 10;
+    ctx.beginPath();
+    ctx.moveTo(cx + r, cy);
+    ctx.lineTo(cx + cardW - r, cy);
+    ctx.quadraticCurveTo(cx + cardW, cy, cx + cardW, cy + r);
+    ctx.lineTo(cx + cardW, cy + cardH - r);
+    ctx.quadraticCurveTo(cx + cardW, cy + cardH, cx + cardW - r, cy + cardH);
+    ctx.lineTo(cx + r, cy + cardH);
+    ctx.quadraticCurveTo(cx, cy + cardH, cx, cy + cardH - r);
+    ctx.lineTo(cx, cy + r);
+    ctx.quadraticCurveTo(cx, cy, cx + r, cy);
+    ctx.closePath();
+    ctx.fill();
+
+    // Border
+    ctx.strokeStyle = a.earned ? 'rgba(251, 191, 36, 0.7)' : 'rgba(107, 114, 128, 0.4)';
+    ctx.lineWidth = a.earned ? 2 : 1;
+    ctx.stroke();
+
+    const centerX = cx + cardW / 2;
+
+    // Icon or lock
+    const iconSize = Math.round(cardH * 0.3);
+    ctx.font = iconSize + 'px sans-serif';
+    ctx.textAlign = 'center';
+    if (a.earned) {
+      ctx.fillText(a.icon, centerX, cy + cardH * 0.35);
+    } else {
+      ctx.fillStyle = '#6b7280';
+      ctx.fillText('???', centerX, cy + cardH * 0.35);
+    }
+
+    // Name
+    const nameSize = Math.round(cardH * 0.1);
+    ctx.font = 'bold ' + nameSize + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.fillStyle = a.earned ? '#fef08a' : '#9ca3af';
+    ctx.textAlign = 'center';
+    ctx.fillText(a.name, centerX, cy + cardH * 0.55);
+
+    // Description or hint
+    const descSize = Math.round(cardH * 0.075);
+    ctx.font = descSize + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.fillStyle = a.earned ? '#e2e8f0' : '#6b7280';
+    const descText = a.earned ? a.description : a.hint;
+    // Simple word wrap for long text
+    const words = descText.split(' ');
+    let line = '';
+    let lineY = cy + cardH * 0.65;
+    const maxLineW = cardW - 16;
+    for (const word of words) {
+      const test = line + (line ? ' ' : '') + word;
+      if (ctx.measureText(test).width > maxLineW && line) {
+        ctx.fillText(line, centerX, lineY);
+        line = word;
+        lineY += descSize + 2;
+      } else {
+        line = test;
+      }
+    }
+    if (line) ctx.fillText(line, centerX, lineY);
+
+    // Earned checkmark
+    if (a.earned) {
+      ctx.fillStyle = '#4ade80';
+      ctx.font = 'bold ' + Math.round(cardH * 0.12) + 'px sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText('\u2713', cx + cardW - 6, cy + 18);
+    }
+  }
+
+  // Progress summary
+  const earned = achievements.filter(a => a.earned).length;
+  ctx.fillStyle = earned === achievements.length ? '#4ade80' : '#e2e8f0';
+  ctx.font = 'bold ' + Math.round(H * 0.035) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(earned + '/' + achievements.length + ' badges earned' + (earned === achievements.length ? ' \u2014 All complete!' : ''), W / 2, H * 0.94);
+}
+
+function drawAchievementPopup(W, H) {
+  if (!achievementPopup) return;
+  const progress = achievementPopup.timer / ACHIEVEMENT_POPUP_DURATION;
+  // Slide in from top, stay, slide out
+  let yOffset;
+  if (progress > 0.85) {
+    // Sliding in
+    yOffset = (1 - (progress - 0.85) / 0.15) * 1;
+  } else if (progress < 0.15) {
+    // Sliding out
+    yOffset = (1 - progress / 0.15) * 1;
+  } else {
+    yOffset = 1;
+  }
+
+  const bannerH = Math.round(H * 0.12);
+  const bannerW = Math.round(W * 0.55);
+  const bx = (W - bannerW) / 2;
+  const by = H * 0.05 * yOffset - bannerH * (1 - yOffset);
+
+  // Banner background
+  const grad = ctx.createLinearGradient(bx, by, bx + bannerW, by + bannerH);
+  grad.addColorStop(0, 'rgba(124, 58, 237, 0.92)');
+  grad.addColorStop(0.5, 'rgba(168, 85, 247, 0.92)');
+  grad.addColorStop(1, 'rgba(251, 191, 36, 0.92)');
+  ctx.fillStyle = grad;
+  // Rounded banner
+  const r = 12;
+  ctx.beginPath();
+  ctx.moveTo(bx + r, by);
+  ctx.lineTo(bx + bannerW - r, by);
+  ctx.quadraticCurveTo(bx + bannerW, by, bx + bannerW, by + r);
+  ctx.lineTo(bx + bannerW, by + bannerH - r);
+  ctx.quadraticCurveTo(bx + bannerW, by + bannerH, bx + bannerW - r, by + bannerH);
+  ctx.lineTo(bx + r, by + bannerH);
+  ctx.quadraticCurveTo(bx, by + bannerH, bx, by + bannerH - r);
+  ctx.lineTo(bx, by + r);
+  ctx.quadraticCurveTo(bx, by, bx + r, by);
+  ctx.closePath();
+  ctx.fill();
+
+  // Border
+  ctx.strokeStyle = 'rgba(253, 224, 71, 0.8)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Icon
+  const iconSize = Math.round(bannerH * 0.5);
+  ctx.font = iconSize + 'px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(achievementPopup.icon, bx + 16, by + bannerH * 0.65);
+
+  // Text
+  ctx.fillStyle = '#fef08a';
+  ctx.font = 'bold ' + Math.round(bannerH * 0.22) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('Achievement Unlocked!', bx + iconSize + 28, by + bannerH * 0.4);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold ' + Math.round(bannerH * 0.26) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.fillText(achievementPopup.name, bx + iconSize + 28, by + bannerH * 0.72);
+}
+
+function drawQuizOverlay(W, H) {
+  // Semi-transparent backdrop
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Pre-compute question lines for dynamic box height
+  const boxW = Math.min(W * 0.85, 420);
+  ctx.font = '14px "Segoe UI", system-ui, sans-serif';
+  const maxTextW = boxW - 40;
+  const words = quizQuestion.split(' ');
+  const qLines = [];
+  let qLine = '';
+  for (const word of words) {
+    const test = qLine ? qLine + ' ' + word : word;
+    if (ctx.measureText(test).width > maxTextW) { qLines.push(qLine); qLine = word; }
+    else qLine = test;
+  }
+  if (qLine) qLines.push(qLine);
+
+  const btnH = 26;
+  const boxH = 36 + qLines.length * 18 + 12 + 3 * (btnH + 4) + 24;
+  const bx = (W - boxW) / 2;
+  const by = (H - boxH) / 2 - 10;
+
+  // Box background
+  ctx.fillStyle = 'rgba(30, 27, 75, 0.95)';
+  ctx.beginPath(); ctx.roundRect(bx, by, boxW, boxH, 12); ctx.fill();
+  ctx.strokeStyle = '#a78bfa'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.roundRect(bx, by, boxW, boxH, 12); ctx.stroke();
+
+  // "Quiz Time!" header
+  ctx.fillStyle = '#fbbf24';
+  ctx.font = 'bold 16px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Quiz Time!', W / 2, by + 28);
+
+  // Question text
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = '14px "Segoe UI", system-ui, sans-serif';
+  for (let i = 0; i < qLines.length; i++) {
+    ctx.fillText(qLines[i], W / 2, by + 52 + i * 18);
+  }
+
+  // Answer choices as tappable button-like rows
+  const answerY = by + 52 + qLines.length * 18 + 12;
+  const btnW = boxW - 40;
+  const colors = ['#f472b6', '#38bdf8', '#4ade80'];
+  const bgColors = ['rgba(244,114,182,0.15)', 'rgba(56,189,248,0.15)', 'rgba(74,222,128,0.15)'];
+  for (let i = 0; i < quizAnswers.length; i++) {
+    const btnY = answerY + i * (btnH + 4);
+    // Button background
+    ctx.fillStyle = bgColors[i];
+    ctx.beginPath(); ctx.roundRect(bx + 20, btnY, btnW, btnH, 6); ctx.fill();
+    ctx.strokeStyle = colors[i]; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.roundRect(bx + 20, btnY, btnW, btnH, 6); ctx.stroke();
+    // Button text
+    ctx.fillStyle = colors[i];
+    ctx.font = 'bold 13px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText((i + 1) + ')  ' + quizAnswers[i], W / 2, btnY + 18);
+  }
+
+  // Instruction
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '11px "Segoe UI", system-ui, sans-serif';
+  const instrY = answerY + 3 * (btnH + 4) + 8;
+  ctx.fillText(isMobile ? 'Tap an answer!' : 'Press 1, 2, or 3 to answer', W / 2, instrY);
+}
+
+function drawQuizResult(W, H) {
+  // Floating result message at top-center
+  const alpha = Math.min(1, quizResultTimer / 500);
+  ctx.globalAlpha = alpha;
+
+  const boxW = Math.min(W * 0.8, 380);
+  const boxH = 44;
+  const bx = (W - boxW) / 2;
+  const by = 60;
+
+  ctx.fillStyle = 'rgba(30, 27, 75, 0.9)';
+  ctx.beginPath(); ctx.roundRect(bx, by, boxW, boxH, 10); ctx.fill();
+  ctx.strokeStyle = quizResultColor; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.roundRect(bx, by, boxW, boxH, 10); ctx.stroke();
+
+  ctx.fillStyle = quizResultColor;
+  ctx.font = 'bold 14px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(quizResultText, W / 2, by + 28);
+
+  ctx.globalAlpha = 1;
+  }
+
+function drawGeometryOverlay(W, H) {
+  // Semi-transparent backdrop
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+  ctx.fillRect(0, 0, W, H);
+
+  const shape = GEOMETRY_SHAPES[geometryShapeIndex];
+  const cx = W / 2;
+  const cy = H / 2 - 20;
+
+  // Title
+  ctx.fillStyle = '#fbbf24';
+  ctx.font = 'bold ' + Math.round(H * 0.05) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Campfire Geometry', cx, H * 0.08);
+
+  // Shape counter
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = Math.round(H * 0.03) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.fillText('Shape ' + (geometryShapeIndex + 1) + ' of ' + GEOMETRY_SHAPES.length + ': ' + shape.name, cx, H * 0.14);
+
+  // Controls hint
+  ctx.fillStyle = '#64748b';
+  ctx.font = Math.round(H * 0.025) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.fillText('Arrow Keys: Rotate | Space: Place stick | Esc: Exit', cx, H * 0.95);
+
+  // Get target edges
+  const edges = getGeometryTargetEdges(geometryShapeIndex);
+
+  // Draw target shape as dotted outline
+  ctx.save();
+  ctx.setLineDash([6, 4]);
+  ctx.strokeStyle = 'rgba(148, 163, 184, 0.4)';
+  ctx.lineWidth = 2;
+  for (let i = 0; i < edges.length; i++) {
+    const e = edges[i];
+    ctx.beginPath();
+    ctx.moveTo(e.x1, e.y1);
+    ctx.lineTo(e.x2, e.y2);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  ctx.restore();
+
+  // Draw next target edge highlighted (if not complete)
+  if (!geometryComplete && geometrySticks.length < edges.length) {
+    const nextEdge = edges[geometrySticks.length];
+    ctx.save();
+    ctx.setLineDash([8, 4]);
+    ctx.strokeStyle = 'rgba(251, 191, 36, 0.6)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(nextEdge.x1, nextEdge.y1);
+    ctx.lineTo(nextEdge.x2, nextEdge.y2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+
+    // Draw target angle indicator at the midpoint
+    const midX = (nextEdge.x1 + nextEdge.x2) / 2;
+    const midY = (nextEdge.y1 + nextEdge.y2) / 2;
+    ctx.fillStyle = 'rgba(251, 191, 36, 0.3)';
+    ctx.beginPath();
+    ctx.arc(midX, midY, 6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Draw placed sticks as solid brown lines
+  ctx.strokeStyle = '#92400e';
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
+  for (const stick of geometrySticks) {
+    ctx.beginPath();
+    ctx.moveTo(stick.x1, stick.y1);
+    ctx.lineTo(stick.x2, stick.y2);
+    ctx.stroke();
+  }
+  // Darker outline for depth
+  ctx.strokeStyle = '#6B4226';
+  ctx.lineWidth = 2;
+  for (const stick of geometrySticks) {
+    ctx.beginPath();
+    ctx.moveTo(stick.x1, stick.y1);
+    ctx.lineTo(stick.x2, stick.y2);
+    ctx.stroke();
+  }
+
+  // Draw current stick being rotated (preview)
+  if (!geometryComplete && geometrySticks.length < edges.length) {
+    const stickLen = 60;
+    const previewX = cx;
+    const previewY = cy + 130;
+    const endX = previewX + Math.cos(geometryAngle) * stickLen;
+    const endY = previewY + Math.sin(geometryAngle) * stickLen;
+
+    // Glow effect
+    ctx.strokeStyle = 'rgba(251, 191, 36, 0.3)';
+    ctx.lineWidth = 8;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(previewX, previewY);
+    ctx.lineTo(endX, endY);
+    ctx.stroke();
+
+    // Stick
+    ctx.strokeStyle = '#c9881a';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(previewX, previewY);
+    ctx.lineTo(endX, endY);
+    ctx.stroke();
+
+    // Label
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = Math.round(H * 0.025) + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Stick ' + (geometrySticks.length + 1) + ' of ' + edges.length, cx, previewY + 40);
+  }
+
+  // Shape completion message
+  if (geometryComplete) {
+    // Glowing background for fact
+    ctx.fillStyle = 'rgba(168, 85, 247, 0.15)';
+    const factBoxY = cy + 95;
+    const factBoxH = 80;
+    ctx.fillRect(W * 0.1, factBoxY, W * 0.8, factBoxH);
+
+    // Border
+    ctx.strokeStyle = '#a855f7';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(W * 0.1, factBoxY, W * 0.8, factBoxH);
+
+    // Shape name with checkmark
+    ctx.fillStyle = '#4ade80';
+    ctx.font = 'bold ' + Math.round(H * 0.04) + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('\u2713 ' + shape.name + ' Complete!', cx, factBoxY + 28);
+
+    // Fun fact
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = Math.round(H * 0.028) + 'px "Segoe UI", system-ui, sans-serif';
+    // Word-wrap the fact
+    const words = shape.fact.split(' ');
+    let lines = [];
+    let currentLine = '';
+    for (const word of words) {
+      const testLine = currentLine ? currentLine + ' ' + word : word;
+      if (ctx.measureText(testLine).width > W * 0.7) {
+        lines.push(currentLine);
+        currentLine = word;
+      } else {
+        currentLine = testLine;
+      }
+    }
+    if (currentLine) lines.push(currentLine);
+    for (let i = 0; i < lines.length; i++) {
+      ctx.fillText(lines[i], cx, factBoxY + 52 + i * 20);
+    }
+  }
+
+  // Progress dots
+  const dotY = H * 0.19;
+  const dotSpacing = 30;
+  const dotsStartX = cx - (GEOMETRY_SHAPES.length - 1) * dotSpacing / 2;
+  for (let i = 0; i < GEOMETRY_SHAPES.length; i++) {
+    const dx = dotsStartX + i * dotSpacing;
+    if (i < geometryShapeIndex || (i === geometryShapeIndex && geometryComplete)) {
+      ctx.fillStyle = '#4ade80'; // completed
+    } else if (i === geometryShapeIndex) {
+      ctx.fillStyle = '#fbbf24'; // current
+    } else {
+      ctx.fillStyle = '#475569'; // upcoming
+    }
+    ctx.beginPath();
+    ctx.arc(dx, dotY, 6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+
+function drawBugCatcherOverlay(W, H) {
+  // Semi-transparent backdrop
+  ctx.fillStyle = 'rgba(0, 20, 0, 0.75)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Grassy field background
+  ctx.fillStyle = '#166534';
+  ctx.fillRect(0, H - 60, W, 60);
+  ctx.fillStyle = '#15803d';
+  for (let gx = 0; gx < W; gx += 20) {
+    ctx.fillRect(gx, H - 60 - Math.random() * 5, 3, 8);
+  }
+
+  // Rule text at top
+  if (bugCatcherRule) {
+    ctx.font = 'bold ' + Math.round(H * 0.055) + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    // Background bar for rule text
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillRect(0, 0, W, H * 0.1);
+    ctx.fillStyle = '#fde68a';
+    ctx.fillText(bugCatcherRule.text, W / 2, H * 0.07);
+  }
+
+  // Round indicator
+  ctx.font = 'bold ' + Math.round(H * 0.035) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.fillStyle = '#a78bfa';
+  ctx.textAlign = 'left';
+  ctx.fillText('Round ' + (bugCatcherRound + 1) + '/5', 15, H * 0.15);
+
+  // Score
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#4ade80';
+  ctx.fillText('Correct: ' + bugCatcherCorrect, W - 15, H * 0.15);
+  ctx.fillStyle = '#ef4444';
+  ctx.fillText('Wrong: ' + bugCatcherWrong, W - 15, H * 0.21);
+
+  // Draw bugs
+  for (const bug of bugCatcherBugs) {
+    if (bug.caught) continue;
+    drawBug(bug);
+  }
+
+  // Instructions at bottom
+  ctx.font = Math.round(H * 0.03) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.fillText('Move near a bug and press Space to catch it!', W / 2, H - 15);
+
+  // Round complete message
+  if (bugCatcherRoundComplete) {
+    ctx.font = 'bold ' + Math.round(H * 0.06) + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.fillStyle = '#fbbf24';
+    ctx.textAlign = 'center';
+    ctx.fillText('Round Complete!', W / 2, H / 2);
+  }
+}
+
+function drawBug(bug) {
+  const r = bug.size === 'big' ? 12 : 7;
+  const hex = BUG_COLOR_HEX[bug.color];
+
+  ctx.save();
+  ctx.translate(bug.x, bug.y);
+
+  if (bug.type === 'butterfly') {
+    // Wings
+    const wingFlap = Math.sin(bug.wobble * 3) * 0.3;
+    ctx.fillStyle = hex;
+    ctx.globalAlpha = 0.8;
+    // Left wing
+    ctx.beginPath();
+    ctx.ellipse(-r * 0.8, -2, r * 0.9, r * 0.6, -0.3 + wingFlap, 0, Math.PI * 2);
+    ctx.fill();
+    // Right wing
+    ctx.beginPath();
+    ctx.ellipse(r * 0.8, -2, r * 0.9, r * 0.6, 0.3 - wingFlap, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    // Body
+    ctx.fillStyle = darkenHex(hex);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, r * 0.2, r * 0.6, 0, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (bug.type === 'beetle') {
+    // Shell
+    ctx.fillStyle = hex;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, r, r * 0.7, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Shell line
+    ctx.strokeStyle = darkenHex(hex);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, -r * 0.7);
+    ctx.lineTo(0, r * 0.7);
+    ctx.stroke();
+    // Head
+    ctx.fillStyle = '#1f2937';
+    ctx.beginPath();
+    ctx.arc(-r * 0.9, 0, r * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (bug.type === 'ladybug') {
+    // Body
+    ctx.fillStyle = hex;
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.fill();
+    // Head
+    ctx.fillStyle = '#1f2937';
+    ctx.beginPath();
+    ctx.arc(-r * 0.8, 0, r * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+    // Default spots (part of ladybug look)
+    ctx.fillStyle = '#1f2937';
+    ctx.beginPath(); ctx.arc(r * 0.2, -r * 0.3, r * 0.2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(r * 0.3, r * 0.3, r * 0.2, 0, Math.PI * 2); ctx.fill();
+  } else if (bug.type === 'caterpillar') {
+    // Body segments
+    ctx.fillStyle = hex;
+    for (let s = 0; s < 4; s++) {
+      const sx = s * r * 0.5 - r * 0.75;
+      const sy = Math.sin(bug.wobble + s * 0.5) * 2;
+      ctx.beginPath();
+      ctx.arc(sx, sy, r * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Head
+    ctx.fillStyle = darkenHex(hex);
+    ctx.beginPath();
+    ctx.arc(r * 0.5, 0, r * 0.35, 0, Math.PI * 2);
+    ctx.fill();
+    // Eyes
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(r * 0.55, -r * 0.15, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(r * 0.55, r * 0.15, 2, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // Pattern indicators
+  if (bug.pattern === 'spots') {
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    const dotR = r * 0.15;
+    ctx.beginPath(); ctx.arc(r * 0.3, -r * 0.2, dotR, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(-r * 0.2, r * 0.3, dotR, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(r * 0.1, r * 0.1, dotR, 0, Math.PI * 2); ctx.fill();
+  } else if (bug.pattern === 'stripes') {
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+    ctx.lineWidth = 1;
+    for (let si = -1; si <= 1; si++) {
+      ctx.beginPath();
+      ctx.moveTo(si * r * 0.4, -r * 0.5);
+      ctx.lineTo(si * r * 0.4, r * 0.5);
+      ctx.stroke();
+    }
+  }
+
+  // Size indicator for big bugs — tiny crown
+  if (bug.size === 'big') {
+    ctx.fillStyle = '#fbbf24';
+    ctx.fillRect(-3, -r - 5, 6, 3);
+    ctx.fillRect(-4, -r - 8, 2, 4);
+    ctx.fillRect(-1, -r - 8, 2, 4);
+    ctx.fillRect(2, -r - 8, 2, 4);
+  }
+
+  ctx.restore();
+}
+
+function darkenHex(hex) {
+  const r = Math.max(0, parseInt(hex.slice(1,3), 16) - 50);
+  const g = Math.max(0, parseInt(hex.slice(3,5), 16) - 50);
+  const b = Math.max(0, parseInt(hex.slice(5,7), 16) - 50);
+  return '#' + [r, g, b].map(c => c.toString(16).padStart(2, '0')).join('');
 }
 
 function drawSpeechBubbles() {
@@ -357,8 +1176,49 @@ function drawLevel1World(W, H, cam) {
   drawPlatforms();
   drawYarnBalls();
   drawHouse();
+  // Bug net pickup (near flower garden)
+  if (!hasBugNet) {
+    drawBugNetPickup(BUG_NET_POS.x);
+  }
   for (const npc of npcs) drawKitty(npc.x, npc.y, npc.color, npc.facing, npc.walkFrame, npc.accessory);
   drawPlayerAndUI();
+}
+
+function drawBugNetPickup(x) {
+  const gy = GROUND_Y;
+  // Handle (stick)
+  ctx.strokeStyle = '#92400e';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(x, gy - 5);
+  ctx.lineTo(x, gy - 35);
+  ctx.stroke();
+  // Net ring
+  ctx.strokeStyle = '#7c3aed';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(x, gy - 42, 10, 0, Math.PI * 2);
+  ctx.stroke();
+  // Net mesh
+  ctx.strokeStyle = 'rgba(124,58,237,0.4)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(x - 7, gy - 38);
+  ctx.lineTo(x, gy - 28);
+  ctx.lineTo(x + 7, gy - 38);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x - 4, gy - 35);
+  ctx.lineTo(x + 4, gy - 35);
+  ctx.stroke();
+  // Sparkle
+  const sparkle = Math.sin(gameTime / 300) * 0.5 + 0.5;
+  ctx.globalAlpha = sparkle;
+  ctx.fillStyle = '#fbbf24';
+  ctx.beginPath();
+  ctx.arc(x + 8, gy - 48, 3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
 }
 
 function drawLevel2World(W, H, cam) {
@@ -6720,6 +7580,55 @@ function drawMoonWorld(W, H, cam, cycle, isNight) {
     ctx.textAlign = 'left';
   }
 
+  // Apollo Landing Site marker
+  const apolloX = APOLLO_SITE_POS.x;
+  if (apolloX > cam - 120 && apolloX < cam + W + 120) {
+    if (apolloMission.complete) {
+      // Completed — show planted flag and boot prints
+      // Flag pole
+      ctx.fillStyle = '#d1d5db';
+      ctx.fillRect(apolloX - 1, GROUND_Y - 60, 3, 60);
+      // American flag
+      drawAmericanFlagSmall(apolloX + 2, GROUND_Y - 60, 28, 18);
+      // Boot prints
+      ctx.fillStyle = '#4b5563';
+      for (let i = 0; i < 3; i++) {
+        ctx.fillRect(apolloX - 30 + i * 20, GROUND_Y + 2, 8, 3);
+        ctx.fillRect(apolloX - 28 + i * 20, GROUND_Y + 6, 4, 2);
+      }
+      // "Apollo Mission Complete" text
+      ctx.fillStyle = '#fbbf24';
+      ctx.font = 'bold 11px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText('Apollo Site', apolloX, GROUND_Y - 65);
+      ctx.textAlign = 'left';
+    } else {
+      // Landing site marker — beacon effect
+      const pulse = Math.sin(gameTime / 400) * 0.3 + 0.7;
+      ctx.fillStyle = 'rgba(251, 191, 36, ' + (pulse * 0.15) + ')';
+      ctx.beginPath();
+      ctx.arc(apolloX, GROUND_Y, 40, 0, Math.PI * 2);
+      ctx.fill();
+      // Landing pad outline
+      ctx.strokeStyle = '#fbbf24';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.ellipse(apolloX, GROUND_Y + 3, 35, 8, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      // Sign
+      ctx.fillStyle = '#fbbf24';
+      ctx.font = 'bold 12px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText('Landing Site', apolloX, GROUND_Y - 20);
+      ctx.font = '10px system-ui';
+      ctx.fillStyle = '#e2e8f0';
+      ctx.fillText('Press Enter', apolloX, GROUND_Y - 8);
+      ctx.textAlign = 'left';
+    }
+  }
+
   // Game completion area at end of level
   if (player.x > ww - 300) {
     ctx.fillStyle = '#fbbf24';
@@ -6816,7 +7725,145 @@ function drawSmoothieShopInterior(cam, W, H) {
   ctx.font = 'bold 12px system-ui';
   ctx.fillText('Smoothies made: ' + smoothieCount, cx, cy + 105);
 
+  // Recipe Mode hint (when not in recipe mode and not all done)
+  if (!recipeModeActive && !recipeAllDone) {
+    ctx.fillStyle = '#a78bfa';
+    ctx.font = 'bold 11px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('Press R for Recipe Mode!', cx, cy + 145);
+  }
+  if (recipeAllDone) {
+    ctx.fillStyle = '#22c55e';
+    ctx.font = 'bold 11px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('All recipes completed!', cx, cy + 145);
+  }
+
+  // Recipe Mode overlay
+  if (recipeModeActive) {
+    drawRecipeCard(cx, cy);
+  }
+
   ctx.textAlign = 'left';
+}
+
+function drawRecipeCard(cx, cy) {
+  const recipe = RECIPE_DATA[recipeRound];
+  const cardW = 360;
+  const cardH = 260;
+  const cardX = cx - cardW / 2;
+  const cardY = cy - cardH / 2;
+
+  // Semi-transparent backdrop
+  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  ctx.fillRect(cx - 220, cy - 140, 440, 300);
+
+  // Index card background — cream colored
+  ctx.fillStyle = '#fef3c7';
+  ctx.fillRect(cardX, cardY, cardW, cardH);
+
+  // Card border
+  ctx.strokeStyle = '#d97706';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(cardX, cardY, cardW, cardH);
+
+  // Lined paper effect
+  ctx.strokeStyle = 'rgba(147,130,115,0.3)';
+  ctx.lineWidth = 1;
+  const lineStart = cardY + 45;
+  const lineSpacing = 28;
+  for (let i = 0; i < recipeSteps.length + 1; i++) {
+    const ly = lineStart + i * lineSpacing;
+    ctx.beginPath();
+    ctx.moveTo(cardX + 10, ly);
+    ctx.lineTo(cardX + cardW - 10, ly);
+    ctx.stroke();
+  }
+
+  // Red margin line
+  ctx.strokeStyle = 'rgba(239,68,68,0.4)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(cardX + 35, cardY);
+  ctx.lineTo(cardX + 35, cardY + cardH);
+  ctx.stroke();
+
+  // Title
+  ctx.fillStyle = '#92400e';
+  ctx.font = 'bold 16px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText('Debug the Recipe: ' + recipe.name, cx, cardY + 22);
+
+  // Round indicator
+  ctx.fillStyle = '#78716c';
+  ctx.font = '11px system-ui';
+  ctx.fillText('Round ' + (recipeRound + 1) + ' of 3', cx, cardY + 38);
+
+  // Steps
+  ctx.textAlign = 'left';
+  const stepStartY = lineStart + 18;
+  for (let i = 0; i < recipeSteps.length; i++) {
+    const sy = stepStartY + i * lineSpacing;
+    const isCorrect = recipeSteps[i] === recipeCorrectOrder[i];
+    const isSelected = recipeFirstSwap === i;
+
+    // Highlight selected step
+    if (isSelected) {
+      ctx.fillStyle = 'rgba(99,102,241,0.2)';
+      ctx.fillRect(cardX + 38, sy - 16, cardW - 48, lineSpacing);
+      ctx.strokeStyle = '#6366f1';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(cardX + 38, sy - 16, cardW - 48, lineSpacing);
+    }
+
+    // Step number
+    ctx.fillStyle = '#1f2937';
+    ctx.font = 'bold 14px system-ui';
+    ctx.fillText((i + 1) + ')', cardX + 42, sy);
+
+    // Step text
+    ctx.fillStyle = isCorrect ? '#166534' : '#1f2937';
+    ctx.font = '14px system-ui';
+    ctx.fillText(recipeSteps[i], cardX + 68, sy);
+
+    // Green checkmark for correctly placed steps
+    if (isCorrect) {
+      ctx.fillStyle = '#22c55e';
+      ctx.font = 'bold 16px system-ui';
+      ctx.fillText('\u2713', cardX + cardW - 30, sy);
+    }
+  }
+
+  // Instruction text at bottom
+  ctx.textAlign = 'center';
+  if (recipeComplete) {
+    // Success animation — spinning blender
+    ctx.fillStyle = '#22c55e';
+    ctx.font = 'bold 14px system-ui';
+    ctx.fillText('Correct! Blending ' + recipe.name + '...', cx, cardY + cardH - 20);
+
+    // Blender animation
+    const blenderX = cx + 130;
+    const blenderY = cardY + cardH - 40;
+    ctx.save();
+    ctx.translate(blenderX, blenderY);
+    ctx.rotate(recipeBlendAnim);
+    ctx.fillStyle = recipe.color;
+    ctx.fillRect(-8, -8, 16, 16);
+    ctx.restore();
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillRect(blenderX - 10, blenderY + 5, 20, 8);
+  } else {
+    ctx.fillStyle = '#78716c';
+    ctx.font = '12px system-ui';
+    ctx.fillText('Press two numbers to swap steps! | Enter/Esc = Exit', cx, cardY + cardH - 20);
+
+    if (recipeFirstSwap !== null) {
+      ctx.fillStyle = '#6366f1';
+      ctx.font = 'bold 12px system-ui';
+      ctx.fillText('Step ' + (recipeFirstSwap + 1) + ' selected — press another number to swap', cx, cardY + cardH - 6);
+    }
+  }
 }
 
 // TopGolf Interior
@@ -7107,6 +8154,574 @@ function drawTourGuide(W, H) {
 
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
+}
+
+// Small American flag helper (used in Apollo mission)
+function drawAmericanFlagSmall(x, y, w, h) {
+  // Red and white stripes
+  const stripeH = h / 7;
+  for (let i = 0; i < 7; i++) {
+    ctx.fillStyle = i % 2 === 0 ? '#b91c1c' : '#ffffff';
+    ctx.fillRect(x, y + i * stripeH, w, stripeH + 0.5);
+  }
+  // Blue canton
+  const cantonW = w * 0.4;
+  const cantonH = h * 0.57;
+  ctx.fillStyle = '#1e3a5f';
+  ctx.fillRect(x, y, cantonW, cantonH);
+  // Stars (simplified — small dots)
+  ctx.fillStyle = '#ffffff';
+  for (let row = 0; row < 3; row++) {
+    for (let col = 0; col < 3; col++) {
+      const sx = x + 3 + col * (cantonW - 6) / 2;
+      const sy = y + 3 + row * (cantonH - 6) / 2;
+      ctx.fillRect(sx, sy, 1.5, 1.5);
+    }
+  }
+}
+
+// Apollo Mission Scene
+function drawApolloMissionScene(cam, W, H) {
+  const cx = cam + W / 2;
+  const cy = H / 2;
+  const am = apolloMission;
+
+  // Dark lunar backdrop
+  ctx.fillStyle = '#030712';
+  ctx.fillRect(cx - 260, cy - 160, 520, 340);
+
+  // Stars in background
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  for (let i = 0; i < 30; i++) {
+    const sx = cx - 250 + (i * 17.3) % 500;
+    const sy = cy - 150 + (i * 13.7) % 150;
+    ctx.beginPath();
+    ctx.arc(sx, sy, 0.6 + (i % 3) * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Earth in background (small)
+  ctx.fillStyle = '#2563eb';
+  ctx.beginPath();
+  ctx.arc(cx + 180, cy - 120, 18, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#22c55e';
+  ctx.beginPath();
+  ctx.arc(cx + 174, cy - 123, 7, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Lunar ground
+  ctx.fillStyle = '#6b7280';
+  ctx.fillRect(cx - 260, cy + 60, 520, 120);
+  ctx.fillStyle = '#9ca3af';
+  ctx.fillRect(cx - 260, cy + 60, 520, 3);
+  // Small craters on ground
+  ctx.fillStyle = '#4b5563';
+  ctx.beginPath();
+  ctx.ellipse(cx - 100, cy + 70, 15, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(cx + 120, cy + 80, 20, 5, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Lunar module silhouette in background
+  const lmX = cx + 160;
+  const lmY = cy + 20;
+  ctx.fillStyle = '#374151';
+  // Body
+  ctx.fillRect(lmX - 12, lmY, 24, 20);
+  // Upper stage
+  ctx.fillRect(lmX - 8, lmY - 12, 16, 14);
+  // Antenna
+  ctx.fillRect(lmX - 1, lmY - 20, 2, 10);
+  // Legs
+  ctx.strokeStyle = '#374151';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(lmX - 12, lmY + 18);
+  ctx.lineTo(lmX - 22, cy + 60);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(lmX + 12, lmY + 18);
+  ctx.lineTo(lmX + 22, cy + 60);
+  ctx.stroke();
+  // Foot pads
+  ctx.fillStyle = '#374151';
+  ctx.fillRect(lmX - 26, cy + 57, 10, 3);
+  ctx.fillRect(lmX + 16, cy + 57, 10, 3);
+
+  // Title for current step
+  const stepNames = ['First Step', 'Plant the Flag', 'Collect Moon Rocks', 'Salute'];
+  const stepQuotes = [
+    '"That\'s one small step for man, one giant leap for mankind." \u2014 Neil Armstrong',
+    '"We came in peace for all mankind." \u2014 Plaque on lunar module',
+    '"I believe this nation should commit itself..." \u2014 JFK',
+    '"Magnificent desolation." \u2014 Buzz Aldrin',
+  ];
+
+  if (am.celebrateTimer > 0) {
+    // Celebration screen
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 22px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Apollo Mission Complete!', cx, cy - 80);
+
+    // Big American flag
+    drawAmericanFlagSmall(cx - 40, cy - 60, 80, 50);
+
+    // Flag pole
+    ctx.fillStyle = '#d1d5db';
+    ctx.fillRect(cx - 42, cy - 60, 3, 120);
+
+    // Fireworks / sparkles
+    const sparkleCount = 12;
+    for (let i = 0; i < sparkleCount; i++) {
+      const angle = (i / sparkleCount) * Math.PI * 2 + gameTime / 500;
+      const dist = 80 + Math.sin(gameTime / 300 + i) * 20;
+      const sx = cx + Math.cos(angle) * dist;
+      const sy = cy - 20 + Math.sin(angle) * dist * 0.5;
+      ctx.fillStyle = ['#fbbf24', '#ef4444', '#3b82f6', '#22c55e', '#a855f7'][i % 5];
+      ctx.beginPath();
+      ctx.arc(sx, sy, 2 + Math.sin(gameTime / 200 + i) * 1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '14px "Segoe UI", system-ui, sans-serif';
+    ctx.fillText('+300 Bonus Points!', cx, cy + 100);
+    ctx.textAlign = 'left';
+    return;
+  }
+
+  if (am.step >= 4) return; // shouldn't happen, but safety check
+
+  // Step title
+  ctx.fillStyle = '#fbbf24';
+  ctx.font = 'bold 18px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Step ' + (am.step + 1) + ': ' + stepNames[am.step], cx, cy - 130);
+
+  // Step progress indicator (dots)
+  for (let i = 0; i < 4; i++) {
+    ctx.fillStyle = i < am.step ? '#22c55e' : (i === am.step ? '#fbbf24' : '#4b5563');
+    ctx.beginPath();
+    ctx.arc(cx - 30 + i * 20, cy - 110, 5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Quote at bottom
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = 'italic 11px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(stepQuotes[am.step], cx, cy + 150);
+
+  // Draw step-specific scene
+  if (am.step === 0) {
+    // "First Step" — boot descending
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '12px system-ui';
+    ctx.fillText('Press Space when the boot reaches the surface!', cx, cy - 90);
+
+    // Ground surface marker (sweet spot zone)
+    ctx.fillStyle = 'rgba(34, 197, 94, 0.2)';
+    ctx.fillRect(cx - 30, cy + 25, 60, 20);
+    ctx.strokeStyle = '#22c55e';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.strokeRect(cx - 30, cy + 25, 60, 20);
+    ctx.setLineDash([]);
+
+    // Boot descending
+    const bootDrawY = cy - 60 + am.bootY;
+    // Boot shape
+    ctx.fillStyle = '#d1d5db';
+    ctx.fillRect(cx - 8, bootDrawY - 20, 16, 22);
+    ctx.fillStyle = '#e2e8f0';
+    ctx.fillRect(cx - 10, bootDrawY, 20, 8);
+    // Sole treads
+    ctx.fillStyle = '#9ca3af';
+    ctx.fillRect(cx - 9, bootDrawY + 6, 4, 2);
+    ctx.fillRect(cx - 3, bootDrawY + 6, 4, 2);
+    ctx.fillRect(cx + 3, bootDrawY + 6, 4, 2);
+
+    // Instructions
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 12px system-ui';
+    ctx.fillText('SPACE', cx, cy + 85);
+  } else if (am.step === 1) {
+    // "Plant the Flag" — progress bar
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '12px system-ui';
+    ctx.fillText('Hold Space to drive the flag into the ground!', cx, cy - 90);
+
+    // Flag being planted (rises as progress increases)
+    const flagH = am.progress;
+    const flagX = cx;
+    const flagBaseY = cy + 58;
+
+    // Pole (grows upward with progress)
+    const poleHeight = flagH * 0.6;
+    ctx.fillStyle = '#d1d5db';
+    ctx.fillRect(flagX - 1, flagBaseY - poleHeight, 3, poleHeight);
+
+    // Flag appears once pole is tall enough
+    if (poleHeight > 20) {
+      drawAmericanFlagSmall(flagX + 2, flagBaseY - poleHeight, 28, 18);
+    }
+
+    // Progress bar
+    ctx.fillStyle = '#1f2937';
+    ctx.fillRect(cx - 80, cy + 75, 160, 12);
+    ctx.fillStyle = '#3b82f6';
+    ctx.fillRect(cx - 80, cy + 75, 160 * (am.progress / 100), 12);
+    ctx.strokeStyle = '#60a5fa';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(cx - 80, cy + 75, 160, 12);
+
+    // Label
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '10px system-ui';
+    ctx.fillText(Math.floor(am.progress) + '%', cx, cy + 100);
+
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 12px system-ui';
+    ctx.fillText('Hold SPACE', cx, cy + 120);
+  } else if (am.step === 2) {
+    // "Collect Moon Rocks" — move left/right
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '12px system-ui';
+    ctx.fillText('Move left/right to collect moon rocks!', cx, cy - 90);
+
+    // Timer
+    const timeLeft = Math.ceil(am.stepTimer / 1000);
+    ctx.fillStyle = timeLeft <= 5 ? '#ef4444' : '#fbbf24';
+    ctx.font = 'bold 16px system-ui';
+    ctx.fillText('Time: ' + timeLeft + 's', cx, cy - 70);
+
+    // Rocks collected
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '14px system-ui';
+    ctx.fillText('Rocks: ' + am.rocksCollected + '/5', cx, cy + 100);
+
+    // Draw rocks
+    for (let i = 0; i < am.rockPositions.length; i++) {
+      if (am.rockPositions[i] === null) continue;
+      const rx = cx + am.rockPositions[i];
+      const ry = cy + 45;
+      // Irregular rock shape
+      ctx.fillStyle = '#78716c';
+      ctx.beginPath();
+      ctx.moveTo(rx - 6, ry + 5);
+      ctx.lineTo(rx - 8, ry - 2);
+      ctx.lineTo(rx - 3, ry - 7);
+      ctx.lineTo(rx + 4, ry - 5);
+      ctx.lineTo(rx + 7, ry + 1);
+      ctx.lineTo(rx + 5, ry + 5);
+      ctx.closePath();
+      ctx.fill();
+      // Highlight
+      ctx.fillStyle = '#9ca3af';
+      ctx.beginPath();
+      ctx.arc(rx - 1, ry - 3, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Player astronaut indicator
+    const pax = cx + am.rockPlayerX;
+    const pay = cy + 30;
+    // Simple astronaut (helmet + body)
+    ctx.fillStyle = '#e2e8f0';
+    ctx.beginPath();
+    ctx.arc(pax, pay - 8, 6, 0, Math.PI * 2);
+    ctx.fill();
+    // Visor
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath();
+    ctx.arc(pax + 2, pay - 8, 3, 0, Math.PI * 2);
+    ctx.fill();
+    // Body
+    ctx.fillStyle = '#d1d5db';
+    ctx.fillRect(pax - 5, pay - 2, 10, 12);
+    // Legs
+    ctx.fillRect(pax - 5, pay + 10, 4, 6);
+    ctx.fillRect(pax + 1, pay + 10, 4, 6);
+
+    // Collection radius hint
+    ctx.strokeStyle = 'rgba(251, 191, 36, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(pax, pay + 5, 20, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 12px system-ui';
+    ctx.fillText('\u2190 \u2192 Arrow Keys', cx, cy + 120);
+  } else if (am.step === 3) {
+    // "Salute" — press S
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '12px system-ui';
+    ctx.fillText('Salute the flag to complete the mission!', cx, cy - 90);
+
+    // Planted American flag
+    ctx.fillStyle = '#d1d5db';
+    ctx.fillRect(cx - 40, cy - 40, 3, 100);
+    drawAmericanFlagSmall(cx - 37, cy - 40, 40, 25);
+
+    // Astronaut standing at attention
+    const astX = cx + 40;
+    const astY = cy + 20;
+    // Helmet
+    ctx.fillStyle = '#e2e8f0';
+    ctx.beginPath();
+    ctx.arc(astX, astY - 20, 10, 0, Math.PI * 2);
+    ctx.fill();
+    // Visor
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath();
+    ctx.arc(astX - 3, astY - 20, 5, 0, Math.PI * 2);
+    ctx.fill();
+    // Body
+    ctx.fillStyle = '#d1d5db';
+    ctx.fillRect(astX - 8, astY - 10, 16, 24);
+    // Legs
+    ctx.fillRect(astX - 8, astY + 14, 6, 12);
+    ctx.fillRect(astX + 2, astY + 14, 6, 12);
+    // Right arm (saluting pose hint — raised)
+    ctx.fillStyle = '#d1d5db';
+    ctx.save();
+    ctx.translate(astX + 8, astY - 6);
+    ctx.rotate(-0.8);
+    ctx.fillRect(0, -2, 14, 4);
+    ctx.restore();
+    // Left arm down
+    ctx.fillRect(astX - 12, astY - 4, 4, 12);
+
+    // Boot prints on ground
+    ctx.fillStyle = '#4b5563';
+    for (let i = 0; i < 4; i++) {
+      ctx.fillRect(cx - 60 + i * 30, cy + 62, 8, 3);
+    }
+
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 16px system-ui';
+    ctx.fillText('Press S to Salute!', cx, cy + 100);
+  }
+
+  // Escape hint
+  ctx.fillStyle = '#64748b';
+  ctx.font = '10px system-ui';
+  ctx.fillText('Esc to exit', cx, cy + 165);
+  }
+
+// Gelato Shop Interior
+function drawGelatoShopInterior(cam, W, H) {
+  const cx = cam + W / 2;
+  const cy = H / 2;
+
+  // Background — warm Italian interior
+  ctx.fillStyle = '#fef3c7';
+  ctx.fillRect(cx - 260, cy - 160, 520, 340);
+  // Tiled floor
+  ctx.fillStyle = '#d4a373';
+  ctx.fillRect(cx - 260, cy + 40, 520, 140);
+  // Counter
+  ctx.fillStyle = '#92400e';
+  ctx.fillRect(cx - 260, cy + 30, 520, 15);
+
+  // Title
+  ctx.fillStyle = '#92400e';
+  ctx.font = 'bold 16px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText('Gelateria Roma', cx, cy - 138);
+
+  const isThirds = gelatoOrder && gelatoOrder.thirds;
+  const maxScoops = isThirds ? 3 : 4;
+
+  // ── Cup visualization (left side) ──
+  const cupX = cx - 160;
+  const cupY = cy - 100;
+  const cupW = 80;
+  const cupH = 160;
+
+  // Cup outline
+  ctx.strokeStyle = '#1f2937';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(cupX - cupW / 2, cupY, cupW, cupH);
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(cupX - cupW / 2 + 1, cupY + 1, cupW - 2, cupH - 2);
+
+  // Fill cup from bottom with scoops
+  const scoopH = cupH / maxScoops;
+  for (let i = 0; i < gelatoCup.length; i++) {
+    const flavor = GELATO_FLAVORS.find(f => f.name === gelatoCup[i]);
+    if (flavor) {
+      ctx.fillStyle = flavor.color;
+      const sy = cupY + cupH - (i + 1) * scoopH;
+      ctx.fillRect(cupX - cupW / 2 + 1, sy + 1, cupW - 2, scoopH - 1);
+      // Fraction label on each section
+      ctx.fillStyle = '#1f2937';
+      ctx.font = 'bold 11px system-ui';
+      ctx.textAlign = 'center';
+      const fracLabel = isThirds ? '1/3' : '1/4';
+      ctx.fillText(fracLabel, cupX, sy + scoopH / 2 + 4);
+    }
+  }
+
+  // Cup label
+  ctx.fillStyle = '#1f2937';
+  ctx.font = '10px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText('Your Cup', cupX, cupY + cupH + 15);
+  ctx.fillText(gelatoCup.length + '/' + maxScoops + ' filled', cupX, cupY + cupH + 28);
+
+  // ── Target order (center) ──
+  const orderX = cx + 10;
+  ctx.fillStyle = '#1f2937';
+  ctx.font = 'bold 13px system-ui';
+  ctx.textAlign = 'center';
+
+  if (gelatoComplete) {
+    ctx.fillStyle = '#16a34a';
+    ctx.font = 'bold 18px system-ui';
+    ctx.fillText('All Orders Complete!', orderX, cy - 90);
+    ctx.font = '14px system-ui';
+    ctx.fillText('Press Enter to leave', orderX, cy - 65);
+  } else {
+    // Customer NPC (simple cat face)
+    ctx.fillStyle = '#f59e0b';
+    ctx.beginPath();
+    ctx.arc(orderX, cy - 95, 18, 0, Math.PI * 2);
+    ctx.fill();
+    // Eyes
+    ctx.fillStyle = '#1f2937';
+    ctx.beginPath(); ctx.arc(orderX - 6, cy - 99, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(orderX + 6, cy - 99, 2, 0, Math.PI * 2); ctx.fill();
+    // Mouth
+    ctx.beginPath(); ctx.arc(orderX, cy - 90, 4, 0, Math.PI); ctx.stroke();
+    // Ears
+    ctx.fillStyle = '#f59e0b';
+    ctx.beginPath(); ctx.moveTo(orderX - 14, cy - 108); ctx.lineTo(orderX - 6, cy - 118); ctx.lineTo(orderX - 2, cy - 105); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(orderX + 14, cy - 108); ctx.lineTo(orderX + 6, cy - 118); ctx.lineTo(orderX + 2, cy - 105); ctx.fill();
+
+    ctx.fillStyle = '#1f2937';
+    ctx.font = '11px system-ui';
+    ctx.fillText('Round ' + (gelatoRound + 1) + ' of 5', orderX, cy - 68);
+    ctx.font = 'bold 12px system-ui';
+    ctx.fillText("I'd like:", orderX, cy - 50);
+
+    // Parse and display order with colored labels
+    if (gelatoOrder) {
+      const parts = gelatoOrder.desc.split(', ');
+      let yOff = cy - 32;
+      for (const part of parts) {
+        // Find flavor name in part
+        const flav = GELATO_FLAVORS.find(f => part.includes(f.name));
+        if (flav) {
+          // Color swatch
+          ctx.fillStyle = flav.color;
+          ctx.fillRect(orderX - 60, yOff - 9, 12, 12);
+          ctx.strokeStyle = '#1f2937';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(orderX - 60, yOff - 9, 12, 12);
+          // Text
+          ctx.fillStyle = '#1f2937';
+          ctx.font = '12px system-ui';
+          ctx.textAlign = 'left';
+          ctx.fillText(part, orderX - 44, yOff);
+          ctx.textAlign = 'center';
+        }
+        yOff += 18;
+      }
+
+      // ── Target fraction bar ──
+      const barX = orderX - 60;
+      const barY = yOff + 8;
+      const barW = 120;
+      const barH = 16;
+      ctx.fillStyle = '#e5e7eb';
+      ctx.fillRect(barX, barY, barW, barH);
+      ctx.strokeStyle = '#1f2937';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(barX, barY, barW, barH);
+      // Fill target bar proportionally
+      let bx = barX;
+      const totalParts = isThirds ? 3 : 4;
+      for (const [fname, count] of Object.entries(gelatoOrder.fractions)) {
+        const flav = GELATO_FLAVORS.find(f => f.name === fname);
+        const segW = (count / totalParts) * barW;
+        ctx.fillStyle = flav ? flav.color : '#999';
+        ctx.fillRect(bx, barY, segW, barH);
+        bx += segW;
+      }
+      ctx.strokeRect(barX, barY, barW, barH);
+      ctx.fillStyle = '#1f2937';
+      ctx.font = '9px system-ui';
+      ctx.fillText('Target', orderX, barY + barH + 12);
+
+      // ── Current fraction bar ──
+      const curBarY = barY + barH + 18;
+      ctx.fillStyle = '#e5e7eb';
+      ctx.fillRect(barX, curBarY, barW, barH);
+      ctx.strokeStyle = '#1f2937';
+      ctx.strokeRect(barX, curBarY, barW, barH);
+      let cbx = barX;
+      for (let i = 0; i < gelatoCup.length; i++) {
+        const flav = GELATO_FLAVORS.find(f => f.name === gelatoCup[i]);
+        const segW = barW / maxScoops;
+        ctx.fillStyle = flav ? flav.color : '#999';
+        ctx.fillRect(cbx, curBarY, segW, barH);
+        cbx += segW;
+      }
+      ctx.strokeRect(barX, curBarY, barW, barH);
+      ctx.fillStyle = '#1f2937';
+      ctx.font = '9px system-ui';
+      ctx.fillText('Your Mix', orderX, curBarY + barH + 12);
+    }
+  }
+
+  // ── Flavor buttons (bottom) ──
+  ctx.font = '10px system-ui';
+  ctx.textAlign = 'center';
+  const btnY = cy + 55;
+  for (let i = 0; i < GELATO_FLAVORS.length; i++) {
+    const bx = cx - 150 + i * 55;
+    // Color swatch
+    ctx.fillStyle = GELATO_FLAVORS[i].color;
+    ctx.fillRect(bx - 18, btnY, 36, 20);
+    ctx.strokeStyle = '#1f2937';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(bx - 18, btnY, 36, 20);
+    // Key number
+    ctx.fillStyle = '#1f2937';
+    ctx.font = 'bold 12px system-ui';
+    ctx.fillText(String(i + 1), bx, btnY - 4);
+    // Flavor name
+    ctx.font = '8px system-ui';
+    ctx.fillText(GELATO_FLAVORS[i].name, bx, btnY + 35);
+  }
+
+  // Feedback message
+  if (gelatoMsgTimer > 0 && gelatoMessage) {
+    ctx.fillStyle = gelatoMessage.includes('Perfetto') || gelatoMessage.includes('Magnifico') ? '#16a34a' : '#dc2626';
+    ctx.font = 'bold 14px system-ui';
+    ctx.fillText(gelatoMessage, cx, cy + 110);
+  }
+
+  // Instructions
+  ctx.fillStyle = '#78716c';
+  ctx.font = '11px system-ui';
+  if (!gelatoComplete) {
+    ctx.fillText('Press 1-6 to add scoops | Esc to leave', cx, cy + 155);
+  } else {
+    ctx.fillText('Press Enter to leave', cx, cy + 155);
+  }
+
+  // Round / score
+  ctx.fillStyle = '#92400e';
+  ctx.font = 'bold 11px system-ui';
+  ctx.fillText('Orders filled: ' + gelatoRound + '/5', cx, cy + 140);
+
+  ctx.textAlign = 'left';
 }
 
 const levelRegistry = {
