@@ -46,6 +46,8 @@ function draw() {
       [Scene.THE_MET]: () => drawMetMuseumInterior(cam, W, H),
       [Scene.NASA_MUSEUM]: () => drawNasaMuseumInterior(cam, W, H),
       [Scene.TELEGRAM]: () => drawTelegramOffice(cam, W, H),
+
+      [Scene.APOLLO_MISSION]: () => drawApolloMissionScene(cam, W, H),
     };
     if (sceneDrawMap[currentScene]) sceneDrawMap[currentScene]();
   } else {
@@ -7067,6 +7069,55 @@ function drawMoonWorld(W, H, cam, cycle, isNight) {
     ctx.textAlign = 'left';
   }
 
+  // Apollo Landing Site marker
+  const apolloX = APOLLO_SITE_POS.x;
+  if (apolloX > cam - 120 && apolloX < cam + W + 120) {
+    if (apolloMission.complete) {
+      // Completed — show planted flag and boot prints
+      // Flag pole
+      ctx.fillStyle = '#d1d5db';
+      ctx.fillRect(apolloX - 1, GROUND_Y - 60, 3, 60);
+      // American flag
+      drawAmericanFlagSmall(apolloX + 2, GROUND_Y - 60, 28, 18);
+      // Boot prints
+      ctx.fillStyle = '#4b5563';
+      for (let i = 0; i < 3; i++) {
+        ctx.fillRect(apolloX - 30 + i * 20, GROUND_Y + 2, 8, 3);
+        ctx.fillRect(apolloX - 28 + i * 20, GROUND_Y + 6, 4, 2);
+      }
+      // "Apollo Mission Complete" text
+      ctx.fillStyle = '#fbbf24';
+      ctx.font = 'bold 11px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText('Apollo Site', apolloX, GROUND_Y - 65);
+      ctx.textAlign = 'left';
+    } else {
+      // Landing site marker — beacon effect
+      const pulse = Math.sin(gameTime / 400) * 0.3 + 0.7;
+      ctx.fillStyle = 'rgba(251, 191, 36, ' + (pulse * 0.15) + ')';
+      ctx.beginPath();
+      ctx.arc(apolloX, GROUND_Y, 40, 0, Math.PI * 2);
+      ctx.fill();
+      // Landing pad outline
+      ctx.strokeStyle = '#fbbf24';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.ellipse(apolloX, GROUND_Y + 3, 35, 8, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      // Sign
+      ctx.fillStyle = '#fbbf24';
+      ctx.font = 'bold 12px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText('Landing Site', apolloX, GROUND_Y - 20);
+      ctx.font = '10px system-ui';
+      ctx.fillStyle = '#e2e8f0';
+      ctx.fillText('Press Enter', apolloX, GROUND_Y - 8);
+      ctx.textAlign = 'left';
+    }
+  }
+
   // Game completion area at end of level
   if (player.x > ww - 300) {
     ctx.fillStyle = '#fbbf24';
@@ -7412,6 +7463,365 @@ function drawTopGolfInterior(cam, W, H) {
   ctx.fillStyle = '#fbbf24';
   ctx.font = 'bold 12px system-ui';
   ctx.fillText('Golf Score: ' + golfScore, cx, cy + 110);
+
+  ctx.textAlign = 'left';
+}
+
+// Small American flag helper (used in Apollo mission)
+function drawAmericanFlagSmall(x, y, w, h) {
+  // Red and white stripes
+  const stripeH = h / 7;
+  for (let i = 0; i < 7; i++) {
+    ctx.fillStyle = i % 2 === 0 ? '#b91c1c' : '#ffffff';
+    ctx.fillRect(x, y + i * stripeH, w, stripeH + 0.5);
+  }
+  // Blue canton
+  const cantonW = w * 0.4;
+  const cantonH = h * 0.57;
+  ctx.fillStyle = '#1e3a5f';
+  ctx.fillRect(x, y, cantonW, cantonH);
+  // Stars (simplified — small dots)
+  ctx.fillStyle = '#ffffff';
+  for (let row = 0; row < 3; row++) {
+    for (let col = 0; col < 3; col++) {
+      const sx = x + 3 + col * (cantonW - 6) / 2;
+      const sy = y + 3 + row * (cantonH - 6) / 2;
+      ctx.fillRect(sx, sy, 1.5, 1.5);
+    }
+  }
+}
+
+// Apollo Mission Scene
+function drawApolloMissionScene(cam, W, H) {
+  const cx = cam + W / 2;
+  const cy = H / 2;
+  const am = apolloMission;
+
+  // Dark lunar backdrop
+  ctx.fillStyle = '#030712';
+  ctx.fillRect(cx - 260, cy - 160, 520, 340);
+
+  // Stars in background
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  for (let i = 0; i < 30; i++) {
+    const sx = cx - 250 + (i * 17.3) % 500;
+    const sy = cy - 150 + (i * 13.7) % 150;
+    ctx.beginPath();
+    ctx.arc(sx, sy, 0.6 + (i % 3) * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Earth in background (small)
+  ctx.fillStyle = '#2563eb';
+  ctx.beginPath();
+  ctx.arc(cx + 180, cy - 120, 18, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#22c55e';
+  ctx.beginPath();
+  ctx.arc(cx + 174, cy - 123, 7, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Lunar ground
+  ctx.fillStyle = '#6b7280';
+  ctx.fillRect(cx - 260, cy + 60, 520, 120);
+  ctx.fillStyle = '#9ca3af';
+  ctx.fillRect(cx - 260, cy + 60, 520, 3);
+  // Small craters on ground
+  ctx.fillStyle = '#4b5563';
+  ctx.beginPath();
+  ctx.ellipse(cx - 100, cy + 70, 15, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(cx + 120, cy + 80, 20, 5, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Lunar module silhouette in background
+  const lmX = cx + 160;
+  const lmY = cy + 20;
+  ctx.fillStyle = '#374151';
+  // Body
+  ctx.fillRect(lmX - 12, lmY, 24, 20);
+  // Upper stage
+  ctx.fillRect(lmX - 8, lmY - 12, 16, 14);
+  // Antenna
+  ctx.fillRect(lmX - 1, lmY - 20, 2, 10);
+  // Legs
+  ctx.strokeStyle = '#374151';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(lmX - 12, lmY + 18);
+  ctx.lineTo(lmX - 22, cy + 60);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(lmX + 12, lmY + 18);
+  ctx.lineTo(lmX + 22, cy + 60);
+  ctx.stroke();
+  // Foot pads
+  ctx.fillStyle = '#374151';
+  ctx.fillRect(lmX - 26, cy + 57, 10, 3);
+  ctx.fillRect(lmX + 16, cy + 57, 10, 3);
+
+  // Title for current step
+  const stepNames = ['First Step', 'Plant the Flag', 'Collect Moon Rocks', 'Salute'];
+  const stepQuotes = [
+    '"That\'s one small step for man, one giant leap for mankind." \u2014 Neil Armstrong',
+    '"We came in peace for all mankind." \u2014 Plaque on lunar module',
+    '"I believe this nation should commit itself..." \u2014 JFK',
+    '"Magnificent desolation." \u2014 Buzz Aldrin',
+  ];
+
+  if (am.celebrateTimer > 0) {
+    // Celebration screen
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 22px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Apollo Mission Complete!', cx, cy - 80);
+
+    // Big American flag
+    drawAmericanFlagSmall(cx - 40, cy - 60, 80, 50);
+
+    // Flag pole
+    ctx.fillStyle = '#d1d5db';
+    ctx.fillRect(cx - 42, cy - 60, 3, 120);
+
+    // Fireworks / sparkles
+    const sparkleCount = 12;
+    for (let i = 0; i < sparkleCount; i++) {
+      const angle = (i / sparkleCount) * Math.PI * 2 + gameTime / 500;
+      const dist = 80 + Math.sin(gameTime / 300 + i) * 20;
+      const sx = cx + Math.cos(angle) * dist;
+      const sy = cy - 20 + Math.sin(angle) * dist * 0.5;
+      ctx.fillStyle = ['#fbbf24', '#ef4444', '#3b82f6', '#22c55e', '#a855f7'][i % 5];
+      ctx.beginPath();
+      ctx.arc(sx, sy, 2 + Math.sin(gameTime / 200 + i) * 1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '14px "Segoe UI", system-ui, sans-serif';
+    ctx.fillText('+300 Bonus Points!', cx, cy + 100);
+    ctx.textAlign = 'left';
+    return;
+  }
+
+  if (am.step >= 4) return; // shouldn't happen, but safety check
+
+  // Step title
+  ctx.fillStyle = '#fbbf24';
+  ctx.font = 'bold 18px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Step ' + (am.step + 1) + ': ' + stepNames[am.step], cx, cy - 130);
+
+  // Step progress indicator (dots)
+  for (let i = 0; i < 4; i++) {
+    ctx.fillStyle = i < am.step ? '#22c55e' : (i === am.step ? '#fbbf24' : '#4b5563');
+    ctx.beginPath();
+    ctx.arc(cx - 30 + i * 20, cy - 110, 5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Quote at bottom
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = 'italic 11px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(stepQuotes[am.step], cx, cy + 150);
+
+  // Draw step-specific scene
+  if (am.step === 0) {
+    // "First Step" — boot descending
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '12px system-ui';
+    ctx.fillText('Press Space when the boot reaches the surface!', cx, cy - 90);
+
+    // Ground surface marker (sweet spot zone)
+    ctx.fillStyle = 'rgba(34, 197, 94, 0.2)';
+    ctx.fillRect(cx - 30, cy + 25, 60, 20);
+    ctx.strokeStyle = '#22c55e';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.strokeRect(cx - 30, cy + 25, 60, 20);
+    ctx.setLineDash([]);
+
+    // Boot descending
+    const bootDrawY = cy - 60 + am.bootY;
+    // Boot shape
+    ctx.fillStyle = '#d1d5db';
+    ctx.fillRect(cx - 8, bootDrawY - 20, 16, 22);
+    ctx.fillStyle = '#e2e8f0';
+    ctx.fillRect(cx - 10, bootDrawY, 20, 8);
+    // Sole treads
+    ctx.fillStyle = '#9ca3af';
+    ctx.fillRect(cx - 9, bootDrawY + 6, 4, 2);
+    ctx.fillRect(cx - 3, bootDrawY + 6, 4, 2);
+    ctx.fillRect(cx + 3, bootDrawY + 6, 4, 2);
+
+    // Instructions
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 12px system-ui';
+    ctx.fillText('SPACE', cx, cy + 85);
+  } else if (am.step === 1) {
+    // "Plant the Flag" — progress bar
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '12px system-ui';
+    ctx.fillText('Hold Space to drive the flag into the ground!', cx, cy - 90);
+
+    // Flag being planted (rises as progress increases)
+    const flagH = am.progress;
+    const flagX = cx;
+    const flagBaseY = cy + 58;
+
+    // Pole (grows upward with progress)
+    const poleHeight = flagH * 0.6;
+    ctx.fillStyle = '#d1d5db';
+    ctx.fillRect(flagX - 1, flagBaseY - poleHeight, 3, poleHeight);
+
+    // Flag appears once pole is tall enough
+    if (poleHeight > 20) {
+      drawAmericanFlagSmall(flagX + 2, flagBaseY - poleHeight, 28, 18);
+    }
+
+    // Progress bar
+    ctx.fillStyle = '#1f2937';
+    ctx.fillRect(cx - 80, cy + 75, 160, 12);
+    ctx.fillStyle = '#3b82f6';
+    ctx.fillRect(cx - 80, cy + 75, 160 * (am.progress / 100), 12);
+    ctx.strokeStyle = '#60a5fa';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(cx - 80, cy + 75, 160, 12);
+
+    // Label
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '10px system-ui';
+    ctx.fillText(Math.floor(am.progress) + '%', cx, cy + 100);
+
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 12px system-ui';
+    ctx.fillText('Hold SPACE', cx, cy + 120);
+  } else if (am.step === 2) {
+    // "Collect Moon Rocks" — move left/right
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '12px system-ui';
+    ctx.fillText('Move left/right to collect moon rocks!', cx, cy - 90);
+
+    // Timer
+    const timeLeft = Math.ceil(am.stepTimer / 1000);
+    ctx.fillStyle = timeLeft <= 5 ? '#ef4444' : '#fbbf24';
+    ctx.font = 'bold 16px system-ui';
+    ctx.fillText('Time: ' + timeLeft + 's', cx, cy - 70);
+
+    // Rocks collected
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '14px system-ui';
+    ctx.fillText('Rocks: ' + am.rocksCollected + '/5', cx, cy + 100);
+
+    // Draw rocks
+    for (let i = 0; i < am.rockPositions.length; i++) {
+      if (am.rockPositions[i] === null) continue;
+      const rx = cx + am.rockPositions[i];
+      const ry = cy + 45;
+      // Irregular rock shape
+      ctx.fillStyle = '#78716c';
+      ctx.beginPath();
+      ctx.moveTo(rx - 6, ry + 5);
+      ctx.lineTo(rx - 8, ry - 2);
+      ctx.lineTo(rx - 3, ry - 7);
+      ctx.lineTo(rx + 4, ry - 5);
+      ctx.lineTo(rx + 7, ry + 1);
+      ctx.lineTo(rx + 5, ry + 5);
+      ctx.closePath();
+      ctx.fill();
+      // Highlight
+      ctx.fillStyle = '#9ca3af';
+      ctx.beginPath();
+      ctx.arc(rx - 1, ry - 3, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Player astronaut indicator
+    const pax = cx + am.rockPlayerX;
+    const pay = cy + 30;
+    // Simple astronaut (helmet + body)
+    ctx.fillStyle = '#e2e8f0';
+    ctx.beginPath();
+    ctx.arc(pax, pay - 8, 6, 0, Math.PI * 2);
+    ctx.fill();
+    // Visor
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath();
+    ctx.arc(pax + 2, pay - 8, 3, 0, Math.PI * 2);
+    ctx.fill();
+    // Body
+    ctx.fillStyle = '#d1d5db';
+    ctx.fillRect(pax - 5, pay - 2, 10, 12);
+    // Legs
+    ctx.fillRect(pax - 5, pay + 10, 4, 6);
+    ctx.fillRect(pax + 1, pay + 10, 4, 6);
+
+    // Collection radius hint
+    ctx.strokeStyle = 'rgba(251, 191, 36, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(pax, pay + 5, 20, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 12px system-ui';
+    ctx.fillText('\u2190 \u2192 Arrow Keys', cx, cy + 120);
+  } else if (am.step === 3) {
+    // "Salute" — press S
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '12px system-ui';
+    ctx.fillText('Salute the flag to complete the mission!', cx, cy - 90);
+
+    // Planted American flag
+    ctx.fillStyle = '#d1d5db';
+    ctx.fillRect(cx - 40, cy - 40, 3, 100);
+    drawAmericanFlagSmall(cx - 37, cy - 40, 40, 25);
+
+    // Astronaut standing at attention
+    const astX = cx + 40;
+    const astY = cy + 20;
+    // Helmet
+    ctx.fillStyle = '#e2e8f0';
+    ctx.beginPath();
+    ctx.arc(astX, astY - 20, 10, 0, Math.PI * 2);
+    ctx.fill();
+    // Visor
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath();
+    ctx.arc(astX - 3, astY - 20, 5, 0, Math.PI * 2);
+    ctx.fill();
+    // Body
+    ctx.fillStyle = '#d1d5db';
+    ctx.fillRect(astX - 8, astY - 10, 16, 24);
+    // Legs
+    ctx.fillRect(astX - 8, astY + 14, 6, 12);
+    ctx.fillRect(astX + 2, astY + 14, 6, 12);
+    // Right arm (saluting pose hint — raised)
+    ctx.fillStyle = '#d1d5db';
+    ctx.save();
+    ctx.translate(astX + 8, astY - 6);
+    ctx.rotate(-0.8);
+    ctx.fillRect(0, -2, 14, 4);
+    ctx.restore();
+    // Left arm down
+    ctx.fillRect(astX - 12, astY - 4, 4, 12);
+
+    // Boot prints on ground
+    ctx.fillStyle = '#4b5563';
+    for (let i = 0; i < 4; i++) {
+      ctx.fillRect(cx - 60 + i * 30, cy + 62, 8, 3);
+    }
+
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 16px system-ui';
+    ctx.fillText('Press S to Salute!', cx, cy + 100);
+  }
+
+  // Escape hint
+  ctx.fillStyle = '#64748b';
+  ctx.font = '10px system-ui';
+  ctx.fillText('Esc to exit', cx, cy + 165);
 
   ctx.textAlign = 'left';
 }

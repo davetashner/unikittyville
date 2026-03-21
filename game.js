@@ -75,6 +75,8 @@ const Scene = {
   THE_MET: 'theMet',
   NASA_MUSEUM: 'nasaMuseum',
   TELEGRAM: 'telegram',
+
+  APOLLO_MISSION: 'apolloMission',
 };
 let currentScene = null;
 
@@ -382,6 +384,20 @@ let golfAngle = Math.PI / 4;
 let golfScore = 0;
 let golfPower = 0;
 let golfCharging = false;
+
+// Apollo Mission minigame state
+let apolloMission = {
+  active: false,
+  step: 0,        // 0-3: first step, plant flag, collect rocks, salute
+  progress: 0,    // generic progress for current step
+  rocksCollected: 0,
+  rockPositions: [],  // x positions of rocks to collect
+  rockPlayerX: 0,     // player x within rock collection scene
+  bootY: 0,           // boot descent position for step 1
+  complete: false,
+  celebrateTimer: 0,
+  stepTimer: 0,       // timing for step 1 press-at-right-moment
+};
 
 // Space flight alien collection — persists to Moon level (defined in level 12 section)
 
@@ -845,6 +861,11 @@ function completeTransition() {
   golfScore = 0;
   golfPower = 0;
   golfCharging = false;
+  apolloMission = {
+    active: false, step: 0, progress: 0, rocksCollected: 0,
+    rockPositions: [], rockPlayerX: 0, bootY: 0, complete: false,
+    celebrateTimer: 0, stepTimer: 0,
+  };
   // Stop any looping SFX from previous level
   stopLoopSfx('sfxSailWind');
   stopLoopSfx('sfxWaterLapping');
@@ -3156,6 +3177,25 @@ function update(dt) {
       golfAngle = Math.PI / 4;
     }
 
+    // Apollo Landing Site entry
+    if (Math.abs(player.x - APOLLO_SITE_POS.x) < BUILDING_RANGE && keys['Enter'] && currentScene === null && !apolloMission.complete) {
+      keys['Enter'] = false;
+      currentScene = Scene.APOLLO_MISSION;
+      apolloMission.active = true;
+      apolloMission.step = 0;
+      apolloMission.progress = 0;
+      apolloMission.rocksCollected = 0;
+      apolloMission.bootY = 0;
+      apolloMission.stepTimer = 0;
+      apolloMission.celebrateTimer = 0;
+      // Generate 5 random rock positions spread across the scene
+      apolloMission.rockPositions = [];
+      for (let i = 0; i < 5; i++) {
+        apolloMission.rockPositions.push(-150 + i * 75 + Math.random() * 30);
+      }
+      apolloMission.rockPlayerX = 0;
+    }
+
     // Game completion at end of level
     if (player.x > level13Moon.worldW - 200 && keys['Enter']) {
       keys['Enter'] = false;
@@ -3335,6 +3375,107 @@ function update(dt) {
     if (keys['Enter'] && !golfBall.active) {
       keys['Enter'] = false;
       currentScene = null;
+    }
+  }
+
+  // Apollo Mission minigame
+  if (currentScene === Scene.APOLLO_MISSION) {
+    const am = apolloMission;
+
+    if (am.celebrateTimer > 0) {
+      // Celebration phase after completing all 4 steps
+      am.celebrateTimer -= 16;
+      if (am.celebrateTimer <= 0) {
+        currentScene = null;
+        am.active = false;
+        am.complete = true;
+      }
+    } else if (am.step === 0) {
+      // Step 1: "First Step" — boot descends, press Space at the right moment
+      am.bootY += 0.8; // boot descends slowly
+      am.stepTimer += 16;
+      // Sweet spot: bootY between 70 and 90 (near the ground)
+      if (keys['Space']) {
+        keys['Space'] = false;
+        if (am.bootY >= 65 && am.bootY <= 95) {
+          // Perfect timing!
+          addPopup(player.x, player.y - 30, 'Perfect step!', '#fbbf24');
+          am.step = 1;
+          am.progress = 0;
+        } else {
+          // Missed — reset boot
+          addPopup(player.x, player.y - 30, 'Too early! Try again', '#ef4444');
+          am.bootY = 0;
+          am.stepTimer = 0;
+        }
+      }
+      // If boot goes past the zone, reset
+      if (am.bootY > 110) {
+        am.bootY = 0;
+        am.stepTimer = 0;
+      }
+    } else if (am.step === 1) {
+      // Step 2: "Plant the Flag" — hold Space to drive flag into ground
+      if (keys['Space']) {
+        am.progress = Math.min(100, am.progress + 1.2);
+      } else {
+        am.progress = Math.max(0, am.progress - 0.3);
+      }
+      if (am.progress >= 100) {
+        addPopup(player.x, player.y - 30, 'Flag planted!', '#fbbf24');
+        am.step = 2;
+        am.progress = 0;
+        am.rocksCollected = 0;
+        am.rockPlayerX = 0;
+        am.stepTimer = 15000; // 15 seconds timer
+      }
+    } else if (am.step === 2) {
+      // Step 3: "Collect Moon Rocks" — move left/right to collect 5 rocks in 15s
+      am.stepTimer -= 16;
+      if (keys['ArrowLeft']) am.rockPlayerX = Math.max(-180, am.rockPlayerX - 4);
+      if (keys['ArrowRight']) am.rockPlayerX = Math.min(180, am.rockPlayerX + 4);
+      // Check collection
+      for (let i = 0; i < am.rockPositions.length; i++) {
+        if (am.rockPositions[i] !== null && Math.abs(am.rockPlayerX - am.rockPositions[i]) < 20) {
+          am.rockPositions[i] = null;
+          am.rocksCollected++;
+          addPopup(player.x, player.y - 30, 'Rock ' + am.rocksCollected + '/5!', '#fbbf24');
+        }
+      }
+      if (am.rocksCollected >= 5) {
+        addPopup(player.x, player.y - 30, 'All rocks collected!', '#22c55e');
+        am.step = 3;
+        am.progress = 0;
+      } else if (am.stepTimer <= 0) {
+        // Time's up — reset step
+        addPopup(player.x, player.y - 30, 'Time up! Try again', '#ef4444');
+        am.rocksCollected = 0;
+        am.rockPlayerX = 0;
+        am.stepTimer = 15000;
+        for (let i = 0; i < 5; i++) {
+          am.rockPositions[i] = -150 + i * 75 + Math.random() * 30;
+        }
+      }
+    } else if (am.step === 3) {
+      // Step 4: "Salute" — press S to salute the flag
+      if (keys['KeyS']) {
+        keys['KeyS'] = false;
+        // All 4 steps complete!
+        am.step = 4;
+        score += 300;
+        addPopup(player.x, player.y - 40, '+300 Apollo Mission Complete!', '#fbbf24');
+        playChaChing();
+        am.celebrateTimer = 3000; // 3 second celebration
+      }
+    }
+
+    // Exit with Escape (abort mission)
+    if (keys['Escape']) {
+      keys['Escape'] = false;
+      currentScene = null;
+      am.active = false;
+      am.step = 0;
+      am.progress = 0;
     }
   }
 

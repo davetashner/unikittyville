@@ -2220,6 +2220,8 @@ const level13Moon = {
 const SMOOTHIE_SHOP_POS = { x: 1400, w: 120 };
 // TopGolf position
 const TOPGOLF_POS = { x: 3200, w: 140 };
+// Apollo Landing Site — near end of Moon level, before the completion zone
+const APOLLO_SITE_POS = { x: 4700, w: 100 };
 
 // Moon yarn balls on elevated platforms
 for (const p of level13Moon.platforms) {
