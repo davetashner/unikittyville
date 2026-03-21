@@ -938,10 +938,18 @@ function updatePrompt(near) {
     el.textContent = `Need ${5 - stickCount} more sticks to build a fire!`;
     el.style.display = 'block';
     setAction(null, '');
-  } else if (near.nearFirePit && campfire.lit) {
+  } else if (near.nearFirePit && campfire.lit && !near.nearGeometry) {
     el.textContent = 'Press R to roast a marshmallow!';
     el.style.display = 'block';
     setAction('KeyR', 'Roast');
+  } else if (near.nearGeometry) {
+    el.textContent = 'Press G for Campfire Geometry! Build shapes with sticks!';
+    el.style.display = 'block';
+    setAction('KeyG', 'Geometry');
+  } else if (geometryActive) {
+    el.textContent = 'Arrows: Rotate | Space: Place stick | Esc: Exit';
+    el.style.display = 'block';
+    setAction(null, '');
   } else if (near.nearHammock) {
     el.textContent = 'Press N to nap in the hammock!';
     el.style.display = 'block';

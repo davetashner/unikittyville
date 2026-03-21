@@ -10,7 +10,7 @@ const DAY_LENGTH = 30000; // 30s full cycle
 const POINTS = {
   FISH: 10, BACON: 15, YARN: 20, PIZZA: 25, HOTDOG_COST: 10,
   GELATO: 5, HONEY: 12, TIKI: 15, COCONUT: 10, DIAMOND: 25,
-  SNOWBALL: 15, STICK: 5, CAMPFIRE_BUILD: 25, SMORE: 30,
+  SNOWBALL: 15, STICK: 5, CAMPFIRE_BUILD: 25, SMORE: 30, GEOMETRY_BONUS: 200,
   MARSHMALLOW_CHALET: 20, COCOA: 50, HAMMOCK_NAP: 20,
   BIGFOOT_MILK: 40, DIG_POOL: 15, FILL_POOL: 15, SHELL: 10,
   PEARL: 15, SCUBA_COMPLETE: 50, COOKED_FISH: 20,
@@ -979,6 +979,23 @@ let campCamperShowering = false;
 let campCamperShowerTimer = 0;
 const CAMP_CAMPER_POS = { x: 4700 };
 
+// ── Level 8: Campfire Geometry minigame ──
+let geometryActive = false;
+let geometryShapeIndex = 0; // 0-4 (triangle, square, pentagon, hexagon, star)
+let geometrySticks = []; // placed sticks [{x1, y1, x2, y2}]
+let geometryAngle = 0; // current stick rotation in radians
+let geometryComplete = false; // true when current shape is done
+let geometryAllComplete = false; // true when all 5 shapes completed
+let geometryCompletionTimer = 0; // timer for showing completion message
+const GEOMETRY_SHAPES = [
+  { name: 'Triangle', sides: 3, fact: 'A triangle has 3 sides and 3 angles that add up to 180 degrees!' },
+  { name: 'Square', sides: 4, fact: 'A square has 4 equal sides and 4 right angles (90 degrees each)!' },
+  { name: 'Pentagon', sides: 5, fact: 'A pentagon has 5 sides. The Pentagon building in Washington DC has this shape!' },
+  { name: 'Hexagon', sides: 6, fact: 'Hexagons are found in beehives! Bees are natural geometers!' },
+  { name: 'Star', sides: 5, fact: 'A five-pointed star is made of 5 triangles around a pentagon!', isStar: true },
+];
+const GEOMETRY_COMPLETION_DISPLAY = 3000; // ms to show fact before advancing
+
 // ── Level 8: Africa Safari ──
 let fruitCount = 0;
 let safariPhotoCount = 0;
@@ -1915,6 +1932,13 @@ function update(dt) {
     return;
   }
 
+  // Geometry minigame update (overlay — blocks normal movement)
+  if (geometryActive) {
+    updateGeometryMinigame(dt);
+    hud.score.textContent = score;
+    return;
+  }
+
   // Movement
   player.vx = 0;
   const effectiveMoveSpeed = currentLevel === 13 ? MOON_MOVE_SPEED : MOVE_SPEED;
@@ -2519,6 +2543,7 @@ function update(dt) {
   let nearWaterPump = false;
   let nearPool = false;
   let nearCampCamper = false;
+  let nearGeometry = false;
   if (currentLevel === 8) {
     // Stick collection
     for (let i = 0; i < STICK_POSITIONS.length; i++) {
@@ -2553,6 +2578,17 @@ function update(dt) {
         roasting.active = true;
         roasting.progress = 0;
         roasting.done = false;
+      }
+      // Geometry minigame — press G near fire pit with 5+ sticks
+      if (stickCount >= 5 && !geometryActive && !geometryAllComplete) nearGeometry = true;
+      if (nearGeometry && keys['KeyG']) {
+        keys['KeyG'] = false;
+        geometryActive = true;
+        geometryShapeIndex = 0;
+        geometrySticks = [];
+        geometryAngle = 0;
+        geometryComplete = false;
+        geometryCompletionTimer = 0;
       }
     }
     // Roasting progress
@@ -3857,7 +3893,7 @@ function update(dt) {
     nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato,
     nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf, nearAirport,
     nearChalet, nearTrain, nearNpc, nearStick, nearFirePit, nearHammock,
-    nearBigfoot, nearDigSite, nearWaterPump, nearPool, nearCampCamper,
+    nearBigfoot, nearDigSite, nearWaterPump, nearPool, nearCampCamper, nearGeometry,
     nearSailboat, nearDiveSpot, nearBaobab, nearCheetah, nearSafariJeep,
     nearWateringHole, nearElephant, nearHospital,
     nearFao, nearEmpire, nearThirtyRock, nearGrandCentral, nearMet
@@ -3882,6 +3918,103 @@ function getGroundLevel(x) {
 
 function addPopup(x, y, text, color) {
   popups.push({ x, y, text, color, life: TIMING.POPUP_LIFE });
+}
+
+// ── Campfire Geometry Minigame ──
+function getGeometryTargetEdges(shapeIndex) {
+  const shape = GEOMETRY_SHAPES[shapeIndex];
+  const cx = canvas.width / 2;
+  const cy = canvas.height / 2 - 20;
+  const radius = 80;
+  const edges = [];
+  if (shape.isStar) {
+    // 5-pointed star: alternate outer/inner vertices
+    const outerR = radius;
+    const innerR = radius * 0.38;
+    const points = [];
+    for (let i = 0; i < 10; i++) {
+      const angle = -Math.PI / 2 + (i / 10) * Math.PI * 2;
+      const r = i % 2 === 0 ? outerR : innerR;
+      points.push({ x: cx + Math.cos(angle) * r, y: cy + Math.sin(angle) * r });
+    }
+    for (let i = 0; i < 10; i++) {
+      edges.push({ x1: points[i].x, y1: points[i].y, x2: points[(i + 1) % 10].x, y2: points[(i + 1) % 10].y });
+    }
+  } else {
+    const n = shape.sides;
+    const points = [];
+    for (let i = 0; i < n; i++) {
+      const angle = -Math.PI / 2 + (i / n) * Math.PI * 2;
+      points.push({ x: cx + Math.cos(angle) * radius, y: cy + Math.sin(angle) * radius });
+    }
+    for (let i = 0; i < n; i++) {
+      edges.push({ x1: points[i].x, y1: points[i].y, x2: points[(i + 1) % n].x, y2: points[(i + 1) % n].y });
+    }
+  }
+  return edges;
+}
+
+function updateGeometryMinigame(dt) {
+  if (geometryComplete) {
+    geometryCompletionTimer += dt;
+    if (geometryCompletionTimer >= GEOMETRY_COMPLETION_DISPLAY) {
+      geometryComplete = false;
+      geometryCompletionTimer = 0;
+      geometryShapeIndex++;
+      geometrySticks = [];
+      geometryAngle = 0;
+      if (geometryShapeIndex >= GEOMETRY_SHAPES.length) {
+        // All shapes completed!
+        geometryActive = false;
+        geometryAllComplete = true;
+        score += POINTS.GEOMETRY_BONUS;
+        addPopup(player.x, player.y - 40, '+' + POINTS.GEOMETRY_BONUS + ' Geometry Master!', '#a855f7');
+        playChaChing();
+      }
+    }
+    return;
+  }
+
+  // Rotate current stick with left/right arrows
+  if (keys['ArrowLeft']) { geometryAngle -= 0.05; }
+  if (keys['ArrowRight']) { geometryAngle += 0.05; }
+
+  // Place stick with Space
+  if (keys['Space']) {
+    keys['Space'] = false;
+    const edges = getGeometryTargetEdges(geometryShapeIndex);
+    const nextEdgeIndex = geometrySticks.length;
+    if (nextEdgeIndex < edges.length) {
+      // Snap to target position
+      const target = edges[nextEdgeIndex];
+      // Check if the player's angle is close enough to the target edge angle
+      const targetAngle = Math.atan2(target.y2 - target.y1, target.x2 - target.x1);
+      let angleDiff = geometryAngle - targetAngle;
+      // Normalize to [-PI, PI]
+      while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+      while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+      // Accept if within ~45 degrees
+      if (Math.abs(angleDiff) < Math.PI / 4) {
+        geometrySticks.push({ x1: target.x1, y1: target.y1, x2: target.x2, y2: target.y2 });
+        playChaChing();
+        // Check if shape is complete
+        if (geometrySticks.length >= edges.length) {
+          geometryComplete = true;
+          geometryCompletionTimer = 0;
+          score += 25;
+          addPopup(player.x, player.y - 40, '+25 ' + GEOMETRY_SHAPES[geometryShapeIndex].name + '!', '#a855f7');
+        }
+      } else {
+        addPopup(player.x, player.y - 40, 'Rotate closer to the guide!', '#f87171');
+      }
+    }
+  }
+
+  // Exit geometry mode with Escape
+  if (keys['Escape']) {
+    keys['Escape'] = false;
+    geometryActive = false;
+  }
 }
 
 function updatePizzaMinigame(dt) {
