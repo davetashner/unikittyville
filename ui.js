@@ -5,21 +5,26 @@ function resize() {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
 
-  // Determine available space (minimal padding on mobile, more on desktop)
+  // Determine available space — account for safe area insets on mobile
   const isMobile = ('ontouchstart' in window) || vw <= 1024;
   const pad = isMobile ? 0 : 20;
-  const availW = vw - pad;
-  const availH = vh - pad;
 
-  // Calculate largest 16:9 rectangle that fits
+  // On mobile, subtract safe area insets (notch, home indicator) from available space
+  const safeTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sat') || '0');
+  const safeBottom = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sab') || '0');
+  const safeLeft = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sal') || '0');
+  const safeRight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sar') || '0');
+
+  const availW = vw - pad - safeLeft - safeRight;
+  const availH = vh - pad - safeTop - safeBottom;
+
+  // Calculate largest 16:9 rectangle that fits — no max cap on mobile
   let w, h;
   if (availW / availH > ASPECT) {
-    // Viewport is wider than 16:9 — height-constrained
-    h = Math.min(availH, MAX_H);
+    h = isMobile ? availH : Math.min(availH, MAX_H);
     w = Math.round(h * ASPECT);
   } else {
-    // Viewport is taller than 16:9 — width-constrained
-    w = Math.min(availW, MAX_W);
+    w = isMobile ? availW : Math.min(availW, MAX_W);
     h = Math.round(w / ASPECT);
   }
 
@@ -68,8 +73,10 @@ window.addEventListener('keyup', e => { keys[e.code] = false; });
       else keys[keyUp] = false;
     }, { passive: false });
   }
+  bindTouch('touch-dpad-up', 'ArrowUp', 'ArrowUp');
   bindTouch('touch-dpad-left', 'ArrowLeft', 'ArrowLeft');
   bindTouch('touch-dpad-right', 'ArrowRight', 'ArrowRight');
+  bindTouch('touch-dpad-down', 'ArrowDown', 'ArrowDown');
   bindTouch('touch-jump', 'Space', 'Space');
   bindTouch('touch-action',
     function() { if (currentActionKey) keys[currentActionKey] = true; },
@@ -77,8 +84,7 @@ window.addEventListener('keyup', e => { keys[e.code] = false; });
   );
 })();
 
-// ── Mobile Fullscreen ──
-// Enter fullscreen when tapping the canvas on mobile; hide the control panel
+// ── Mobile Fullscreen + Orientation Lock ──
 if (isMobile) {
   canvas.addEventListener('touchstart', function requestFS() {
     const el = document.documentElement;
@@ -86,12 +92,15 @@ if (isMobile) {
     if (fs && !document.fullscreenElement && !document.webkitFullscreenElement) {
       fs.call(el).then(() => {
         document.getElementById('controls').style.display = 'none';
+        // Lock to landscape once in fullscreen (required order for most browsers)
+        if (screen.orientation && screen.orientation.lock) {
+          screen.orientation.lock('landscape').catch(() => {});
+        }
         setTimeout(resize, 150);
       }).catch(() => {});
     }
   }, { passive: true });
 
-  // Re-layout when exiting fullscreen
   document.addEventListener('fullscreenchange', () => setTimeout(resize, 150));
   document.addEventListener('webkitfullscreenchange', () => setTimeout(resize, 150));
 }

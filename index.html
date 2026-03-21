@@ -2,11 +2,17 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>Unikittyville</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --sat: env(safe-area-inset-top, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+    --sal: env(safe-area-inset-left, 0px);
+    --sar: env(safe-area-inset-right, 0px);
+  }
   body {
     background: #1a1a2e;
     display: flex;
@@ -107,7 +113,7 @@
   }
   #hud {
     position: fixed;
-    top: 16px;
+    top: calc(16px + var(--sat));
     left: 50%;
     transform: translateX(-50%);
     display: none;
@@ -187,7 +193,7 @@
   }
   #prompt {
     position: fixed;
-    bottom: 10px;
+    bottom: calc(10px + var(--sab));
     left: 50%;
     transform: translateX(-50%);
     display: none;
@@ -204,10 +210,10 @@
   #touch-controls {
     display: none;
     position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 80px;
+    bottom: var(--sab);
+    left: var(--sal);
+    right: var(--sar);
+    height: 140px;
     z-index: 50;
     pointer-events: none;
     user-select: none;
@@ -233,23 +239,37 @@
     opacity: 0.85;
     background: rgba(255,255,255,0.4);
   }
+  #touch-dpad-up {
+    left: 38px;
+    bottom: 72px;
+    width: 50px;
+    height: 50px;
+    font-size: 1.4rem;
+  }
   #touch-dpad-left {
-    left: 10px;
-    bottom: 12px;
-    width: 56px;
-    height: 56px;
+    left: 2px;
+    bottom: 18px;
+    width: 50px;
+    height: 50px;
     font-size: 1.4rem;
   }
   #touch-dpad-right {
-    left: 76px;
-    bottom: 12px;
-    width: 56px;
-    height: 56px;
+    left: 74px;
+    bottom: 18px;
+    width: 50px;
+    height: 50px;
+    font-size: 1.4rem;
+  }
+  #touch-dpad-down {
+    left: 38px;
+    bottom: 4px;
+    width: 50px;
+    height: 50px;
     font-size: 1.4rem;
   }
   #touch-jump {
     right: 10px;
-    bottom: 12px;
+    bottom: 18px;
     width: 60px;
     height: 60px;
     border-radius: 50%;
@@ -259,7 +279,7 @@
   }
   #touch-action {
     right: 82px;
-    bottom: 16px;
+    bottom: 22px;
     width: 52px;
     height: 52px;
     min-width: 48px;
@@ -274,7 +294,7 @@
     outline-offset: 2px;
   }
   .touch-active #prompt {
-    bottom: 6px;
+    bottom: calc(145px + var(--sab));
   }
 
   /* ── Mobile-friendly HUD and menus ── */
@@ -307,17 +327,17 @@
 
     /* HUD */
     #hud {
-      top: 8px;
-      font-size: 0.7rem;
-      padding: 4px 10px;
-      gap: 8px;
+      top: calc(4px + var(--sat));
+      font-size: 0.65rem;
+      padding: 3px 8px;
+      gap: 6px;
       border-radius: 14px;
       max-width: 95vw;
       flex-wrap: wrap;
       justify-content: center;
     }
     #hud span {
-      gap: 3px;
+      gap: 2px;
     }
 
     /* Prompt */
@@ -458,8 +478,10 @@
 </div>
 <div id="prompt"></div>
 <div id="touch-controls">
+  <div id="touch-dpad-up" class="touch-btn">&uarr;</div>
   <div id="touch-dpad-left" class="touch-btn">&larr;</div>
   <div id="touch-dpad-right" class="touch-btn">&rarr;</div>
+  <div id="touch-dpad-down" class="touch-btn">&darr;</div>
   <div id="touch-jump" class="touch-btn">Jump</div>
   <div id="touch-action" class="touch-btn" style="display:none;">Action</div>
 </div>
