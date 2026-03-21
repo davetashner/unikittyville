@@ -421,8 +421,6 @@ let scubaCollectibles = [];
 let scubaPearlCount = 0;
 // Level select
 let levelSelectUnlocked = true; // permanently unlocked for dev/debug
-let gameCompleted = false;
-let showLevelSelect = false;
 const LEVEL_NAMES = ['Meadow', 'Sledding', 'NYC', 'Rome', 'Hawaii', 'Oriental', 'Alps', 'Campground', 'Africa Safari'];
 const TOTAL_LEVELS = 9;
 
