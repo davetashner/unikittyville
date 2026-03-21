@@ -6885,9 +6885,9 @@ function drawCapeWorld(W, H, cam, cycle, isNight) {
     ctx.fillStyle = '#475569';
     ctx.fillRect(rx - 10, GROUND_Y - 40, 20, 10);
 
-    // Fuel gauge if fueling
-    if (capeFueling > 0 && capeFueling < 3000) {
-      const pct = capeFueling / 3000;
+    // Fuel gauge showing calc progress
+    if (fuelCalcActive || (fuelCalcCorrect > 0 && !capeFueled)) {
+      const pct = fuelCalcCorrect / 3;
       ctx.fillStyle = '#1f2937';
       ctx.fillRect(rx - 25, GROUND_Y - 250, 50, 8);
       ctx.fillStyle = '#22c55e';
@@ -6895,7 +6895,7 @@ function drawCapeWorld(W, H, cam, cycle, isNight) {
       ctx.fillStyle = '#fff';
       ctx.font = '10px system-ui';
       ctx.textAlign = 'center';
-      ctx.fillText('Fueling...', rx, GROUND_Y - 255);
+      ctx.fillText('Fuel: ' + Math.round(pct * 100) + '%', rx, GROUND_Y - 255);
       ctx.textAlign = 'left';
     }
 
@@ -7009,11 +7009,11 @@ function drawCapeWorld(W, H, cam, cycle, isNight) {
     ctx.textAlign = 'left';
   }
 
-  if (Math.abs(px - ROCKET_POS.x) < BUILDING_RANGE && !capeFueled) {
+  if (Math.abs(px - ROCKET_POS.x) < BUILDING_RANGE && !capeFueled && !fuelCalcActive) {
     ctx.fillStyle = '#fbbf24';
     ctx.font = 'bold 14px system-ui';
     ctx.textAlign = 'center';
-    ctx.fillText('Hold P to Fuel Rocket', ROCKET_POS.x, GROUND_Y - 235);
+    ctx.fillText('Press P to Calculate Fuel', ROCKET_POS.x, GROUND_Y - 235);
     ctx.textAlign = 'left';
   }
 
@@ -7022,6 +7022,88 @@ function drawCapeWorld(W, H, cam, cycle, isNight) {
     ctx.font = 'bold 14px system-ui';
     ctx.textAlign = 'center';
     ctx.fillText('Press Enter to Board Rocket!', ROCKET_POS.x, GROUND_Y - 235);
+    ctx.textAlign = 'left';
+  }
+
+  // Fuel calculator overlay
+  if (fuelCalcActive) {
+    const cx = cam + W / 2;
+    const cy = H / 2;
+    // Dark terminal backdrop
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
+    ctx.fillRect(cam + W * 0.1, H * 0.1, W * 0.8, H * 0.8);
+    // Terminal border (green glow)
+    ctx.strokeStyle = '#22c55e';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(cam + W * 0.1 + 2, H * 0.1 + 2, W * 0.8 - 4, H * 0.8 - 4);
+    // Header
+    ctx.fillStyle = '#22c55e';
+    ctx.font = 'bold 18px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('MISSION CONTROL — FUEL CALCULATOR', cx, H * 0.18);
+    // Fuel gauge bar at top
+    const gaugeX = cam + W * 0.25;
+    const gaugeW = W * 0.5;
+    const gaugeY = H * 0.22;
+    ctx.fillStyle = '#1f2937';
+    ctx.fillRect(gaugeX, gaugeY, gaugeW, 14);
+    ctx.fillStyle = '#22c55e';
+    ctx.fillRect(gaugeX, gaugeY, gaugeW * (fuelCalcCorrect / 3), 14);
+    ctx.strokeStyle = '#22c55e';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(gaugeX, gaugeY, gaugeW, 14);
+    ctx.fillStyle = '#fff';
+    ctx.font = '10px monospace';
+    ctx.fillText('FUEL: ' + Math.round(fuelCalcCorrect / 3 * 100) + '%', cx, gaugeY + 11);
+    // Problem number
+    ctx.fillStyle = '#4ade80';
+    ctx.font = '14px monospace';
+    if (fuelCalcProblem < 3) {
+      ctx.fillText('Problem ' + (fuelCalcProblem + 1) + ' of 3', cx, H * 0.32);
+    }
+    // Show current problem or completion message
+    if (fuelCalcCorrect >= 3) {
+      ctx.fillStyle = '#22c55e';
+      ctx.font = 'bold 22px monospace';
+      ctx.fillText('ALL SYSTEMS GO!', cx, cy);
+      ctx.font = '14px monospace';
+      ctx.fillText('Fuel tanks are full!', cx, cy + 30);
+    } else if (fuelCalcProblem < 3) {
+      // Draw the question text (multi-line)
+      const problem = FUEL_CALC_PROBLEMS[fuelCalcProblem];
+      const lines = problem.question.split('\n');
+      ctx.fillStyle = '#4ade80';
+      ctx.font = '16px monospace';
+      lines.forEach((line, i) => {
+        ctx.fillText(line, cx, H * 0.38 + i * 24);
+      });
+      // Input field
+      const inputY = H * 0.38 + lines.length * 24 + 20;
+      ctx.fillStyle = '#0f1a0f';
+      ctx.fillRect(cx - 80, inputY, 160, 32);
+      ctx.strokeStyle = '#22c55e';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(cx - 80, inputY, 160, 32);
+      // Typed answer with blinking cursor
+      ctx.fillStyle = '#22c55e';
+      ctx.font = 'bold 20px monospace';
+      const cursor = Math.floor(Date.now() / 500) % 2 === 0 ? '_' : '';
+      ctx.fillText('> ' + fuelCalcAnswer + cursor, cx, inputY + 22);
+      // Hint
+      ctx.fillStyle = '#6b7280';
+      ctx.font = '11px monospace';
+      ctx.fillText('Type your answer and press Enter', cx, inputY + 52);
+    }
+    // Feedback
+    if (fuelCalcFeedback === 'correct') {
+      ctx.fillStyle = '#22c55e';
+      ctx.font = 'bold 20px monospace';
+      ctx.fillText('CORRECT!', cx, H * 0.78);
+    } else if (fuelCalcFeedback === 'wrong') {
+      ctx.fillStyle = '#ef4444';
+      ctx.font = 'bold 20px monospace';
+      ctx.fillText('INCORRECT — TRY AGAIN!', cx, H * 0.78);
+    }
     ctx.textAlign = 'left';
   }
 

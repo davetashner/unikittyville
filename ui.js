@@ -312,6 +312,32 @@ window.addEventListener('keydown', e => {
       kitNameInput += e.key;
     }
   }
+  // Fuel calculator digit input — consume keys to prevent game actions
+  if (fuelCalcActive && !e.repeat) {
+    keys[e.code] = false; // block game from seeing these keys
+    if (fuelCalcFeedbackTimer <= 0) {
+      if (/^[0-9]$/.test(e.key) && fuelCalcAnswer.length < 6) {
+        fuelCalcAnswer += e.key;
+      } else if (e.key === 'Backspace') {
+        fuelCalcAnswer = fuelCalcAnswer.slice(0, -1);
+      } else if (e.key === 'Enter' && fuelCalcAnswer.length > 0) {
+        const correctAnswer = FUEL_CALC_PROBLEMS[fuelCalcProblem].answer;
+        if (parseInt(fuelCalcAnswer) === correctAnswer) {
+          fuelCalcFeedback = 'correct';
+          fuelCalcCorrect++;
+          fuelCalcProblem++;
+          fuelCalcAnswer = '';
+          fuelCalcFeedbackTimer = 1200;
+        } else {
+          fuelCalcFeedback = 'wrong';
+          fuelCalcAnswer = '';
+          fuelCalcFeedbackTimer = 1200;
+        }
+      } else if (e.key === 'Escape') {
+        fuelCalcActive = false;
+      }
+    }
+  }
   // Telegram typing input
   if (currentScene === Scene.TELEGRAM && telegramActive && !telegramComplete && !e.repeat) {
     if (e.key.length === 1) {
@@ -1143,8 +1169,12 @@ function updatePrompt(near) {
     el.textContent = 'Press S to put on Space Suit!';
     el.style.display = 'block';
     setAction('KeyS', 'Suit');
+  } else if (currentLevel === 11 && fuelCalcActive) {
+    el.textContent = 'Type your answer and press Enter (Esc to exit)';
+    el.style.display = 'block';
+    setAction('Enter', 'Submit');
   } else if (currentLevel === 11 && Math.abs(player.x - ROCKET_POS.x) < BUILDING_RANGE && !capeFueled) {
-    el.textContent = 'Hold P to fuel the rocket!';
+    el.textContent = 'Press P to calculate rocket fuel!';
     el.style.display = 'block';
     setAction('KeyP', 'Fuel');
   } else if (currentLevel === 11 && capeFueled && capeSpaceSuit && Math.abs(player.x - ROCKET_POS.x) < BUILDING_RANGE && !capeLaunching) {
