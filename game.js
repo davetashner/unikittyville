@@ -23,6 +23,7 @@ const POINTS = {
   HOTDOG_MATH: 25,
   LIGHT_SHOW_CHALLENGE: 40, LIGHT_SHOW_BONUS: 150,
   TELEGRAM_BASE: 30,
+  PANTHEON_PUZZLE: 100,
 
   BUG_CORRECT: 15, BUG_WRONG: 5,
 };
@@ -264,6 +265,23 @@ let gelatoCount = 0;
 const FOUNTAIN_POS = { x: 1500 };
 const GELATO_POSITIONS = [1000, 2800];
 const PANTHEON_POS = { x: 2600 };
+// Pantheon architecture puzzle
+let pantheonPuzzle = {
+  active: false,
+  placed: 0, // 0-5 pieces placed (bottom to top)
+  feedback: '',
+  feedbackTimer: 0,
+  animating: false,
+  animProgress: 0,
+  complete: false,
+};
+const PANTHEON_PIECES = [
+  { name: 'Foundation', fact: "The Pantheon's foundation is 24 feet thick \u2014 made of Roman concrete!" },
+  { name: 'Walls', fact: "The walls are 20 feet thick and get thinner as they go up, saving weight!" },
+  { name: 'Lower Dome', fact: "Roman concrete gets lighter higher up \u2014 they mixed in volcanic pumice!" },
+  { name: 'Upper Dome', fact: "The dome spans 142 feet \u2014 the largest unreinforced concrete dome ever built!" },
+  { name: 'Oculus', fact: "The oculus (eye) at the top is 27 feet wide \u2014 the only source of light!" },
+];
 const FIAT_POS = { x: 4500 };
 // Gelato Shop minigame state
 const GELATO_FLAVORS = [
@@ -2169,8 +2187,60 @@ function update(dt) {
   }
 
   if (currentScene === Scene.PANTHEON) {
+    // Animate piece placement
+    if (pantheonPuzzle.animating) {
+      pantheonPuzzle.animProgress += dt / 600; // ~0.6s animation
+      if (pantheonPuzzle.animProgress >= 1) {
+        pantheonPuzzle.animating = false;
+        pantheonPuzzle.animProgress = 0;
+      }
+      return;
+    }
+    // Feedback timer
+    if (pantheonPuzzle.feedbackTimer > 0) {
+      pantheonPuzzle.feedbackTimer -= dt;
+      if (pantheonPuzzle.feedbackTimer <= 0) pantheonPuzzle.feedback = '';
+    }
+    // Start puzzle with A
+    if (!pantheonPuzzle.active && keys['KeyA']) {
+      keys['KeyA'] = false;
+      pantheonPuzzle.active = true;
+      pantheonPuzzle.placed = 0;
+      pantheonPuzzle.feedback = '';
+      pantheonPuzzle.complete = false;
+    }
+    // Puzzle piece placement with 1-5
+    if (pantheonPuzzle.active && !pantheonPuzzle.complete) {
+      for (let i = 1; i <= 5; i++) {
+        if (keys['Digit' + i]) {
+          keys['Digit' + i] = false;
+          if (i === pantheonPuzzle.placed + 1) {
+            // Correct piece
+            pantheonPuzzle.animating = true;
+            pantheonPuzzle.animProgress = 0;
+            pantheonPuzzle.placed = i;
+            pantheonPuzzle.feedback = PANTHEON_PIECES[i - 1].fact;
+            pantheonPuzzle.feedbackTimer = 5000;
+            if (i === 5) {
+              // Puzzle complete
+              pantheonPuzzle.complete = true;
+              score += POINTS.PANTHEON_PUZZLE;
+              addPopup(player.x, player.y - 40, '+' + POINTS.PANTHEON_PUZZLE + ' Master Architect!', '#fbbf24');
+              playChaChing();
+            }
+          } else {
+            // Wrong order
+            pantheonPuzzle.feedback = 'Try a lower piece first!';
+            pantheonPuzzle.feedbackTimer = 2000;
+          }
+          break;
+        }
+      }
+    }
+    // Exit with Enter
     if (keys['Enter']) {
       keys['Enter'] = false;
+      pantheonPuzzle.active = false;
       currentScene = null;
       player.y = GROUND_Y;
       player.vy = 0;
@@ -2694,6 +2764,13 @@ function update(dt) {
       if (keys['Enter']) {
         keys['Enter'] = false;
         currentScene = Scene.PANTHEON;
+        pantheonPuzzle.active = false;
+        pantheonPuzzle.placed = 0;
+        pantheonPuzzle.feedback = '';
+        pantheonPuzzle.feedbackTimer = 0;
+        pantheonPuzzle.animating = false;
+        pantheonPuzzle.animProgress = 0;
+        pantheonPuzzle.complete = false;
       }
     }
     // Fiat → Hawaii

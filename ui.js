@@ -707,9 +707,17 @@ function updatePrompt(near) {
     return;
   }
   if (currentScene === Scene.PANTHEON) {
-    el.textContent = 'Inside the Pantheon... Press Enter to leave';
+    if (pantheonPuzzle.active && !pantheonPuzzle.complete) {
+      el.textContent = 'Architecture Puzzle: Press 1-5 to place pieces!';
+      setAction('Enter', 'Exit');
+    } else if (pantheonPuzzle.active && pantheonPuzzle.complete) {
+      el.textContent = 'You rebuilt the Pantheon dome! Press Enter to leave';
+      setAction('Enter', 'Exit');
+    } else {
+      el.textContent = 'Inside the Pantheon... Press A for puzzle, Enter to leave';
+      setAction('KeyA', 'Puzzle', 'Enter', 'Exit');
+    }
     el.style.display = 'block';
-    setAction('Enter', 'Exit');
     return;
   }
   if (currentScene === Scene.CAMPER) {
