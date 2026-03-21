@@ -97,7 +97,7 @@ if (isMobile) {
 }
 
 // ── Level Select ──
-const levelColors = ['#86efac','#bae6fd','#fca5a5','#fde68a','#38bdf8','#67e8f9','#ddd6fe','#bbf7d0'];
+const levelColors = ['#86efac','#bae6fd','#fca5a5','#fde68a','#38bdf8','#67e8f9','#ddd6fe','#bbf7d0','#f59e0b'];
 
 function buildLevelGrid() {
   const grid = document.getElementById('levelGrid');
@@ -207,7 +207,7 @@ function setAction(key, label) {
   }
 }
 
-function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf, nearAirport, nearChalet, nearTrain, nearNpc, nearStick, nearFirePit, nearHammock, nearBigfoot, nearDigSite, nearWaterPump, nearPool, nearCampCamper, nearSailboat, nearDiveSpot) {
+function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf, nearAirport, nearChalet, nearTrain, nearNpc, nearStick, nearFirePit, nearHammock, nearBigfoot, nearDigSite, nearWaterPump, nearPool, nearCampCamper, nearSailboat, nearDiveSpot, nearBaobab, nearCheetah, nearSafariJeep, nearWateringHole, nearElephant) {
   const el = document.getElementById('prompt');
   if (insideCampCamper) {
     if (campCamperSleeping) {
@@ -488,9 +488,49 @@ function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, ne
     el.style.display = 'block';
     setAction('KeyS', 'Swim');
   } else if (nearCampCamper) {
-    el.textContent = 'Press Enter to enter the camper!';
+    el.textContent = 'Press Enter to enter the camper! J: Safari jeep to Africa!';
     el.style.display = 'block';
     setAction('Enter', 'Enter');
+  } else if (swimmingInWateringHole) {
+    el.textContent = 'Splashing in the watering hole! Press S to get out';
+    el.style.display = 'block';
+    setAction('KeyS', 'Exit');
+  } else if (safariPhotography.active) {
+    el.textContent = 'Taking photo... hold steady!';
+    el.style.display = 'block';
+    setAction(null, '');
+  } else if (ridingCheetah) {
+    el.textContent = 'Riding the cheetah! G: Dismount | Yarn auto-collects nearby!';
+    el.style.display = 'block';
+    setAction('KeyG', 'Off');
+  } else if (nearBaobab) {
+    el.textContent = 'Press F to pick baobab fruit!';
+    el.style.display = 'block';
+    setAction('KeyF', 'Fruit');
+  } else if (nearCheetah && !ridingCheetah && cheetahYarnGiven < 5 && yarnCount > 0) {
+    el.textContent = `Press Y to give yarn to cheetah (${cheetahYarnGiven}/5)`;
+    el.style.display = 'block';
+    setAction('KeyY', 'Yarn');
+  } else if (nearCheetah && !ridingCheetah && cheetahYarnGiven >= 5) {
+    el.textContent = 'Press G to ride the cheetah!';
+    el.style.display = 'block';
+    setAction('KeyG', 'Ride');
+  } else if (nearCheetah && !ridingCheetah && cheetahYarnGiven < 5 && yarnCount === 0) {
+    el.textContent = `The cheetah wants yarn! (${cheetahYarnGiven}/5) Find more yarn balls!`;
+    el.style.display = 'block';
+    setAction(null, '');
+  } else if (nearWateringHole) {
+    el.textContent = 'Press S to swim in the watering hole!';
+    el.style.display = 'block';
+    setAction('KeyS', 'Swim');
+  } else if (nearElephant) {
+    el.textContent = 'Press E for elephant boost! P: Photo!';
+    el.style.display = 'block';
+    setAction('KeyE', 'Boost');
+  } else if (nearSafariJeep) {
+    el.textContent = 'End of the safari! Great adventure!';
+    el.style.display = 'block';
+    setAction(null, '');
   } else if (nearNpc) {
     el.textContent = 'Press Q to talk!';
     el.style.display = 'block';
