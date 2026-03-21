@@ -509,6 +509,10 @@ function completeTransition() {
   skiing = false;
   alpsEquipment = null;
   alpsChoosing = (levelTransition.toLevel === 7);
+  alpsScrollZ = 0;
+  alpsPlayerLane = 0;
+  alpsAirborne = false;
+  alpsAirTimer = 0;
   sledding = false;
   hammockNapping = false;
   hammockNapTimer = 0;
@@ -600,13 +604,19 @@ let levelSelectUnlocked = true; // permanently unlocked for dev/debug
 // LEVEL_NAMES and TOTAL_LEVELS are now derived from levelRegistry (defined in drawing.js)
 
 // ── Level 7: Alps ──
-// The Alps is a downhill skiing level — the kitty starts at the top-left
-// and skis right/downhill, dodging trees, jumping cornices, collecting diamonds.
+// The Alps is a first-person downhill skiing level.
+// Player sees the slope rushing toward them, dodging trees and collecting diamonds.
 let skiing = false;
 let diamondCount = 0;
-let alpsScrollX = 0;
-const ALPS_WORLD_W = 6000;
-const ALPS_SPEED = 3.5; // auto-scroll speed while skiing
+let alpsScrollZ = 0; // distance traveled down the mountain
+const ALPS_WORLD_W = 960; // minimal — the FP view doesn't use world scrolling
+const ALPS_FP_SPEED = 5; // z-units per frame (how fast slope rushes toward player)
+const ALPS_RUN_LENGTH = 3000; // total z-distance of the run
+const ALPS_LANE_SPEED = 6; // how fast player moves left/right in screen pixels
+let alpsPlayerLane = 0; // screen-space x offset from center (-200 to 200)
+let alpsAirborne = false; // true when launched off a cornice
+let alpsAirTimer = 0; // ms in the air
+const ALPS_AIR_DURATION = 1500; // ms of air time from a jump
 // Alps equipment choice
 let alpsEquipment = null; // 'skis' or 'snowboard' — null means choosing
 let alpsChoosing = false; // true when the equipment selection UI is showing
@@ -1665,25 +1675,21 @@ function update(dt) {
     }
   }
 
-  // Alps interactions (level 7)
+  // Alps interactions (level 7) — first-person downhill view
   let nearChalet = false;
   if (currentLevel === 7) {
     // Equipment selection phase
     if (alpsChoosing) {
       player.vx = 0;
-      // Press 1 or S for Skis
       if (keys['Digit1'] || keys['KeyS']) {
-        keys['Digit1'] = false;
-        keys['KeyS'] = false;
+        keys['Digit1'] = false; keys['KeyS'] = false;
         alpsEquipment = 'skis';
         alpsChoosing = false;
         skiing = true;
         addPopup(player.x, player.y - 40, 'Skis equipped!', '#60a5fa');
       }
-      // Press 2 or B for Snowboard
       if (keys['Digit2'] || keys['KeyB']) {
-        keys['Digit2'] = false;
-        keys['KeyB'] = false;
+        keys['Digit2'] = false; keys['KeyB'] = false;
         alpsEquipment = 'snowboard';
         alpsChoosing = false;
         skiing = true;
@@ -1692,52 +1698,82 @@ function update(dt) {
     }
 
     if (alpsChoosing) {
-      // Skip the rest of level 7 logic while choosing
+      // Skip game logic while choosing equipment
     } else {
-    // Auto-ski: push player right continuously
-    player.vx = Math.max(player.vx, ALPS_SPEED);
+      // Advance down the mountain
+      alpsScrollZ += ALPS_FP_SPEED;
+      player.vx = 0; // no world-space movement — it's all in the FP view
 
-    // Diamond collection
-    for (const d of level5.diamonds) {
-      if (d.collected) continue;
-      const ddx = player.x - d.x;
-      const ddy = (player.y - 20) - d.y;
-      if (ddx * ddx + ddy * ddy < 625) {
-        d.collected = true;
-        diamondCount++;
-        score += POINTS.DIAMOND;
-        addPopup(d.x, d.y - 20, '+' + POINTS.DIAMOND + ' Diamond!', '#60a5fa');
-        playChaChing();
+      // Left/right lane movement
+      const laneSpeed = alpsEquipment === 'snowboard' ? ALPS_LANE_SPEED * 1.3 : ALPS_LANE_SPEED;
+      if (keys['ArrowLeft']) alpsPlayerLane = Math.max(-200, alpsPlayerLane - laneSpeed);
+      if (keys['ArrowRight']) alpsPlayerLane = Math.min(200, alpsPlayerLane + laneSpeed);
+      // Friction — drift back toward center slightly
+      if (!keys['ArrowLeft'] && !keys['ArrowRight']) alpsPlayerLane *= 0.98;
+
+      // Jump off cornices
+      if (keys['Space'] && !alpsAirborne) {
+        // Check if near a cornice z-position
+        for (const c of level5.cornices) {
+          if (Math.abs(alpsScrollZ - c.z) < 40) {
+            alpsAirborne = true;
+            alpsAirTimer = 0;
+            player.vy = JUMP_VEL;
+            break;
+          }
+        }
       }
-    }
-
-    // Tree collision (slow down + lose points)
-    for (const tree of level5.trees) {
-      if (tree.hit) continue;
-      if (Math.abs(player.x - tree.x) < 12 && player.y > tree.y - 50 * tree.size) {
-        tree.hit = true;
-        score = Math.max(0, score - POINTS.TREE_HIT);
-        addPopup(tree.x, player.y - 40, '-' + POINTS.TREE_HIT + ' Ouch!', '#ef4444');
-        player.vx = 1; // slow down on hit
+      if (alpsAirborne) {
+        alpsAirTimer += dt;
+        if (alpsAirTimer >= ALPS_AIR_DURATION) {
+          alpsAirborne = false;
+          alpsAirTimer = 0;
+        }
       }
-    }
 
-    // Reset trees that are far behind (so they can hit again on replay)
-    for (const tree of level5.trees) {
-      if (tree.hit && player.x - tree.x > 300) tree.hit = false;
-    }
-
-    // End of run — reach the chalet at the bottom
-    if (player.x > ALPS_WORLD_W - 200) {
-      nearChalet = true;
-      player.vx = 0; // stop at the end
-      if (keys['Enter']) {
-        keys['Enter'] = false;
-        currentScene = Scene.CHALET;
-        marshmallowAngle = Math.PI / 5; // reset aim
-        crossfadeToMusic(CHALET_MUSIC_ID); // chalet music
+      // Diamond collection — check z-proximity and lane proximity
+      for (const d of level5.diamonds) {
+        if (d.collected) continue;
+        const dz = d.z - alpsScrollZ;
+        if (dz > -20 && dz < 40) {
+          const dlane = d.lane - alpsPlayerLane;
+          // Wider pickup when airborne (jumping through diamond arcs)
+          const pickupW = alpsAirborne ? 60 : 35;
+          if (Math.abs(dlane) < pickupW) {
+            d.collected = true;
+            diamondCount++;
+            score += POINTS.DIAMOND;
+            addPopup(player.x, player.y - 40, '+' + POINTS.DIAMOND + ' Diamond!', '#60a5fa');
+            playChaChing();
+          }
+        }
       }
-    }
+
+      // Tree collision — check z-proximity and lane proximity
+      for (const tree of level5.trees) {
+        if (tree.hit) continue;
+        const tz = tree.z - alpsScrollZ;
+        if (tz > -10 && tz < 20 && !alpsAirborne) {
+          const tlane = tree.lane - alpsPlayerLane;
+          if (Math.abs(tlane) < 25) {
+            tree.hit = true;
+            score = Math.max(0, score - POINTS.TREE_HIT);
+            addPopup(player.x, player.y - 40, '-' + POINTS.TREE_HIT + ' Ouch!', '#ef4444');
+          }
+        }
+      }
+
+      // End of run — reach the chalet
+      if (alpsScrollZ >= ALPS_RUN_LENGTH) {
+        nearChalet = true;
+        skiing = false;
+        if (keys['Enter']) {
+          keys['Enter'] = false;
+          currentScene = Scene.CHALET;
+          marshmallowAngle = Math.PI / 5;
+          crossfadeToMusic(CHALET_MUSIC_ID);
+        }
+      }
     } // end else (not choosing)
   }
 
