@@ -575,6 +575,7 @@ const hud = {
   controls: document.getElementById('controls'),
 };
 const hudItems = document.querySelectorAll('.hud-item');
+const ctrlItems = document.querySelectorAll('.ctrl-item');
 
 
 // ── Game Loop ──
@@ -2173,8 +2174,12 @@ function update(dt) {
   hud.smore.textContent = smoreCount;
   hud.shell.textContent = shellCount;
 
-  // Show/hide HUD items based on current level
+  // Show/hide HUD items and control hints based on current level
   for (const el of hudItems) {
+    const levels = el.dataset.levels.split(',');
+    el.style.display = levels.includes(String(currentLevel)) ? '' : 'none';
+  }
+  for (const el of ctrlItems) {
     const levels = el.dataset.levels.split(',');
     el.style.display = levels.includes(String(currentLevel)) ? '' : 'none';
   }
