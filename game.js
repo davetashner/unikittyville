@@ -6,6 +6,40 @@ const JUMP_VEL = -12;
 const MOVE_SPEED = 4;
 const DAY_LENGTH = 30000; // 30s full cycle
 
+// ── Score awards ──
+const POINTS = {
+  FISH: 10, BACON: 15, YARN: 20, PIZZA: 25, HOTDOG_COST: 10,
+  GELATO: 5, HONEY: 12, TIKI: 15, COCONUT: 10, DIAMOND: 25,
+  SNOWBALL: 15, STICK: 5, CAMPFIRE_BUILD: 25, SMORE: 30,
+  MARSHMALLOW_CHALET: 20, COCOA: 50, HAMMOCK_NAP: 20,
+  BIGFOOT_MILK: 40, DIG_POOL: 15, FILL_POOL: 15, SHELL: 10,
+  PEARL: 15, SCUBA_COMPLETE: 50, COOKED_FISH: 20,
+  CAMPER_NAP: 10, PHONE_ANSWER: 5, CAMP_PASTA: 25,
+  CAMP_SHOWER: 20, TREE_HIT: 10, SNOWMAN_HIT: 10,
+  YARN_BONUS: 100, LEPRECHAUN_GOLD: 50,
+  FRUIT: 10, ELEPHANT_BOOST: 15, RHINO_HIT: 15,
+  SAFARI_PHOTO: 30, SAFARI_PHOTO_DUP: 5, SAFARI_COLLECTION: 100,
+  CHEETAH_RIDE: 50, GIRAFFE_LIFT: 10,
+};
+
+// ── Timing durations (ms) ──
+const TIMING = {
+  COOK_READY: 3000, COOK_BURNT: 5000,
+  CAMPER_COOK_READY: 2500, CAMPER_COOK_BURNT: 4500,
+  NAP_DURATION: 3000, SHOWER_DURATION: 3000,
+  PASTA_DURATION: 3000, COCOA_DRINK: 2500,
+  ROAST_READY: 2000, ROAST_BURNT: 3500, ROAST_OVERBURN: 5000,
+  DIG_DURATION: 3000, FILL_DURATION: 2500,
+  PHONE_RING_MIN: 5000, SPEECH_BUBBLE_LIFE: 4000,
+  POPUP_LIFE: 1500, LEVEL_TRANSITION: 1500,
+  PIZZA_READY: 3000, PIZZA_BURNT: 4500, PIZZA_CHARRED: 6000,
+};
+
+// ── Interaction distances ──
+const INTERACT_RANGE = 40;  // general proximity for interactions
+const BUILDING_RANGE = 55;  // entering buildings
+const COLLECT_RADIUS_SQ = 625; // 25px radius squared for collection
+
 // Zone positions in world coords
 const POND = { x: 200, w: 400, depth: 80 };
 const GRILL = { x: 1000, w: 60 };
@@ -560,7 +594,7 @@ function update(dt) {
   // Level transition animation
   if (levelTransition.active) {
     levelTransition.timer += dt;
-    if (levelTransition.timer > 1500) {
+    if (levelTransition.timer > TIMING.LEVEL_TRANSITION) {
       completeTransition();
     }
     return;
@@ -585,11 +619,11 @@ function update(dt) {
     // Showering
     if (campCamperShowering) {
       campCamperShowerTimer += dt;
-      if (campCamperShowerTimer >= 3000) {
+      if (campCamperShowerTimer >= TIMING.SHOWER_DURATION) {
         campCamperShowering = false;
         campCamperShowerTimer = 0;
-        score += 20;
-        addPopup(player.x, player.y - 40, '+20 So fresh!', '#38bdf8');
+        score += POINTS.CAMP_SHOWER;
+        addPopup(player.x, player.y - 40, '+' + POINTS.CAMP_SHOWER + ' So fresh!', '#38bdf8');
         playChaChing();
       }
       return;
@@ -615,12 +649,12 @@ function update(dt) {
     }
     if (campCamperPasta.cooking) {
       campCamperPasta.progress += dt;
-      if (campCamperPasta.progress >= 3000) {
+      if (campCamperPasta.progress >= TIMING.PASTA_DURATION) {
         campCamperPasta.cooking = false;
         campCamperPasta.progress = 0;
         campCamperPasta.eaten++;
-        score += 25;
-        addPopup(player.x, player.y - 40, '+25 Delicious pasta!', '#fbbf24');
+        score += POINTS.CAMP_PASTA;
+        addPopup(player.x, player.y - 40, '+' + POINTS.CAMP_PASTA + ' Delicious pasta!', '#fbbf24');
         playChaChing();
       }
     }
@@ -673,11 +707,11 @@ function update(dt) {
       if (c.collected) continue;
       const dx = scubaPlayer.x - c.x;
       const dy = scubaPlayer.y - c.y;
-      if (dx * dx + dy * dy < 625) {
+      if (dx * dx + dy * dy < COLLECT_RADIUS_SQ) {
         c.collected = true;
         scubaPearlCount++;
-        score += 15;
-        addPopup(player.x, player.y - 40, '+15 ' + c.type + '!', c.color);
+        score += POINTS.PEARL;
+        addPopup(player.x, player.y - 40, '+' + POINTS.PEARL + ' ' + c.type + '!', c.color);
         playSfx('sfxPearlPickup');
       }
     }
@@ -690,7 +724,7 @@ function update(dt) {
           if (!alreadyTalking) {
             const dialogs = npcDialogs[61]; // 61 = scuba sub-level dialogs
             const text = dialogs[Math.floor(Math.random() * dialogs.length)];
-            activeSpeechBubbles.push({ npc: mc, text, life: 4000 });
+            activeSpeechBubbles.push({ npc: mc, text, life: TIMING.SPEECH_BUBBLE_LIFE });
             playSfx('sfxMercatChirp');
           }
         }
@@ -713,8 +747,8 @@ function update(dt) {
         musicFade = null;
       }
       crossfadeToLevel(currentLevel);
-      score += 50;
-      addPopup(player.x, player.y - 40, '+50 Great dive!', '#38bdf8');
+      score += POINTS.SCUBA_COMPLETE;
+      addPopup(player.x, player.y - 40, '+' + POINTS.SCUBA_COMPLETE + ' Great dive!', '#38bdf8');
       playChaChing();
     }
     // HUD updates during scuba
@@ -766,8 +800,8 @@ function update(dt) {
       if (camperNapTimer >= CAMPER_NAP_DURATION) {
         camperNapping = false;
         camperNapTimer = 0;
-        score += 10;
-        addPopup(player.x, player.y - 40, '+10 Refreshed!', '#a78bfa');
+        score += POINTS.CAMPER_NAP;
+        addPopup(player.x, player.y - 40, '+' + POINTS.CAMPER_NAP + ' Refreshed!', '#a78bfa');
         playChaChing();
       }
       return;
@@ -791,18 +825,18 @@ function update(dt) {
     }
     if (camperCooking.active) {
       camperCooking.progress += dt;
-      if (camperCooking.progress >= 2500 && camperCooking.progress < 4500) {
+      if (camperCooking.progress >= TIMING.CAMPER_COOK_READY && camperCooking.progress < TIMING.CAMPER_COOK_BURNT) {
         // Perfect window — press C to collect or auto-collect at end
         if (keys['KeyC']) {
           keys['KeyC'] = false;
           camperCooking.active = false;
           fishCount--;
-          score += 20;
-          addPopup(player.x, player.y - 40, '+20 Cooked fish!', '#fb923c');
+          score += POINTS.COOKED_FISH;
+          addPopup(player.x, player.y - 40, '+' + POINTS.COOKED_FISH + ' Cooked fish!', '#fb923c');
           playChaChing();
         }
       }
-      if (camperCooking.progress >= 4500) {
+      if (camperCooking.progress >= TIMING.CAMPER_COOK_BURNT) {
         camperCooking.active = false;
         camperCooking.burnt = true;
         addPopup(player.x, player.y - 40, 'Burnt!', '#ef4444');
@@ -817,14 +851,14 @@ function update(dt) {
     // Phone logic — rings periodically, answer with P key
     if (!camperPhone.ringing && !camperPhone.answered) {
       camperPhone.ringTimer += dt;
-      if (camperPhone.ringTimer > 5000 + Math.random() * 3000) {
+      if (camperPhone.ringTimer > TIMING.PHONE_RING_MIN + Math.random() * 3000) {
         camperPhone.ringing = true;
         camperPhone.ringTimer = 0;
       }
     }
     if (camperPhone.answered) {
       camperPhone.callTimer += dt;
-      if (camperPhone.callTimer >= 4000) {
+      if (camperPhone.callTimer >= TIMING.SPEECH_BUBBLE_LIFE) {
         camperPhone.answered = false;
         camperPhone.callTimer = 0;
         camperPhone.dialogue = '';
@@ -836,8 +870,8 @@ function update(dt) {
       camperPhone.answered = true;
       camperPhone.callTimer = 0;
       camperPhone.dialogue = CAMPER_PHONE_DIALOGUES[Math.floor(Math.random() * CAMPER_PHONE_DIALOGUES.length)];
-      score += 5;
-      addPopup(player.x, player.y - 40, '+5 Answered!', '#38bdf8');
+      score += POINTS.PHONE_ANSWER;
+      addPopup(player.x, player.y - 40, '+' + POINTS.PHONE_ANSWER + ' Answered!', '#38bdf8');
       playChaChing();
     }
     // Exit
@@ -928,8 +962,8 @@ function update(dt) {
       if (marshmallow.x > mugLeft && marshmallow.x < mugRight && marshmallow.y > mugTop && marshmallow.y < hotChocolate.y + 10 && marshmallow.vy > 0) {
         marshmallow.landed = true;
         marshmallowScore++;
-        score += 20;
-        addPopup(hotChocolate.x, hotChocolate.y - 30, '+20 Marshmallow!', '#fef3c7');
+        score += POINTS.MARSHMALLOW_CHALET;
+        addPopup(hotChocolate.x, hotChocolate.y - 30, '+' + POINTS.MARSHMALLOW_CHALET + ' Marshmallow!', '#fef3c7');
         playChaChing();
       }
       // Missed — fell off screen
@@ -947,8 +981,8 @@ function update(dt) {
       if (cocoaDrinkTimer >= COCOA_DRINK_DURATION) {
         drinkingCocoa = false;
         cocoaDrinkTimer = 0;
-        score += 50;
-        addPopup(chaletCx, chaletCy - 20, '+50 Delicious cocoa!', '#fbbf24');
+        score += POINTS.COCOA;
+        addPopup(chaletCx, chaletCy - 20, '+' + POINTS.COCOA + ' Delicious cocoa!', '#fbbf24');
         playChaChing();
         marshmallowScore = 0; // reset for another round
       }
@@ -1012,11 +1046,11 @@ function update(dt) {
     if (yb.collected) continue;
     const dx = player.x - yb.x;
     const dy = (player.y - 20) - yb.y;
-    if (dx * dx + dy * dy < 625) { // ~25px radius
+    if (dx * dx + dy * dy < COLLECT_RADIUS_SQ) { // ~25px radius
       yb.collected = true;
       yarnCount++;
-      score += 20;
-      addPopup(yb.x, yb.y - 20, '+20 Yarn!', yb.color);
+      score += POINTS.YARN;
+      addPopup(yb.x, yb.y - 20, '+' + POINTS.YARN + ' Yarn!', yb.color);
       playChaChing();
     }
   }
@@ -1025,8 +1059,8 @@ function update(dt) {
   const curYarn = getCurrentYarnBalls();
   if (curYarn.length > 0 && !yarnBonusAwarded[currentLevel] && curYarn.every(y => y.collected)) {
     yarnBonusAwarded[currentLevel] = true;
-    score += 100;
-    addPopup(player.x, player.y - 60, '+100 ALL YARN BONUS!', '#fbbf24');
+    score += POINTS.YARN_BONUS;
+    addPopup(player.x, player.y - 60, '+' + POINTS.YARN_BONUS + ' ALL YARN BONUS!', '#fbbf24');
     playChaChing();
     // Big glitter celebration from the horn
     if (!prefersReducedMotion) {
@@ -1075,8 +1109,8 @@ function update(dt) {
       fishing.active = false;
       fishing.caught = true;
       fishCount++;
-      score += 10;
-      addPopup(player.x, player.y - 40, '+10 Fish!', '#38bdf8');
+      score += POINTS.FISH;
+      addPopup(player.x, player.y - 40, '+' + POINTS.FISH + ' Fish!', '#38bdf8');
       playChaChing();
       // respawn a fish
       if (pondFish.length < 8) {
@@ -1103,14 +1137,14 @@ function update(dt) {
   }
   if (cooking.active) {
     cooking.progress += dt;
-    if (cooking.progress > 3000 && cooking.progress < 5000) {
+    if (cooking.progress > TIMING.COOK_READY && cooking.progress < TIMING.COOK_BURNT) {
       // perfectly cooked window — auto collect
       cooking.active = false;
       baconCount++;
-      score += 15;
-      addPopup(GRILL.x, GROUND_Y - 60, '+15 Bacon!', '#fb923c');
+      score += POINTS.BACON;
+      addPopup(GRILL.x, GROUND_Y - 60, '+' + POINTS.BACON + ' Bacon!', '#fb923c');
       playChaChing();
-    } else if (cooking.progress >= 5000) {
+    } else if (cooking.progress >= TIMING.COOK_BURNT) {
       cooking.active = false;
       cooking.burnt = true;
       addPopup(GRILL.x, GROUND_Y - 60, 'Burnt!', '#ef4444');
@@ -1160,13 +1194,13 @@ function update(dt) {
   let nearBeehive = false;
   if (currentLevel === 1) {
     for (const s of bgScenes) {
-      if (s.type === 'beehive' && Math.abs(player.x - s.x) < 40) {
+      if (s.type === 'beehive' && Math.abs(player.x - s.x) < INTERACT_RANGE) {
         nearBeehive = true;
         if (keys['KeyH']) {
           keys['KeyH'] = false;
           honeyCount++;
-          score += 12;
-          addPopup(s.x, GROUND_Y - 80, '+12 Honey!', '#f59e0b');
+          score += POINTS.HONEY;
+          addPopup(s.x, GROUND_Y - 80, '+' + POINTS.HONEY + ' Honey!', '#f59e0b');
           playChaChing();
         }
         break;
@@ -1188,11 +1222,11 @@ function update(dt) {
   let nearHotdog = false;
   if (currentLevel === 3) {
     for (const hx of HOTDOG_POSITIONS) {
-      if (Math.abs(player.x - hx) < 40) {
+      if (Math.abs(player.x - hx) < INTERACT_RANGE) {
         nearHotdog = true;
-        if (keys['KeyC'] && score >= 10) {
+        if (keys['KeyC'] && score >= POINTS.HOTDOG_COST) {
           keys['KeyC'] = false;
-          score -= 10;
+          score -= POINTS.HOTDOG_COST;
           hotdogCount++;
           addPopup(player.x, player.y - 40, 'Hot Dog! -10pts', '#fbbf24');
         }
@@ -1213,7 +1247,7 @@ function update(dt) {
   let nearTaxi = false;
   if (currentLevel === 3) {
     for (const tx of TAXI_POSITIONS) {
-      if (Math.abs(player.x - tx) < 40) {
+      if (Math.abs(player.x - tx) < INTERACT_RANGE) {
         nearTaxi = true;
         if (keys['Enter'] && currentScene === null) {
           keys['Enter'] = false;
@@ -1240,20 +1274,20 @@ function update(dt) {
     }
     // Gelato
     for (const gx of GELATO_POSITIONS) {
-      if (Math.abs(player.x - gx) < 40) {
+      if (Math.abs(player.x - gx) < INTERACT_RANGE) {
         nearGelato = true;
         if (keys['KeyG']) {
           keys['KeyG'] = false;
           gelatoCount++;
-          score += 5;
-          addPopup(player.x, player.y - 40, '+5 Gelato!', '#fda4af');
+          score += POINTS.GELATO;
+          addPopup(player.x, player.y - 40, '+' + POINTS.GELATO + ' Gelato!', '#fda4af');
           playChaChing();
         }
         break;
       }
     }
     // Pantheon
-    if (Math.abs(player.x - PANTHEON_POS.x) < 55) {
+    if (Math.abs(player.x - PANTHEON_POS.x) < BUILDING_RANGE) {
       nearPantheonDoor = true;
       if (keys['Enter']) {
         keys['Enter'] = false;
@@ -1278,13 +1312,13 @@ function update(dt) {
   if (currentLevel === 5) {
     // Tiki torches
     for (const tx of TIKI_POSITIONS) {
-      if (Math.abs(player.x - tx) < 40) {
+      if (Math.abs(player.x - tx) < INTERACT_RANGE) {
         nearTiki = true;
         if (keys['KeyT']) {
           keys['KeyT'] = false;
           tikiCount++;
-          score += 15;
-          addPopup(player.x, player.y - 40, '+15 Tiki!', '#f97316');
+          score += POINTS.TIKI;
+          addPopup(player.x, player.y - 40, '+' + POINTS.TIKI + ' Tiki!', '#f97316');
           playChaChing();
         }
         break;
@@ -1292,13 +1326,13 @@ function update(dt) {
     }
     // Coconuts
     for (const cx2 of COCONUT_POSITIONS) {
-      if (Math.abs(player.x - cx2) < 40) {
+      if (Math.abs(player.x - cx2) < INTERACT_RANGE) {
         nearCoconut = true;
         if (keys['KeyC']) {
           keys['KeyC'] = false;
           coconutCount++;
-          score += 10;
-          addPopup(player.x, player.y - 40, '+10 Coconut!', '#92400e');
+          score += POINTS.COCONUT;
+          addPopup(player.x, player.y - 40, '+' + POINTS.COCONUT + ' Coconut!', '#92400e');
           playChaChing();
         }
         break;
@@ -1313,7 +1347,7 @@ function update(dt) {
       }
     }
     // Airport → Oriental
-    if (Math.abs(player.x - AIRPORT_POS.x) < 55) {
+    if (Math.abs(player.x - AIRPORT_POS.x) < BUILDING_RANGE) {
       nearAirport = true;
       if (keys['Enter']) {
         keys['Enter'] = false;
@@ -1336,8 +1370,8 @@ function update(dt) {
       if (ddx * ddx + ddy * ddy < 625) {
         d.collected = true;
         diamondCount++;
-        score += 25;
-        addPopup(d.x, d.y - 20, '+25 Diamond!', '#60a5fa');
+        score += POINTS.DIAMOND;
+        addPopup(d.x, d.y - 20, '+' + POINTS.DIAMOND + ' Diamond!', '#60a5fa');
         playChaChing();
       }
     }
@@ -1347,8 +1381,8 @@ function update(dt) {
       if (tree.hit) continue;
       if (Math.abs(player.x - tree.x) < 12 && player.y > tree.y - 50 * tree.size) {
         tree.hit = true;
-        score = Math.max(0, score - 10);
-        addPopup(tree.x, player.y - 40, '-10 Ouch!', '#ef4444');
+        score = Math.max(0, score - POINTS.TREE_HIT);
+        addPopup(tree.x, player.y - 40, '-' + POINTS.TREE_HIT + ' Ouch!', '#ef4444');
         player.vx = 1; // slow down on hit
       }
     }
@@ -1376,7 +1410,7 @@ function update(dt) {
   let nearDiveSpot = false;
   if (currentLevel === 6 && currentScene !== Scene.SCUBA_DIVING) {
     // Sailboat boarding
-    if (Math.abs(player.x - SAILBOAT_POS.x) < 55) {
+    if (Math.abs(player.x - SAILBOAT_POS.x) < BUILDING_RANGE) {
       nearSailboat = true;
       if (keys['Enter'] && currentScene !== Scene.SAILING) {
         keys['Enter'] = false;
@@ -1386,7 +1420,7 @@ function update(dt) {
       }
     }
     // Dive spot — enter scuba minigame
-    if (Math.abs(player.x - DIVE_SPOT_POS.x) < 55) {
+    if (Math.abs(player.x - DIVE_SPOT_POS.x) < BUILDING_RANGE) {
       nearDiveSpot = true;
       if (keys['Enter']) {
         keys['Enter'] = false;
@@ -1401,13 +1435,13 @@ function update(dt) {
     }
     // Shell collection
     for (const s of levelOriental.scenes) {
-      if (s.type === 'shell' && !s.collected && Math.abs(player.x - s.x) < 40) {
+      if (s.type === 'shell' && !s.collected && Math.abs(player.x - s.x) < INTERACT_RANGE) {
         if (keys['KeyC']) {
           keys['KeyC'] = false;
           s.collected = true;
           shellCount++;
-          score += 10;
-          addPopup(s.x, player.y - 40, '+10 Shell!', '#fda4af');
+          score += POINTS.SHELL;
+          addPopup(s.x, player.y - 40, '+' + POINTS.SHELL + ' Shell!', '#fda4af');
           playChaChing();
         }
       }
@@ -1434,14 +1468,14 @@ function update(dt) {
     // Stick collection
     for (let i = 0; i < STICK_POSITIONS.length; i++) {
       if (level6.sticksCollected[i]) continue;
-      if (Math.abs(player.x - STICK_POSITIONS[i]) < 40) {
+      if (Math.abs(player.x - STICK_POSITIONS[i]) < INTERACT_RANGE) {
         nearStick = true;
         if (keys['KeyC']) {
           keys['KeyC'] = false;
           level6.sticksCollected[i] = true;
           stickCount++;
-          score += 5;
-          addPopup(STICK_POSITIONS[i], player.y - 40, '+5 Stick!', '#92400e');
+          score += POINTS.STICK;
+          addPopup(STICK_POSITIONS[i], player.y - 40, '+' + POINTS.STICK + ' Stick!', '#92400e');
           playChaChing();
         }
       }
@@ -1454,8 +1488,8 @@ function update(dt) {
         campfire.built = true;
         campfire.lit = true;
         stickCount -= 5;
-        score += 25;
-        addPopup(FIRE_PIT_POS.x, player.y - 40, '+25 Campfire built!', '#f97316');
+        score += POINTS.CAMPFIRE_BUILD;
+        addPopup(FIRE_PIT_POS.x, player.y - 40, '+' + POINTS.CAMPFIRE_BUILD + ' Campfire built!', '#f97316');
         playChaChing();
       }
       // Roast marshmallow near lit campfire
@@ -1470,20 +1504,20 @@ function update(dt) {
     if (roasting.active) {
       roasting.progress += dt;
       // Perfect window: 2000-3500ms
-      if (roasting.progress >= 2000 && roasting.progress < 3500) {
+      if (roasting.progress >= TIMING.ROAST_READY && roasting.progress < TIMING.ROAST_BURNT) {
         // Press C to make s'more
         if (keys['KeyC']) {
           keys['KeyC'] = false;
           roasting.active = false;
           roasting.done = true;
           smoreCount++;
-          score += 30;
-          addPopup(FIRE_PIT_POS.x, player.y - 40, "+30 S'more!", '#fbbf24');
+          score += POINTS.SMORE;
+          addPopup(FIRE_PIT_POS.x, player.y - 40, '+' + POINTS.SMORE + " S'more!", '#fbbf24');
           playChaChing();
           setTimeout(() => { roasting.done = false; }, 500);
         }
       }
-      if (roasting.progress >= 5000) {
+      if (roasting.progress >= TIMING.ROAST_OVERBURN) {
         // Burnt!
         roasting.active = false;
         addPopup(FIRE_PIT_POS.x, player.y - 40, 'Burnt marshmallow!', '#ef4444');
@@ -1504,8 +1538,8 @@ function update(dt) {
       if (hammockNapTimer >= HAMMOCK_NAP_DURATION) {
         hammockNapping = false;
         hammockNapTimer = 0;
-        score += 20;
-        addPopup(player.x, player.y - 40, '+20 Great nap!', '#86efac');
+        score += POINTS.HAMMOCK_NAP;
+        addPopup(player.x, player.y - 40, '+' + POINTS.HAMMOCK_NAP + ' Great nap!', '#86efac');
         playChaChing();
       }
     }
@@ -1523,8 +1557,8 @@ function update(dt) {
       if (bigfootDrinkTimer >= BIGFOOT_DRINK_DURATION) {
         bigfootDrinking = false;
         bigfootDrinkTimer = 0;
-        score += 40;
-        addPopup(BIGFOOT_POS.x, player.y - 40, '+40 Chocolate milk with Bigfoot!', '#92400e');
+        score += POINTS.BIGFOOT_MILK;
+        addPopup(BIGFOOT_POS.x, player.y - 40, '+' + POINTS.BIGFOOT_MILK + ' Chocolate milk with Bigfoot!', '#92400e');
         playChaChing();
       }
     }
@@ -1539,11 +1573,11 @@ function update(dt) {
     }
     if (campPool.digging) {
       campPool.digProgress += dt;
-      if (campPool.digProgress >= 3000) {
+      if (campPool.digProgress >= TIMING.DIG_DURATION) {
         campPool.digging = false;
         campPool.dug = true;
-        score += 15;
-        addPopup(DIG_SITE_POS.x, player.y - 40, '+15 Pool dug!', '#92400e');
+        score += POINTS.DIG_POOL;
+        addPopup(DIG_SITE_POS.x, player.y - 40, '+' + POINTS.DIG_POOL + ' Pool dug!', '#92400e');
         playChaChing();
       }
     }
@@ -1558,11 +1592,11 @@ function update(dt) {
     }
     if (campPool.filling) {
       campPool.fillProgress += dt;
-      if (campPool.fillProgress >= 2500) {
+      if (campPool.fillProgress >= TIMING.FILL_DURATION) {
         campPool.filling = false;
         campPool.filled = true;
-        score += 15;
-        addPopup(WATER_PUMP_POS.x, player.y - 40, '+15 Pool filled!', '#38bdf8');
+        score += POINTS.FILL_POOL;
+        addPopup(WATER_PUMP_POS.x, player.y - 40, '+' + POINTS.FILL_POOL + ' Pool filled!', '#38bdf8');
         playChaChing();
       }
     }
@@ -1579,7 +1613,7 @@ function update(dt) {
       currentScene = null;
     }
     // Camp camper entry
-    if (Math.abs(player.x - CAMP_CAMPER_POS.x) < 55) {
+    if (Math.abs(player.x - CAMP_CAMPER_POS.x) < BUILDING_RANGE) {
       nearCampCamper = true;
       if (keys['Enter'] && currentScene !== Scene.CAMP_CAMPER) {
         keys['Enter'] = false;
@@ -1593,9 +1627,9 @@ function update(dt) {
       if (smoreCount > 0) {
         smoreCount--;
         leprechaunGold++;
-        score += 50;
+        score += POINTS.LEPRECHAUN_GOLD;
         leprechaunSpeech = { text: "A s'more! Aye, here's some gold for ye!", timer: 3000 };
-        addPopup(DIG_SITE_POS.x + 60, player.y - 40, "+50 Leprechaun gold!", '#fbbf24');
+        addPopup(DIG_SITE_POS.x + 60, player.y - 40, '+' + POINTS.LEPRECHAUN_GOLD + ' Leprechaun gold!', '#fbbf24');
         playChaChing();
       } else {
         leprechaunSpeech = { text: "No gold without s'mores! Bring me s'mores!", timer: 3000 };
@@ -1648,8 +1682,8 @@ function update(dt) {
         if (dx * dx + dy * dy < CHEETAH_YARN_MAGNET * CHEETAH_YARN_MAGNET) {
           yb.collected = true;
           yarnCount++;
-          score += 20;
-          addPopup(yb.x, yb.y - 20, '+20 Yarn!', yb.color);
+          score += POINTS.YARN;
+          addPopup(yb.x, yb.y - 20, '+' + POINTS.YARN + ' Yarn!', yb.color);
           playChaChing();
         }
       }
@@ -1678,8 +1712,8 @@ function update(dt) {
         if (keys['KeyF']) {
           keys['KeyF'] = false;
           fruitCount++;
-          score += 10;
-          addPopup(bx, player.y - 40, '+10 Baobab fruit!', '#f59e0b');
+          score += POINTS.FRUIT;
+          addPopup(bx, player.y - 40, '+' + POINTS.FRUIT + ' Baobab fruit!', '#f59e0b');
           playSfx('sfxBaobabPluck');
         }
       }
@@ -1706,8 +1740,8 @@ function update(dt) {
           keys['KeyE'] = false;
           player.vy = JUMP_VEL * 1.8; // super high launch!
           player.onGround = false;
-          score += 15;
-          addPopup(ex, player.y - 60, '+15 Elephant boost!', '#94a3b8');
+          score += POINTS.ELEPHANT_BOOST;
+          addPopup(ex, player.y - 60, '+' + POINTS.ELEPHANT_BOOST + ' Elephant boost!', '#94a3b8');
           playSfx('sfxElephantTrumpet');
           playSfx('sfxElephantSpray', 100);
         }
@@ -1734,8 +1768,8 @@ function update(dt) {
         // Hit detection
         if (!rh.hit && Math.abs(player.x - rh.x) < 20 && player.y > GROUND_Y - 50) {
           rh.hit = true;
-          score = Math.max(0, score - 15);
-          addPopup(rh.x, player.y - 40, '-15 Rhino charge!', '#ef4444');
+          score = Math.max(0, score - POINTS.RHINO_HIT);
+          addPopup(rh.x, player.y - 40, '-' + POINTS.RHINO_HIT + ' Rhino charge!', '#ef4444');
           player.vy = JUMP_VEL * 0.8; // knocked back
           player.onGround = false;
         }
@@ -1780,18 +1814,18 @@ function update(dt) {
           if (!safariPhotosTaken[animal]) {
             safariPhotosTaken[animal] = true;
             safariPhotoCount++;
-            score += 30;
-            addPopup(player.x, player.y - 40, '+30 Great photo!', '#fbbf24');
+            score += POINTS.SAFARI_PHOTO;
+            addPopup(player.x, player.y - 40, '+' + POINTS.SAFARI_PHOTO + ' Great photo!', '#fbbf24');
             playSfx('sfxPhotoSuccess');
             // Bonus for all 4 species
             if (safariPhotoCount >= 4) {
-              score += 100;
-              addPopup(player.x, player.y - 60, '+100 Safari collection complete!', '#f97316');
+              score += POINTS.SAFARI_COLLECTION;
+              addPopup(player.x, player.y - 60, '+' + POINTS.SAFARI_COLLECTION + ' Safari collection complete!', '#f97316');
               playChaChing();
             }
           } else {
-            score += 5;
-            addPopup(player.x, player.y - 40, '+5 Nice shot!', '#86efac');
+            score += POINTS.SAFARI_PHOTO_DUP;
+            addPopup(player.x, player.y - 40, '+' + POINTS.SAFARI_PHOTO_DUP + ' Nice shot!', '#86efac');
             playChaChing();
           }
         } else {
@@ -1836,8 +1870,8 @@ function update(dt) {
         playSfx('sfxCheetahChirp');
         if (cheetahYarnGiven >= 5) {
           ridingCheetah = true;
-          score += 50;
-          addPopup(CHEETAH_POS.x, player.y - 40, '+50 Cheetah ride unlocked!', '#f97316');
+          score += POINTS.CHEETAH_RIDE;
+          addPopup(CHEETAH_POS.x, player.y - 40, '+' + POINTS.CHEETAH_RIDE + ' Cheetah ride unlocked!', '#f97316');
           playSfx('sfxCheetahPurr');
           startLoopSfx('sfxCheetahSprint');
         }
@@ -1859,15 +1893,15 @@ function update(dt) {
         keys['KeyE'] = false;
         player.vy = JUMP_VEL * 1.5; // high boost
         player.onGround = false;
-        score += 10;
-        addPopup(gx, player.y - 40, '+10 Giraffe lift!', '#fde68a');
+        score += POINTS.GIRAFFE_LIFT;
+        addPopup(gx, player.y - 40, '+' + POINTS.GIRAFFE_LIFT + ' Giraffe lift!', '#fde68a');
         playSfx('sfxGiraffeHum');
         playSfx('sfxGiraffeLift', 100);
       }
     }
 
     // Safari jeep — exit portal
-    if (Math.abs(player.x - SAFARI_JEEP_POS_GAME.x) < 55) {
+    if (Math.abs(player.x - SAFARI_JEEP_POS_GAME.x) < BUILDING_RANGE) {
       nearSafariJeep = true;
       // For now the safari is the last level — could connect to next level later
     }
@@ -1916,8 +1950,8 @@ function update(dt) {
       if (sdx * sdx + sdy * sdy < 625) {
         sb.collected = true;
         snowballCount++;
-        score += 15;
-        addPopup(sb.x, sb.y - 20, '+15 Snowball!', '#bae6fd');
+        score += POINTS.SNOWBALL;
+        addPopup(sb.x, sb.y - 20, '+' + POINTS.SNOWBALL + ' Snowball!', '#bae6fd');
         playChaChing();
       }
     }
@@ -1927,8 +1961,8 @@ function update(dt) {
       if (sm.hit) continue;
       if (Math.abs(player.x - sm.x) < 15 && player.y > sm.y - 40 * sm.size) {
         sm.hit = true;
-        score = Math.max(0, score - 10);
-        addPopup(sm.x, player.y - 40, '-10 Ouch!', '#ef4444');
+        score = Math.max(0, score - POINTS.SNOWMAN_HIT);
+        addPopup(sm.x, player.y - 40, '-' + POINTS.SNOWMAN_HIT + ' Ouch!', '#ef4444');
         player.vx = 1;
       }
     }
@@ -1993,7 +2027,7 @@ function update(dt) {
             const levelDialogs = npcDialogs[currentLevel] || [];
             if (levelDialogs.length === 0) return; // no dialogs available
             const text = levelDialogs[Math.floor(Math.random() * levelDialogs.length)];
-            activeSpeechBubbles.push({ npc, text, life: 4000 });
+            activeSpeechBubbles.push({ npc, text, life: TIMING.SPEECH_BUBBLE_LIFE });
             npc.facing = player.x < npc.x ? -1 : 1;
           }
         }
@@ -2101,7 +2135,7 @@ function getGroundLevel(x) {
 }
 
 function addPopup(x, y, text, color) {
-  popups.push({ x, y, text, color, life: 1500 });
+  popups.push({ x, y, text, color, life: TIMING.POPUP_LIFE });
 }
 
 function updatePizzaMinigame(dt) {
@@ -2130,13 +2164,13 @@ function updatePizzaMinigame(dt) {
     // Sweet spot: 3000-4500ms = perfect, >4500 = burnt
     if (keys['KeyC']) {
       keys['KeyC'] = false;
-      if (pizzaMaking.progress >= 3000 && pizzaMaking.progress < 4500) {
+      if (pizzaMaking.progress >= TIMING.PIZZA_READY && pizzaMaking.progress < TIMING.PIZZA_BURNT) {
         // Perfect pizza!
         pizzaMaking.pizzaCount++;
-        score += 25;
-        addPopup(player.x, player.y - 40, '+25 Perfect Pizza!', '#f97316');
+        score += POINTS.PIZZA;
+        addPopup(player.x, player.y - 40, '+' + POINTS.PIZZA + ' Perfect Pizza!', '#f97316');
         playChaChing();
-      } else if (pizzaMaking.progress < 3000) {
+      } else if (pizzaMaking.progress < TIMING.PIZZA_READY) {
         // Undercooked
         addPopup(player.x, player.y - 40, 'Undercooked!', '#93c5fd');
       } else {
@@ -2146,7 +2180,7 @@ function updatePizzaMinigame(dt) {
       pizzaMaking.stage = 'idle';
       pizzaMaking.progress = 0;
     }
-    if (pizzaMaking.progress >= 6000) {
+    if (pizzaMaking.progress >= TIMING.PIZZA_CHARRED) {
       // Auto-burn
       addPopup(player.x, player.y - 40, 'Burnt to a crisp!', '#ef4444');
       pizzaMaking.stage = 'idle';
