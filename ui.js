@@ -1,4 +1,12 @@
 // ── Character Creator ──
+// Quick-pick row: one representative color per hue family
+const PALETTE_QUICK = [
+  '#fb7185', '#fb923c', '#facc15', '#4ade80',
+  '#22d3ee', '#60a5fa', '#a855f7', '#e879f9',
+  '#ffffff', '#94a3b8', '#475569', '#1e293b',
+];
+
+// Full palette (shown when expanded)
 const PALETTE_64 = [
   // Row 1: Reds & pinks
   '#fecdd3','#fda4af','#fb7185','#f43f5e','#e11d48','#be123c','#881337','#4c0519',
@@ -48,21 +56,47 @@ function darkenColor(hex, amount) {
   return '#' + [nr, ng, nb].map(c => c.toString(16).padStart(2, '0')).join('');
 }
 
-function buildPalette(containerId, selectedColor, onSelect) {
-  const container = document.getElementById(containerId);
-  if (!container) return;
-  container.innerHTML = '';
-  for (const color of PALETTE_64) {
+function buildPalette(containerId, fullContainerId, selectedColor, onSelect) {
+  const quickContainer = document.getElementById(containerId);
+  const fullContainer = document.getElementById(fullContainerId);
+  if (!quickContainer) return;
+
+  // Both containers share selection — clicking one deselects in both
+  const allContainers = [quickContainer, fullContainer].filter(Boolean);
+  function deselectAll() {
+    for (const c of allContainers) c.querySelectorAll('.swatch').forEach(s => s.classList.remove('selected'));
+  }
+
+  function makeSwatch(color) {
     const swatch = document.createElement('div');
     swatch.className = 'swatch' + (color === selectedColor ? ' selected' : '');
     swatch.style.background = color;
     swatch.addEventListener('click', () => {
-      container.querySelectorAll('.swatch').forEach(s => s.classList.remove('selected'));
-      swatch.classList.add('selected');
+      deselectAll();
+      // Highlight this color in all containers that have it
+      for (const c of allContainers) {
+        c.querySelectorAll('.swatch').forEach(s => {
+          if (s.style.background === swatch.style.background) s.classList.add('selected');
+        });
+      }
       onSelect(color);
       updatePreview();
     });
-    container.appendChild(swatch);
+    return swatch;
+  }
+
+  // Quick-pick row
+  quickContainer.innerHTML = '';
+  for (const color of PALETTE_QUICK) {
+    quickContainer.appendChild(makeSwatch(color));
+  }
+
+  // Full palette (hidden by default)
+  if (fullContainer) {
+    fullContainer.innerHTML = '';
+    for (const color of PALETTE_64) {
+      fullContainer.appendChild(makeSwatch(color));
+    }
   }
 }
 
@@ -202,9 +236,20 @@ function updatePreview() {
 }
 
 function initCharacterCreator() {
-  buildPalette('furPalette', selectedFurColor, (c) => { selectedFurColor = c; });
-  buildPalette('eyePalette', selectedEyeColor, (c) => { selectedEyeColor = c; });
-  buildPalette('hornPalette', selectedHornColor, (c) => { selectedHornColor = c; });
+  buildPalette('furPalette', 'furPaletteFull', selectedFurColor, (c) => { selectedFurColor = c; });
+  buildPalette('eyePalette', 'eyePaletteFull', selectedEyeColor, (c) => { selectedEyeColor = c; });
+  buildPalette('hornPalette', 'hornPaletteFull', selectedHornColor, (c) => { selectedHornColor = c; });
+
+  // Toggle button
+  const toggle = document.getElementById('paletteToggle');
+  const fullPalettes = document.getElementById('fullPalettes');
+  if (toggle && fullPalettes) {
+    toggle.addEventListener('click', () => {
+      const expanded = fullPalettes.style.display !== 'none';
+      fullPalettes.style.display = expanded ? 'none' : 'flex';
+      toggle.textContent = expanded ? 'More colors...' : 'Fewer colors';
+    });
+  }
   updatePreview();
 }
 
