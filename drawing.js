@@ -60,6 +60,11 @@ function draw() {
   if (photoGalleryOpen && currentLevel === 9) {
     drawPhotoGallery(W, H);
   }
+
+  // Fact Notebook overlay
+  if (notebookOpen) {
+    drawNotebook(W, H);
+  }
 }
 
 function drawPhotoGallery(W, H) {
@@ -189,6 +194,157 @@ function drawPhotoGallery(W, H) {
   ctx.font = 'bold ' + Math.round(H * 0.04) + 'px "Segoe UI", system-ui, sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText(count + '/4 species photographed' + (count >= 4 ? ' — Collection complete!' : ''), W / 2, H * 0.88);
+}
+
+function drawNotebook(W, H) {
+  // Semi-transparent backdrop
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Notebook parchment background
+  const pad = Math.round(W * 0.06);
+  const nbX = pad, nbY = pad;
+  const nbW = W - pad * 2, nbH = H - pad * 2;
+
+  // Parchment fill
+  ctx.fillStyle = '#fef3c7';
+  ctx.fillRect(nbX, nbY, nbW, nbH);
+
+  // Subtle border
+  ctx.strokeStyle = '#d97706';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(nbX, nbY, nbW, nbH);
+
+  // Spine line (left margin)
+  const spineX = nbX + Math.round(nbW * 0.06);
+  ctx.strokeStyle = '#fca5a5';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(spineX, nbY);
+  ctx.lineTo(spineX, nbY + nbH);
+  ctx.stroke();
+
+  // Title
+  const titleSize = Math.round(H * 0.055);
+  ctx.fillStyle = '#92400e';
+  ctx.font = 'bold ' + titleSize + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Fact Notebook', W / 2, nbY + titleSize + 10);
+
+  // Category tabs
+  const tabY = nbY + titleSize + 25;
+  const tabH = Math.round(H * 0.045);
+  const tabFont = Math.round(tabH * 0.6);
+  ctx.font = 'bold ' + tabFont + 'px "Segoe UI", system-ui, sans-serif';
+
+  const tabColors = { All: '#78716c', Geography: '#3b82f6', History: '#dc2626', Science: '#16a34a', Culture: '#a855f7', Language: '#f59e0b' };
+  const tabTotalW = nbW - 20;
+  const tabW = Math.floor(tabTotalW / NOTEBOOK_CATEGORIES.length);
+  const tabStartX = nbX + 10;
+
+  for (let i = 0; i < NOTEBOOK_CATEGORIES.length; i++) {
+    const cat = NOTEBOOK_CATEGORIES[i];
+    const tx = tabStartX + i * tabW;
+    const isActive = cat === notebookCategory;
+
+    // Tab background
+    ctx.fillStyle = isActive ? tabColors[cat] : '#e7e5e4';
+    ctx.fillRect(tx + 2, tabY, tabW - 4, tabH);
+
+    // Tab text
+    ctx.fillStyle = isActive ? '#ffffff' : '#57534e';
+    ctx.textAlign = 'center';
+    ctx.fillText(cat, tx + tabW / 2, tabY + tabH * 0.72);
+  }
+
+  // Filter facts by category
+  const filteredFacts = notebookCategory === 'All'
+    ? factNotebook
+    : factNotebook.filter(f => f.category === notebookCategory);
+
+  // Fact list area
+  const listY = tabY + tabH + 15;
+  const listH = nbY + nbH - listY - Math.round(H * 0.08);
+  const lineH = Math.round(H * 0.055);
+  const maxLines = Math.floor(listH / lineH);
+  const maxScroll = Math.max(0, filteredFacts.length - maxLines);
+  if (notebookScroll > maxScroll) notebookScroll = maxScroll;
+
+  // Horizontal ruled lines
+  ctx.strokeStyle = '#ddd6cb';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= maxLines; i++) {
+    const ly = listY + i * lineH;
+    if (ly > nbY + nbH - 30) break;
+    ctx.beginPath();
+    ctx.moveTo(nbX + 10, ly);
+    ctx.lineTo(nbX + nbW - 10, ly);
+    ctx.stroke();
+  }
+
+  // Draw facts
+  const factFont = Math.round(lineH * 0.45);
+  const labelFont = Math.round(lineH * 0.35);
+  ctx.textAlign = 'left';
+
+  if (filteredFacts.length === 0) {
+    ctx.fillStyle = '#a8a29e';
+    ctx.font = 'italic ' + Math.round(H * 0.035) + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(factNotebook.length === 0 ? 'No facts yet! Talk to NPCs with Q to learn things.' : 'No facts in this category.', W / 2, listY + lineH * 2);
+  } else {
+    for (let i = 0; i < maxLines && (i + notebookScroll) < filteredFacts.length; i++) {
+      const fact = filteredFacts[i + notebookScroll];
+      const fy = listY + i * lineH + lineH * 0.65;
+
+      // Category dot
+      ctx.fillStyle = tabColors[fact.category] || '#78716c';
+      ctx.beginPath();
+      ctx.arc(spineX + 14, fy - factFont * 0.25, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Fact text (truncate if too long)
+      ctx.fillStyle = '#44403c';
+      ctx.font = factFont + 'px "Segoe UI", system-ui, sans-serif';
+      const maxTextW = nbX + nbW - spineX - 130;
+      let displayText = fact.text;
+      while (ctx.measureText(displayText).width > maxTextW && displayText.length > 10) {
+        displayText = displayText.slice(0, -4) + '...';
+      }
+      ctx.fillText(displayText, spineX + 24, fy);
+
+      // Level label (right-aligned)
+      ctx.fillStyle = '#a8a29e';
+      ctx.font = labelFont + 'px "Segoe UI", system-ui, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(fact.levelName, nbX + nbW - 15, fy);
+      ctx.textAlign = 'left';
+    }
+  }
+
+  // Scroll indicators
+  if (notebookScroll > 0) {
+    ctx.fillStyle = '#92400e';
+    ctx.font = 'bold ' + Math.round(H * 0.035) + 'px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('\u25B2', nbX + nbW - 25, listY + 15);
+  }
+  if (notebookScroll < maxScroll) {
+    ctx.fillStyle = '#92400e';
+    ctx.font = 'bold ' + Math.round(H * 0.035) + 'px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('\u25BC', nbX + nbW - 25, nbY + nbH - Math.round(H * 0.06));
+  }
+
+  // Footer: fact count + close hint
+  const footerY = nbY + nbH - 12;
+  ctx.fillStyle = '#78716c';
+  ctx.font = Math.round(H * 0.03) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(factNotebook.length + ' fact' + (factNotebook.length !== 1 ? 's' : '') + ' collected', nbX + 15, footerY);
+  ctx.textAlign = 'right';
+  ctx.fillText('N / Enter to close  |  \u2190\u2192 categories  |  \u2191\u2193 scroll', nbX + nbW - 15, footerY);
+  ctx.textAlign = 'left';
 }
 
 function drawSpeechBubbles() {
