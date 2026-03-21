@@ -296,6 +296,24 @@ const npcDialogs = {
     "I want to camp here forever. Can we? Please?",
     "Bigfoot can play the harmonica. Who knew?!",
   ],
+  10: [ // Transatlantic Flight
+    "Look at that ocean! It goes on forever!",
+    "I saw a whale down there! Or maybe it was a really big fish...",
+    "My wings — er, paws — are getting tired!",
+    "Is that a pirate ship? No, just a cloud. Disappointing!",
+    "The seagulls here are NOT friendly! Dodge dodge dodge!",
+    "I can see the curvature of the Earth! Just kidding, it's flat... wait, no!",
+    "Who put thunderstorms in our flight path?! Rude!",
+    "That hurricane is spinning like a giant yarn ball!",
+    "Flying through clouds feels like swimming through cotton candy!",
+    "I think I see Florida! Or is that more ocean? Hard to tell up here.",
+    "My fur is SO windswept right now. I look fabulous!",
+    "The rubies up here are WAY shinier than yarn balls!",
+    "Note to self: unicorn cats CAN fly. Sort of. With a plane.",
+    "I wonder if fish can see us from down there...",
+    "Altitude check: very high. Sparkle level: maximum!",
+    "The sunset from up here is absolutely PURR-fect!",
+  ],
 };
 
 // Fish in pond
@@ -1227,6 +1245,98 @@ for (let i = 0; i < 4; i++) {
     color: safariNpcColors[i],
     accessory: safariNpcAccessories[i],
     vx: (Math.random() - 0.5) * 1.0,
+    walkFrame: 0, walkTimer: 0,
+    facing: 1,
+    idleTimer: Math.random() * 200
+  });
+}
+
+// ── Level 10: Transatlantic Flight ──
+const FLIGHT_WORLD_W = 6000;
+const FLIGHT_SPEED = 3.5; // auto-scroll speed
+
+const level10Flight = {
+  worldW: FLIGHT_WORLD_W,
+  platforms: [], // empty — this is a flying level, no platforms needed
+  yarnBalls: [], // will hold rubies (reusing yarnBalls system)
+  seagulls: [], // obstacles
+  storms: [], // thunderstorm obstacles
+  hurricanes: [], // hurricane obstacles
+  clouds: [], // translucent visual clouds
+};
+
+// Rubies (using yarnBalls array for compatibility) — at least 6
+// Place them at interesting positions requiring skillful flying
+// y values between 100-350 (screen space, player bounded)
+const rubyPositions = [
+  { x: 800, y: 200 }, { x: 1500, y: 300 }, { x: 2200, y: 150 },
+  { x: 3000, y: 280 }, { x: 3800, y: 180 }, { x: 4500, y: 250 },
+  { x: 5200, y: 160 },
+];
+for (const rp of rubyPositions) {
+  level10Flight.yarnBalls.push({
+    x: rp.x, y: rp.y,
+    color: '#ef4444', // ruby red
+    collected: false,
+    bobPhase: Math.random() * Math.PI * 2
+  });
+}
+
+// Seagulls — scattered obstacles
+const seagullXPositions = [600, 1100, 1700, 2400, 2900, 3500, 4100, 4700, 5400];
+for (const sx of seagullXPositions) {
+  level10Flight.seagulls.push({
+    x: sx,
+    y: 150 + Math.random() * 200,
+    wingPhase: Math.random() * Math.PI * 2,
+    hit: false
+  });
+}
+
+// Thunderstorms — larger, dangerous
+const stormXPositions = [1300, 2600, 3900, 5000];
+for (const sx of stormXPositions) {
+  level10Flight.storms.push({
+    x: sx, y: 100 + Math.random() * 150,
+    w: 120, h: 80,
+    flashTimer: Math.random() * 1000,
+    hit: false
+  });
+}
+
+// Hurricanes — swirling, dangerous
+const hurricaneXPositions = [2000, 3300, 4600];
+for (const hx of hurricaneXPositions) {
+  level10Flight.hurricanes.push({
+    x: hx, y: 180 + Math.random() * 120,
+    radius: 50,
+    rotation: Math.random() * Math.PI * 2,
+    hit: false
+  });
+}
+
+// Clouds — translucent, visual only
+for (let i = 0; i < 15; i++) {
+  level10Flight.clouds.push({
+    x: 200 + Math.random() * (FLIGHT_WORLD_W - 400),
+    y: 80 + Math.random() * 280,
+    w: 80 + Math.random() * 60,
+    speed: 0.3 + Math.random() * 0.5,
+    alpha: 0.2 + Math.random() * 0.2
+  });
+}
+
+// Flight NPCs (decorative — positioned within world bounds)
+const flightNpcs = [];
+const flightNpcColors = ['#93c5fd', '#c4b5fd', '#fcd34d', '#86efac'];
+const flightNpcAccessories = ['bow', 'glasses', 'scarf', 'flower'];
+for (let i = 0; i < 4; i++) {
+  flightNpcs.push({
+    x: 200 + i * 1400 + Math.random() * 200,
+    y: GROUND_Y,
+    color: flightNpcColors[i],
+    accessory: flightNpcAccessories[i],
+    vx: 0,
     walkFrame: 0, walkTimer: 0,
     facing: 1,
     idleTimer: Math.random() * 200

@@ -4504,6 +4504,318 @@ function drawCheetahSpeech(x, gy) {
   ctx.fillText(text, x, by + 16);
 }
 
+// ── Level 10: Transatlantic Flight Drawing ──
+
+function drawFlightSky(W, H, cycle, isNight, cam) {
+  // Sky gradient — higher altitude blue
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  if (isNight) {
+    grad.addColorStop(0, '#0a1628');
+    grad.addColorStop(0.6, '#1a2744');
+    grad.addColorStop(1, '#1e3a5f');
+  } else {
+    grad.addColorStop(0, '#1e40af');
+    grad.addColorStop(0.4, '#3b82f6');
+    grad.addColorStop(1, '#60a5fa');
+  }
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Stars at night
+  if (isNight) {
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    for (let i = 0; i < 40; i++) {
+      const sx = (i * 137 + 50) % W;
+      const sy = (i * 89 + 20) % (H * 0.4);
+      ctx.beginPath();
+      ctx.arc(sx, sy, 1 + (i % 3) * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // Sun or moon
+  if (!isNight) {
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath();
+    ctx.arc(W - 80, 60, 30, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    ctx.fillStyle = '#e2e8f0';
+    ctx.beginPath();
+    ctx.arc(W - 80, 60, 22, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawFlightWorld(W, H, cam, cycle, isNight) {
+  const ww = level10Flight.worldW;
+  const t = gameTime;
+
+  // Ocean — bottom third of screen
+  const oceanTop = H * 0.7;
+  const oceanGrad = ctx.createLinearGradient(0, oceanTop, 0, H);
+  oceanGrad.addColorStop(0, '#1d4ed8');
+  oceanGrad.addColorStop(0.5, '#1e3a8a');
+  oceanGrad.addColorStop(1, '#172554');
+  ctx.fillStyle = oceanGrad;
+  ctx.fillRect(0, oceanTop, W, H - oceanTop);
+
+  // Animated wave patterns
+  ctx.strokeStyle = 'rgba(96, 165, 250, 0.4)';
+  ctx.lineWidth = 2;
+  for (let row = 0; row < 4; row++) {
+    ctx.beginPath();
+    const wy = oceanTop + 15 + row * 18;
+    for (let x = -20; x < W + 20; x += 5) {
+      const yOff = Math.sin((x + cam * 0.3 + t / 500 + row * 50) / 30) * 5;
+      if (x === -20) ctx.moveTo(x, wy + yOff);
+      else ctx.lineTo(x, wy + yOff);
+    }
+    ctx.stroke();
+  }
+
+  // Distant ships on ocean
+  const shipPositions = [800, 2200, 3600, 5000];
+  for (const shipX of shipPositions) {
+    const sx = shipX - cam * 0.5; // parallax
+    if (sx < -40 || sx > W + 40) continue;
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillRect(sx - 8, oceanTop + 8, 16, 6);
+    ctx.fillStyle = '#cbd5e1';
+    ctx.fillRect(sx - 1, oceanTop - 2, 2, 12);
+  }
+
+  // Occasional islands
+  const islandPositions = [1500, 3800];
+  for (const ix of islandPositions) {
+    const isx = ix - cam * 0.5;
+    if (isx < -60 || isx > W + 60) continue;
+    ctx.fillStyle = '#22c55e';
+    ctx.beginPath();
+    ctx.ellipse(isx, oceanTop + 5, 25, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Palm tree on island
+    ctx.fillStyle = '#92400e';
+    ctx.fillRect(isx - 2, oceanTop - 15, 4, 18);
+    ctx.fillStyle = '#16a34a';
+    ctx.beginPath();
+    ctx.ellipse(isx, oceanTop - 18, 12, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Florida coastline at end of level
+  const coastX = ww - 300 - cam;
+  if (coastX < W + 100) {
+    ctx.fillStyle = '#fbbf24'; // sandy beach
+    ctx.beginPath();
+    ctx.moveTo(coastX, oceanTop);
+    ctx.lineTo(coastX + 300, oceanTop - 20);
+    ctx.lineTo(coastX + 400, oceanTop);
+    ctx.lineTo(coastX + 400, H);
+    ctx.lineTo(coastX, H);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#22c55e'; // green land
+    ctx.beginPath();
+    ctx.moveTo(coastX + 30, oceanTop - 5);
+    ctx.lineTo(coastX + 280, oceanTop - 25);
+    ctx.lineTo(coastX + 400, oceanTop - 10);
+    ctx.lineTo(coastX + 400, oceanTop);
+    ctx.lineTo(coastX + 30, oceanTop);
+    ctx.closePath();
+    ctx.fill();
+    // "Florida" label
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 14px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('Florida!', coastX + 200, oceanTop - 30);
+    ctx.textAlign = 'left';
+  }
+
+  // Draw clouds (translucent, visual only, behind obstacles)
+  for (const cloud of level10Flight.clouds) {
+    const cx = cloud.x - cam + Math.sin(t / 2000 + cloud.x) * 20;
+    if (cx < -cloud.w || cx > W + cloud.w) continue;
+    ctx.globalAlpha = cloud.alpha;
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.ellipse(cx, cloud.y, cloud.w / 2, 15, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(cx - cloud.w * 0.25, cloud.y + 5, cloud.w * 0.3, 12, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(cx + cloud.w * 0.25, cloud.y + 3, cloud.w * 0.35, 13, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  // Draw seagulls
+  for (const sg of level10Flight.seagulls) {
+    const sx = sg.x - cam;
+    if (sx < -30 || sx > W + 30) continue;
+    if (sg.hit) continue;
+    const wingY = Math.sin(t / 200 + sg.wingPhase) * 5;
+    ctx.strokeStyle = '#f8fafc';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(sx - 12, sg.y + wingY);
+    ctx.quadraticCurveTo(sx - 4, sg.y - 6 + wingY, sx, sg.y);
+    ctx.quadraticCurveTo(sx + 4, sg.y - 6 + wingY, sx + 12, sg.y + wingY);
+    ctx.stroke();
+    // Body
+    ctx.fillStyle = '#e2e8f0';
+    ctx.beginPath();
+    ctx.ellipse(sx, sg.y + 2, 5, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Beak
+    ctx.fillStyle = '#f59e0b';
+    ctx.beginPath();
+    ctx.moveTo(sx + 5, sg.y + 1);
+    ctx.lineTo(sx + 9, sg.y + 3);
+    ctx.lineTo(sx + 5, sg.y + 4);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Draw thunderstorms
+  for (const storm of level10Flight.storms) {
+    const sx = storm.x - cam;
+    if (sx < -storm.w || sx > W + storm.w) continue;
+    if (storm.hit) continue;
+    // Dark cloud
+    ctx.fillStyle = 'rgba(30, 41, 59, 0.85)';
+    ctx.beginPath();
+    ctx.ellipse(sx, storm.y, storm.w / 2, storm.h / 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(sx - 20, storm.y + 10, storm.w * 0.35, storm.h * 0.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(sx + 25, storm.y + 8, storm.w * 0.3, storm.h * 0.35, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Lightning flash
+    storm.flashTimer = (storm.flashTimer + 16) % 1200;
+    if (storm.flashTimer < 100) {
+      ctx.strokeStyle = '#fbbf24';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(sx - 5, storm.y + storm.h / 2);
+      ctx.lineTo(sx + 3, storm.y + storm.h / 2 + 15);
+      ctx.lineTo(sx - 2, storm.y + storm.h / 2 + 15);
+      ctx.lineTo(sx + 5, storm.y + storm.h / 2 + 30);
+      ctx.stroke();
+    }
+  }
+
+  // Draw hurricanes
+  for (const hur of level10Flight.hurricanes) {
+    const hx = hur.x - cam;
+    if (hx < -hur.radius * 2 || hx > W + hur.radius * 2) continue;
+    if (hur.hit) continue;
+    hur.rotation += 0.02;
+    // Swirling cloud
+    for (let ring = 0; ring < 4; ring++) {
+      const r = hur.radius - ring * 10;
+      const alpha = 0.3 + ring * 0.15;
+      ctx.strokeStyle = `rgba(100, 116, 139, ${alpha})`;
+      ctx.lineWidth = 6 - ring;
+      ctx.beginPath();
+      ctx.arc(hx, hur.y, r, hur.rotation + ring * 0.5, hur.rotation + ring * 0.5 + Math.PI * 1.5);
+      ctx.stroke();
+    }
+    // Eye
+    ctx.fillStyle = 'rgba(59, 130, 246, 0.4)';
+    ctx.beginPath();
+    ctx.arc(hx, hur.y, 8, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Draw rubies (yarn balls with ruby appearance)
+  for (const ruby of level10Flight.yarnBalls) {
+    const rx = ruby.x - cam;
+    if (rx < -20 || rx > W + 20) continue;
+    if (ruby.collected) continue;
+    const bob = Math.sin(t / 300 + ruby.bobPhase) * 3;
+    // Ruby gem shape
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath();
+    const ry = ruby.y + bob;
+    ctx.moveTo(rx, ry - 8);
+    ctx.lineTo(rx + 7, ry - 3);
+    ctx.lineTo(rx + 5, ry + 6);
+    ctx.lineTo(rx - 5, ry + 6);
+    ctx.lineTo(rx - 7, ry - 3);
+    ctx.closePath();
+    ctx.fill();
+    // Shine
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.beginPath();
+    ctx.moveTo(rx - 2, ry - 6);
+    ctx.lineTo(rx + 2, ry - 6);
+    ctx.lineTo(rx + 4, ry - 3);
+    ctx.lineTo(rx - 4, ry - 3);
+    ctx.closePath();
+    ctx.fill();
+    // Sparkle
+    ctx.fillStyle = '#fbbf24';
+    const sparkle = Math.sin(t / 150 + ruby.bobPhase) * 0.5 + 0.5;
+    ctx.globalAlpha = sparkle;
+    ctx.beginPath();
+    ctx.arc(rx + 4, ry - 5, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  // Draw the plane (player)
+  const px = player.x - cam;
+  const py = player.y;
+  // Plane body
+  ctx.fillStyle = '#e2e8f0';
+  ctx.beginPath();
+  ctx.ellipse(px, py, 18, 8, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Wings
+  ctx.fillStyle = '#94a3b8';
+  ctx.fillRect(px - 6, py - 14, 12, 6);
+  ctx.fillRect(px - 6, py + 8, 12, 6);
+  // Tail
+  ctx.fillStyle = '#64748b';
+  ctx.beginPath();
+  ctx.moveTo(px - 18, py);
+  ctx.lineTo(px - 26, py - 10);
+  ctx.lineTo(px - 26, py + 10);
+  ctx.closePath();
+  ctx.fill();
+  // Cockpit
+  ctx.fillStyle = '#60a5fa';
+  ctx.beginPath();
+  ctx.ellipse(px + 10, py - 2, 6, 5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Propeller
+  const propAngle = t / 50;
+  ctx.strokeStyle = '#475569';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(px + 18 + Math.cos(propAngle) * 8, py + Math.sin(propAngle) * 8);
+  ctx.lineTo(px + 18 - Math.cos(propAngle) * 8, py - Math.sin(propAngle) * 8);
+  ctx.stroke();
+
+  // Player cat in cockpit (tiny)
+  drawKitty(px + 8, py + 2, player.color || '#86efac', 1, 0, 'horn');
+
+  // HUD: show "Enter" prompt near Florida
+  if (player.x > ww - 500) {
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 16px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('Press Enter to land in Florida!', W / 2, 30);
+    ctx.textAlign = 'left';
+  }
+
+  // NPCs are not visible during flight — they're decorative for data integrity
+}
+
 // ── Level Registry ──
 // Central registry mapping level numbers to their data and draw functions.
 // Defined here (at the bottom of drawing.js) because all level data from
@@ -4598,6 +4910,16 @@ const levelRegistry = {
     musicId: 'musicSafari',
     drawSky: drawSafariSky,
     drawWorld: drawSafariWorld,
+  },
+  10: {
+    name: 'Transatlantic Flight',
+    worldW: level10Flight.worldW,
+    platforms: level10Flight.platforms,
+    yarnBalls: level10Flight.yarnBalls,
+    npcs: flightNpcs,
+    musicId: 'musicFlight',
+    drawSky: drawFlightSky,
+    drawWorld: drawFlightWorld,
   },
 };
 

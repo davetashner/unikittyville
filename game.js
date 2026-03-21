@@ -1905,7 +1905,10 @@ function update(dt) {
     // Safari jeep — exit portal
     if (Math.abs(player.x - SAFARI_JEEP_POS_GAME.x) < BUILDING_RANGE) {
       nearSafariJeep = true;
-      // For now the safari is the last level — could connect to next level later
+      if (keys['Enter']) {
+        keys['Enter'] = false;
+        switchToLevel(10);
+      }
     }
 
     // Tall grass slowdown
@@ -1925,6 +1928,76 @@ function update(dt) {
     hud.fruit.textContent = fruitCount;
     hud.photo.textContent = safariPhotoCount;
     hud.cheetahYarn.textContent = cheetahYarnGiven + '/5';
+  }
+
+  // ── Transatlantic Flight interactions (level 10) ──
+  if (currentLevel === 10) {
+    // Auto-scroll: push player right
+    player.vx = Math.max(player.vx, FLIGHT_SPEED);
+
+    // Vertical movement — up/down keys move player vertically
+    if (keys['ArrowUp']) player.y = Math.max(60, player.y - 3);
+    if (keys['ArrowDown']) player.y = Math.min(GROUND_Y - 80, player.y + 3);
+
+    // Override gravity — flying level
+    player.vy = 0;
+    player.onGround = false;
+
+    // Seagull collision
+    for (const sg of level10Flight.seagulls) {
+      if (sg.hit) continue;
+      const dx = player.x - sg.x;
+      const dy = player.y - sg.y;
+      if (dx * dx + dy * dy < 900) { // 30px radius
+        sg.hit = true;
+        score = Math.max(0, score - 15);
+        addPopup(sg.x, sg.y, '-15 Seagull!', '#ef4444');
+      }
+    }
+
+    // Storm collision
+    for (const storm of level10Flight.storms) {
+      if (storm.hit) continue;
+      const dx = player.x - storm.x;
+      const dy = player.y - storm.y;
+      if (Math.abs(dx) < storm.w / 2 && Math.abs(dy) < storm.h / 2) {
+        storm.hit = true;
+        score = Math.max(0, score - 25);
+        addPopup(storm.x, storm.y, '-25 Storm!', '#ef4444');
+      }
+    }
+
+    // Hurricane collision
+    for (const hur of level10Flight.hurricanes) {
+      if (hur.hit) continue;
+      const dx = player.x - hur.x;
+      const dy = player.y - hur.y;
+      if (dx * dx + dy * dy < hur.radius * hur.radius) {
+        hur.hit = true;
+        score = Math.max(0, score - 30);
+        addPopup(hur.x, hur.y, '-30 Hurricane!', '#ef4444');
+      }
+    }
+
+    // Ruby collection (uses yarnBalls array)
+    for (const ruby of level10Flight.yarnBalls) {
+      if (ruby.collected) continue;
+      const dx = player.x - ruby.x;
+      const dy = player.y - ruby.y;
+      if (dx * dx + dy * dy < COLLECT_RADIUS_SQ) {
+        ruby.collected = true;
+        yarnCount++;
+        score += POINTS.YARN;
+        addPopup(ruby.x, ruby.y - 20, '+' + POINTS.YARN + ' Ruby!', '#ef4444');
+        playChaChing();
+      }
+    }
+
+    // Level exit — reach Florida
+    if (player.x > level10Flight.worldW - 400 && keys['Enter']) {
+      keys['Enter'] = false;
+      switchToLevel(11);
+    }
   }
 
   // Rainbow bridge portal (level 1 → level 2 sledding)
