@@ -604,6 +604,12 @@ function setAction(key, label, key2, label2) {
 
 function updatePrompt(near) {
   const el = document.getElementById('prompt');
+  // Hide prompt during hot dog math overlay (UI is drawn on canvas)
+  if (hotdogMath.active) {
+    el.style.display = 'none';
+    setAction(null, '');
+    return;
+  }
   // Quiz mode overrides all other prompts
   if (quizActive) {
     el.textContent = 'Quiz! Press 1, 2, or 3 to answer!';
@@ -924,9 +930,13 @@ function updatePrompt(near) {
     el.style.display = 'block';
     setAction('Enter', 'Enter');
   } else if (near.nearHotdog) {
-    el.textContent = score >= 10 ? 'Press C to buy a hot dog (-10 pts)' : 'Not enough points for a hot dog!';
+    if (hotdogMath.complete) {
+      el.textContent = 'You already bought all 5 hot dogs here!';
+    } else {
+      el.textContent = 'Press H for Hot Dog Math Challenge!';
+    }
     el.style.display = 'block';
-    setAction(score >= 10 ? 'KeyC' : null, 'Buy');
+    setAction(hotdogMath.complete ? null : 'KeyH', 'Math');
   } else if (near.nearPark) {
     el.textContent = 'Press Enter to visit Central Park';
     el.style.display = 'block';

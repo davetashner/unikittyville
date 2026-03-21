@@ -112,6 +112,11 @@ function draw() {
   if (journalActive && currentLevel === 9) {
     drawFieldJournal(W, H);
   }
+
+  // Hot dog math overlay (NYC level)
+  if (hotdogMath.active) {
+    drawHotdogMathOverlay(W, H);
+  }
 }
 
 function drawPhotoGallery(W, H) {
@@ -1348,6 +1353,157 @@ function drawLightShowOverlay(W, H) {
   } else {
     ctx.fillText('R/B/G/Y/W: add color   X: repeat x3   Backspace: delete   Space: run   N: next   Esc: exit', W / 2, helpY);
   }
+}
+
+function drawHotdogMathOverlay(W, H) {
+  const cx = W / 2;
+  const cy = H / 2;
+
+  // Semi-transparent backdrop
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Hot dog cart backdrop panel
+  const panelW = Math.min(460, W * 0.9);
+  const panelH = Math.min(340, H * 0.85);
+  const px = cx - panelW / 2;
+  const py = cy - panelH / 2;
+
+  // Panel background (warm cart colors)
+  ctx.fillStyle = '#7f1d1d';
+  ctx.beginPath(); ctx.roundRect(px, py, panelW, panelH, 12); ctx.fill();
+  ctx.fillStyle = '#991b1b';
+  ctx.beginPath(); ctx.roundRect(px + 4, py + 4, panelW - 8, panelH - 8, 10); ctx.fill();
+
+  // Awning stripes at top
+  const stripeH = 20;
+  for (let i = 0; i < Math.ceil(panelW / 30); i++) {
+    ctx.fillStyle = i % 2 === 0 ? '#dc2626' : '#fbbf24';
+    ctx.fillRect(px + i * 30, py, 30, stripeH);
+  }
+  // Clip awning to panel
+  ctx.fillStyle = '#991b1b';
+  ctx.beginPath(); ctx.roundRect(px, py, panelW, panelH, 12); ctx.fill();
+  ctx.save();
+  ctx.beginPath(); ctx.roundRect(px, py, panelW, panelH, 12); ctx.clip();
+  for (let i = 0; i < Math.ceil(panelW / 30); i++) {
+    ctx.fillStyle = i % 2 === 0 ? '#dc2626' : '#fbbf24';
+    ctx.fillRect(px + i * 30, py, 30, stripeH);
+  }
+  ctx.restore();
+
+  // Title
+  ctx.fillStyle = '#fef3c7';
+  ctx.font = 'bold ' + Math.round(panelH * 0.065) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Hot Dog Stand Math!', cx, py + stripeH + 28);
+
+  // Round indicator
+  ctx.fillStyle = '#fbbf24';
+  ctx.font = Math.round(panelH * 0.04) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.fillText('Round ' + (hotdogMath.round + 1) + ' of ' + HOTDOG_MATH_PRICES.length, cx, py + stripeH + 50);
+
+  // Price display
+  const priceY = py + stripeH + 85;
+  ctx.fillStyle = '#1f2937';
+  ctx.beginPath(); ctx.roundRect(cx - 80, priceY - 22, 160, 36, 8); ctx.fill();
+  ctx.fillStyle = '#4ade80';
+  ctx.font = 'bold ' + Math.round(panelH * 0.08) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.fillText('$' + hotdogMath.price.toFixed(2), cx, priceY + 8);
+
+  // Amount paid so far
+  const paidY = priceY + 45;
+  ctx.fillStyle = '#fef3c7';
+  ctx.font = Math.round(panelH * 0.045) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.fillText('Paid: $' + (hotdogMath.paid / 100).toFixed(2), cx, paidY);
+
+  // Remaining
+  const remaining = Math.max(0, Math.round(hotdogMath.price * 100) - hotdogMath.paid);
+  ctx.fillStyle = remaining > 0 ? '#fca5a5' : '#4ade80';
+  ctx.font = Math.round(panelH * 0.04) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.fillText(remaining > 0 ? 'Still need: $' + (remaining / 100).toFixed(2) : 'Paid in full!', cx, paidY + 22);
+
+  // Coin/bill buttons
+  const btnY = paidY + 50;
+  const coins = [
+    { label: '$1', key: '1', color: '#4ade80', value: 100 },
+    { label: '$5', key: '5', color: '#22d3ee', value: 500 },
+    { label: '25\u00a2', key: 'Q', color: '#a78bfa', value: 25 },
+    { label: '10\u00a2', key: 'D', color: '#f472b6', value: 10 },
+    { label: '5\u00a2', key: 'N', color: '#fb923c', value: 5 },
+    { label: '1\u00a2', key: 'P', color: '#94a3b8', value: 1 },
+  ];
+  const btnW = Math.round(panelW * 0.13);
+  const btnH = Math.round(panelH * 0.13);
+  const gap = Math.round(panelW * 0.02);
+  const totalBtnW = coins.length * btnW + (coins.length - 1) * gap;
+  const btnStartX = cx - totalBtnW / 2;
+
+  for (let i = 0; i < coins.length; i++) {
+    const c = coins[i];
+    const bx = btnStartX + i * (btnW + gap);
+    const by = btnY;
+
+    // Button background
+    ctx.fillStyle = '#1f2937';
+    ctx.beginPath(); ctx.roundRect(bx, by, btnW, btnH, 6); ctx.fill();
+
+    // Coin circle
+    ctx.fillStyle = c.color;
+    ctx.beginPath();
+    ctx.arc(bx + btnW / 2, by + btnH * 0.4, Math.min(btnW, btnH) * 0.25, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Value label
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold ' + Math.round(btnH * 0.22) + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(c.label, bx + btnW / 2, by + btnH * 0.48);
+
+    // Key label
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = Math.round(btnH * 0.2) + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.fillText('[' + c.key + ']', bx + btnW / 2, by + btnH * 0.82);
+  }
+
+  // Feedback message (when correct/overpaid)
+  if (hotdogMath.feedback) {
+    const fbY = btnY + btnH + 30;
+    ctx.fillStyle = '#1f2937';
+    ctx.beginPath(); ctx.roundRect(px + 20, fbY - 16, panelW - 40, 32, 6); ctx.fill();
+    ctx.fillStyle = '#4ade80';
+    ctx.font = 'bold ' + Math.round(panelH * 0.04) + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(hotdogMath.feedback, cx, fbY + 5);
+  }
+
+  // Escape hint
+  ctx.fillStyle = '#6b7280';
+  ctx.font = Math.round(panelH * 0.032) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Press Esc to cancel', cx, py + panelH - 10);
+
+  // Hot dog icon decorations in corners
+  drawMiniHotdog(px + 20, py + stripeH + 12);
+  drawMiniHotdog(px + panelW - 40, py + stripeH + 12);
+}
+
+function drawMiniHotdog(x, y) {
+  // Bun
+  ctx.fillStyle = '#d97706';
+  ctx.beginPath(); ctx.ellipse(x + 10, y + 4, 12, 6, 0, 0, Math.PI * 2); ctx.fill();
+  // Sausage
+  ctx.fillStyle = '#b91c1c';
+  ctx.beginPath(); ctx.ellipse(x + 10, y + 4, 9, 3.5, 0, 0, Math.PI * 2); ctx.fill();
+  // Mustard zigzag
+  ctx.strokeStyle = '#facc15';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(x + 3, y + 4);
+  for (let i = 0; i < 5; i++) {
+    ctx.lineTo(x + 5 + i * 3, y + (i % 2 === 0 ? 2 : 6));
+  }
+  ctx.stroke();
 }
 
 function drawSpeechBubbles() {
