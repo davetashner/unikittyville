@@ -41,7 +41,7 @@ function drawHouseInterior(cam, W, H) {
   ctx.fillText('Press Enter to go outside', cx, cy + 130);
 
   // Draw player inside
-  drawKitty(cx, cy + 60, player.color, 1, 0, 'horn');
+  drawKitty(cx, cy + 60, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
 }
 
 function drawCamperInterior(cam, W, H) {
@@ -178,7 +178,7 @@ function drawCamperInterior(cam, W, H) {
   // Napping animation
   if (camperNapping) {
     // Kitty in bed
-    drawKitty(cx + 140, cy - 40, player.color, 1, 0, 'horn');
+    drawKitty(cx + 140, cy - 40, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
     // Zzz
     const napPhase = camperNapTimer / CAMPER_NAP_DURATION;
     ctx.fillStyle = '#fff'; ctx.font = 'bold 14px system-ui'; ctx.textAlign = 'center';
@@ -195,7 +195,7 @@ function drawCamperInterior(cam, W, H) {
     ctx.fillText('Napping...', cx, cy + 125);
   } else {
     // Draw player walking around
-    drawKitty(kittyX, cy + 60, player.color, player.facing, player.walkFrame, 'horn');
+    drawKitty(kittyX, cy + 60, player.color, player.facing, player.walkFrame, 'horn', playerEyeColor, playerHornColors);
   }
 
   // Text
@@ -276,7 +276,7 @@ function drawWindmillInterior(cam, W, H) {
   ctx.fillStyle = 'rgba(255,255,255,0.7)';
   ctx.fillText('Press Enter to go outside', cx, cy + 130);
 
-  drawKitty(cx, cy + 60, player.color, 1, 0, 'horn');
+  drawKitty(cx, cy + 60, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
 }
 
 function drawPizzaInterior(cam, W, H) {
@@ -443,7 +443,7 @@ function drawPizzaInterior(cam, W, H) {
   }
 
   // Draw player
-  drawKitty(cx - 60, cy + 60, player.color, 1, 0, 'horn');
+  drawKitty(cx - 60, cy + 60, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
 
   // Popups
   for (const p of popups) {
@@ -517,7 +517,7 @@ function drawParkInterior(cam, W, H) {
   ctx.font = '13px system-ui'; ctx.fillStyle = 'rgba(255,255,255,0.8)';
   ctx.fillText('Press Enter to leave', cx, cy + 150);
   // Draw player
-  drawKitty(cx, cy + 60, player.color, 1, 0, 'horn');
+  drawKitty(cx, cy + 60, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
 }
 
 function drawPantheonInterior(cam, W, H) {
@@ -582,7 +582,7 @@ function drawPantheonInterior(cam, W, H) {
   ctx.fillText('The Pantheon', cx, cy - 130);
   ctx.font = '13px system-ui'; ctx.fillStyle = 'rgba(100,100,100,0.8)';
   ctx.fillText('Press Enter to leave', cx, cy + 145);
-  drawKitty(cx, cy + 60, player.color, 1, 0, 'horn');
+  drawKitty(cx, cy + 60, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
 }
 
 function drawSwimmingScene(cam, W, H) {
@@ -740,7 +740,7 @@ function drawSwimmingScene(cam, W, H) {
   ctx.globalAlpha = 1;
   // Kitty bobbing in the water
   const kittyBob = Math.sin(gameTime / 300) * 4;
-  drawKitty(cx, cy + kittyBob, player.color, 1, Math.floor(gameTime / 200) % 4, 'horn');
+  drawKitty(cx, cy + kittyBob, player.color, 1, Math.floor(gameTime / 200) % 4, 'horn', playerEyeColor, playerHornColors);
   // Water overlay (kitty partially submerged)
   ctx.fillStyle = 'rgba(56, 189, 248, 0.4)';
   ctx.beginPath(); ctx.ellipse(cx, cy + 8, 190, 45, 0, 0, Math.PI * 2); ctx.fill();
@@ -894,7 +894,7 @@ function drawChaletInterior(cam, W, H) {
   // Drinking animation
   if (drinkingCocoa) {
     // Draw kitty next to mug, "drinking"
-    drawKitty(mx - 30, cy + 60, player.color, 1, 0, 'horn');
+    drawKitty(mx - 30, cy + 60, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
     // Drinking progress bar
     const drinkProgress = cocoaDrinkTimer / COCOA_DRINK_DURATION;
     ctx.fillStyle = '#1f2937'; ctx.fillRect(cx - 40, cy + 100, 80, 8);
@@ -912,7 +912,7 @@ function drawChaletInterior(cam, W, H) {
     ctx.globalAlpha = 1;
   } else {
     // Kitty sitting by fire
-    drawKitty(cx - 80, cy + 70, player.color, 1, 0, 'horn');
+    drawKitty(cx - 80, cy + 70, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
 
     // Aim trajectory preview (dotted arc)
     if (!marshmallow.active) {
@@ -986,7 +986,7 @@ function drawSurfingScene(cam, W, H) {
   ctx.restore();
   // Kitty on surfboard
   const kittyBob = Math.sin(gameTime / 400) * 3;
-  drawKitty(cx, cy - 20 + kittyBob, player.color, 1, Math.floor(gameTime / 200) % 4, 'horn');
+  drawKitty(cx, cy - 20 + kittyBob, player.color, 1, Math.floor(gameTime / 200) % 4, 'horn', playerEyeColor, playerHornColors);
   // Splash effects
   ctx.fillStyle = '#bae6fd';
   for (let i = 0; i < 8; i++) {
@@ -1154,7 +1154,7 @@ function drawPoolSwimmingScene(cam, W, H) {
 
   // Kitty bobbing in pool
   const bobY = Math.sin(gameTime / 400) * 4;
-  drawKitty(cx, cy + 47 + bobY, player.color || '#c4b5fd', 1, 0, 'horn');
+  drawKitty(cx, cy + 47 + bobY, player.color || '#c4b5fd', 1, 0, 'horn', playerEyeColor, playerHornColors);
 
   // Gold count display
   if (leprechaunGold > 0) {
@@ -1273,7 +1273,7 @@ function drawCampCamperInterior(cam, W, H) {
     ctx.fillStyle = blanketColor;
     ctx.beginPath(); ctx.roundRect(bedX - 25, bedY + 2, 50, 18, 4); ctx.fill();
     // Kitty head peeking
-    drawKitty(bedX - 10, bedY - 5, player.color || '#c4b5fd', 1, 0, 'horn');
+    drawKitty(bedX - 10, bedY - 5, player.color || '#c4b5fd', 1, 0, 'horn', playerEyeColor, playerHornColors);
     // Zzz
     ctx.fillStyle = '#c4b5fd'; ctx.font = 'bold 14px system-ui'; ctx.textAlign = 'center';
     const zFloat = (gameTime / 600) % 1;
@@ -1284,7 +1284,7 @@ function drawCampCamperInterior(cam, W, H) {
     ctx.globalAlpha = 1;
   } else if (campCamperShowering) {
     // Kitty in shower (just head visible)
-    drawKitty(bathX, bathY + 35, player.color || '#c4b5fd', 1, 0, 'horn');
+    drawKitty(bathX, bathY + 35, player.color || '#c4b5fd', 1, 0, 'horn', playerEyeColor, playerHornColors);
     // Steam
     ctx.fillStyle = 'rgba(255,255,255,0.3)';
     for (let i = 0; i < 5; i++) {
@@ -1294,7 +1294,7 @@ function drawCampCamperInterior(cam, W, H) {
     }
   } else {
     // Kitty walking around
-    drawKitty(kittyX, cy + 60, player.color || '#c4b5fd', player.facing, player.walkFrame, 'horn');
+    drawKitty(kittyX, cy + 60, player.color || '#c4b5fd', player.facing, player.walkFrame, 'horn', playerEyeColor, playerHornColors);
   }
 
   // Pasta on counter if cooking

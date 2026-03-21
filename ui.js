@@ -1,3 +1,215 @@
+// ── Character Creator ──
+const PALETTE_64 = [
+  // Row 1: Reds & pinks
+  '#fecdd3','#fda4af','#fb7185','#f43f5e','#e11d48','#be123c','#881337','#4c0519',
+  // Row 2: Oranges & warm
+  '#fed7aa','#fdba74','#fb923c','#f97316','#ea580c','#c2410c','#9a3412','#7c2d12',
+  // Row 3: Yellows & gold
+  '#fef08a','#fde047','#facc15','#eab308','#ca8a04','#a16207','#854d0e','#713f12',
+  // Row 4: Greens
+  '#bbf7d0','#86efac','#4ade80','#22c55e','#16a34a','#15803d','#166534','#14532d',
+  // Row 5: Teals & cyans
+  '#a5f3fc','#67e8f9','#22d3ee','#06b6d4','#0891b2','#0e7490','#155e75','#164e63',
+  // Row 6: Blues
+  '#bfdbfe','#93c5fd','#60a5fa','#3b82f6','#2563eb','#1d4ed8','#1e40af','#1e3a5f',
+  // Row 7: Purples & violets
+  '#e9d5ff','#d8b4fe','#c084fc','#a855f7','#9333ea','#7e22ce','#6b21a8','#581c87',
+  // Row 8: Special (white, grays, black, metallics, neons)
+  '#ffffff','#e2e8f0','#94a3b8','#475569','#1e293b','#e879f9','#f0abfc','#a78bfa',
+];
+
+// Current selections
+let selectedFurColor = '#e879f9'; // default player color
+let selectedEyeColor = '#1e1b4b';
+let selectedHornColor = '#f472b6'; // middle of the gradient — we derive gradient from this
+
+// Horn gradient from a single picked color
+function hornGradientFromColor(color) {
+  return [lightenColor(color, 0.4), color, darkenColor(color, 0.3)];
+}
+
+function lightenColor(hex, amount) {
+  const r = parseInt(hex.slice(1,3), 16);
+  const g = parseInt(hex.slice(3,5), 16);
+  const b = parseInt(hex.slice(5,7), 16);
+  const nr = Math.min(255, Math.round(r + (255 - r) * amount));
+  const ng = Math.min(255, Math.round(g + (255 - g) * amount));
+  const nb = Math.min(255, Math.round(b + (255 - b) * amount));
+  return '#' + [nr, ng, nb].map(c => c.toString(16).padStart(2, '0')).join('');
+}
+
+function darkenColor(hex, amount) {
+  const r = parseInt(hex.slice(1,3), 16);
+  const g = parseInt(hex.slice(3,5), 16);
+  const b = parseInt(hex.slice(5,7), 16);
+  const nr = Math.round(r * (1 - amount));
+  const ng = Math.round(g * (1 - amount));
+  const nb = Math.round(b * (1 - amount));
+  return '#' + [nr, ng, nb].map(c => c.toString(16).padStart(2, '0')).join('');
+}
+
+function buildPalette(containerId, selectedColor, onSelect) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = '';
+  for (const color of PALETTE_64) {
+    const swatch = document.createElement('div');
+    swatch.className = 'swatch' + (color === selectedColor ? ' selected' : '');
+    swatch.style.background = color;
+    swatch.addEventListener('click', () => {
+      container.querySelectorAll('.swatch').forEach(s => s.classList.remove('selected'));
+      swatch.classList.add('selected');
+      onSelect(color);
+      updatePreview();
+    });
+    container.appendChild(swatch);
+  }
+}
+
+function updatePreview() {
+  const canvas = document.getElementById('previewCanvas');
+  if (!canvas) return;
+  const pCtx = canvas.getContext('2d');
+  pCtx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const cx = 60, cy = 80;
+
+  // Body
+  pCtx.fillStyle = selectedFurColor;
+  pCtx.beginPath();
+  pCtx.ellipse(cx, cy - 12, 16, 14, 0, 0, Math.PI * 2);
+  pCtx.fill();
+
+  // Head
+  pCtx.beginPath();
+  pCtx.arc(cx, cy - 30, 14, 0, Math.PI * 2);
+  pCtx.fill();
+
+  // Ears
+  pCtx.beginPath();
+  pCtx.moveTo(cx - 10, cy - 40);
+  pCtx.lineTo(cx - 6, cy - 50);
+  pCtx.lineTo(cx - 2, cy - 40);
+  pCtx.fill();
+  pCtx.beginPath();
+  pCtx.moveTo(cx + 2, cy - 40);
+  pCtx.lineTo(cx + 6, cy - 50);
+  pCtx.lineTo(cx + 10, cy - 40);
+  pCtx.fill();
+
+  // Inner ears
+  pCtx.fillStyle = '#fda4af';
+  pCtx.beginPath();
+  pCtx.moveTo(cx - 8, cy - 41);
+  pCtx.lineTo(cx - 6, cy - 47);
+  pCtx.lineTo(cx - 4, cy - 41);
+  pCtx.fill();
+  pCtx.beginPath();
+  pCtx.moveTo(cx + 4, cy - 41);
+  pCtx.lineTo(cx + 6, cy - 47);
+  pCtx.lineTo(cx + 8, cy - 41);
+  pCtx.fill();
+
+  // Eyes
+  pCtx.fillStyle = '#fff';
+  pCtx.beginPath();
+  pCtx.ellipse(cx - 5, cy - 32, 5, 6, 0, 0, Math.PI * 2);
+  pCtx.fill();
+  pCtx.beginPath();
+  pCtx.ellipse(cx + 5, cy - 32, 5, 6, 0, 0, Math.PI * 2);
+  pCtx.fill();
+
+  // Pupils
+  pCtx.fillStyle = selectedEyeColor;
+  pCtx.beginPath();
+  pCtx.arc(cx - 4, cy - 31, 2.5, 0, Math.PI * 2);
+  pCtx.fill();
+  pCtx.beginPath();
+  pCtx.arc(cx + 6, cy - 31, 2.5, 0, Math.PI * 2);
+  pCtx.fill();
+
+  // Eye shine
+  pCtx.fillStyle = '#fff';
+  pCtx.beginPath();
+  pCtx.arc(cx - 3, cy - 33, 1, 0, Math.PI * 2);
+  pCtx.fill();
+  pCtx.beginPath();
+  pCtx.arc(cx + 7, cy - 33, 1, 0, Math.PI * 2);
+  pCtx.fill();
+
+  // Mouth
+  pCtx.strokeStyle = '#831843';
+  pCtx.lineWidth = 1.2;
+  pCtx.beginPath();
+  pCtx.arc(cx - 2, cy - 25, 3, 0, Math.PI);
+  pCtx.stroke();
+  pCtx.beginPath();
+  pCtx.arc(cx + 2, cy - 25, 3, 0, Math.PI);
+  pCtx.stroke();
+
+  // Horn
+  const hc = hornGradientFromColor(selectedHornColor);
+  const hornGrad = pCtx.createLinearGradient(cx, cy - 50, cx, cy - 58);
+  hornGrad.addColorStop(0, hc[0]);
+  hornGrad.addColorStop(0.5, hc[1]);
+  hornGrad.addColorStop(1, hc[2]);
+  pCtx.fillStyle = hornGrad;
+  pCtx.beginPath();
+  pCtx.moveTo(cx - 3, cy - 43);
+  pCtx.lineTo(cx, cy - 58);
+  pCtx.lineTo(cx + 3, cy - 43);
+  pCtx.closePath();
+  pCtx.fill();
+
+  // Horn spiral
+  pCtx.strokeStyle = 'rgba(255,255,255,0.5)';
+  pCtx.lineWidth = 0.8;
+  for (let i = 0; i < 3; i++) {
+    const hy = cy - 45 - i * 4;
+    pCtx.beginPath();
+    pCtx.moveTo(cx - 2, hy);
+    pCtx.lineTo(cx + 2, hy - 2);
+    pCtx.stroke();
+  }
+
+  // Tail
+  pCtx.strokeStyle = selectedFurColor;
+  pCtx.lineWidth = 4;
+  pCtx.lineCap = 'round';
+  pCtx.beginPath();
+  pCtx.moveTo(cx - 14, cy - 8);
+  pCtx.quadraticCurveTo(cx - 24, cy - 20, cx - 18, cy - 28);
+  pCtx.stroke();
+
+  // Legs
+  pCtx.fillStyle = selectedFurColor;
+  pCtx.fillRect(cx - 10, cy - 2, 6, 6);
+  pCtx.fillRect(cx + 4, cy - 2, 6, 6);
+
+  // Whiskers
+  pCtx.strokeStyle = 'rgba(0,0,0,0.3)';
+  pCtx.lineWidth = 0.8;
+  for (let side = -1; side <= 1; side += 2) {
+    pCtx.beginPath();
+    pCtx.moveTo(cx + side * 8, cy - 28);
+    pCtx.lineTo(cx + side * 20, cy - 30);
+    pCtx.stroke();
+    pCtx.beginPath();
+    pCtx.moveTo(cx + side * 8, cy - 26);
+    pCtx.lineTo(cx + side * 20, cy - 26);
+    pCtx.stroke();
+  }
+}
+
+function initCharacterCreator() {
+  buildPalette('furPalette', selectedFurColor, (c) => { selectedFurColor = c; });
+  buildPalette('eyePalette', selectedEyeColor, (c) => { selectedEyeColor = c; });
+  buildPalette('hornPalette', selectedHornColor, (c) => { selectedHornColor = c; });
+  updatePreview();
+}
+
+initCharacterCreator();
+
 function resize() {
   const ASPECT = 16 / 9;
   const MAX_W = 960;
@@ -161,6 +373,10 @@ function startGameAtLevel(lvl) {
       if (p) p.then(() => { sfx.pause(); sfx.currentTime = 0; }).catch(() => {});
     }
   }
+  // Apply character creator selections
+  player.color = selectedFurColor;
+  playerEyeColor = selectedEyeColor;
+  playerHornColors = hornGradientFromColor(selectedHornColor);
   currentLevel = lvl;
   player.x = 100;
   player.y = GROUND_Y;
@@ -201,6 +417,10 @@ function startGame() {
       if (p) p.then(() => { sfx.pause(); sfx.currentTime = 0; }).catch(() => {});
     }
   }
+  // Apply character creator selections
+  player.color = selectedFurColor;
+  playerEyeColor = selectedEyeColor;
+  playerHornColors = hornGradientFromColor(selectedHornColor);
   // Start music (requires user gesture, which the click/enter provides)
   startLevelMusic(1);
   requestAnimationFrame(loop);

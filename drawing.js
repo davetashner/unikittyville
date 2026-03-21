@@ -400,7 +400,7 @@ function drawPlayerAndUI() {
   }
   // On sledding level, draw kitty sitting in sled (offset lower into sled)
   const sledOffset = (currentLevel === 2 && sledding) ? 5 : 0;
-  drawKitty(player.x, player.y - (ridingCheetah ? 15 : sledOffset), player.color, player.facing, player.walkFrame, 'horn');
+  drawKitty(player.x, player.y - (ridingCheetah ? 15 : sledOffset), player.color, player.facing, player.walkFrame, 'horn', playerEyeColor, playerHornColors);
 
   // Glitter particles from horn
   for (const g of glitterParticles) {
@@ -2932,7 +2932,7 @@ function drawChalet(x) {
   ctx.fillText('FINISH', x, gy - 105);
 }
 
-function drawKitty(x, y, color, facing, walkFrame, accessory) {
+function drawKitty(x, y, color, facing, walkFrame, accessory, eyeColor, hornColors) {
   ctx.save();
   ctx.translate(x, y);
   ctx.scale(facing, 1);
@@ -2985,7 +2985,7 @@ function drawKitty(x, y, color, facing, walkFrame, accessory) {
   ctx.fill();
 
   // Pupils
-  ctx.fillStyle = '#1e1b4b';
+  ctx.fillStyle = eyeColor || '#1e1b4b';
   ctx.beginPath();
   ctx.arc(-4, -31 + bounce, 2.5, 0, Math.PI * 2);
   ctx.fill();
@@ -3045,10 +3045,11 @@ function drawKitty(x, y, color, facing, walkFrame, accessory) {
 
   // Unicorn horn
   if (accessory === 'horn') {
+    const hc = hornColors || ['#fbbf24', '#f472b6', '#a78bfa'];
     const hornGrad = ctx.createLinearGradient(0, -50 + bounce, 0, -58 + bounce);
-    hornGrad.addColorStop(0, '#fbbf24');
-    hornGrad.addColorStop(0.5, '#f472b6');
-    hornGrad.addColorStop(1, '#a78bfa');
+    hornGrad.addColorStop(0, hc[0]);
+    hornGrad.addColorStop(0.5, hc[1]);
+    hornGrad.addColorStop(1, hc[2]);
     ctx.fillStyle = hornGrad;
     ctx.beginPath();
     ctx.moveTo(-3, -43 + bounce);
@@ -3446,7 +3447,7 @@ function drawSailingScene(cam, W, H) {
   ctx.beginPath(); ctx.moveTo(0, -80); ctx.lineTo(15, -75); ctx.lineTo(0, -70); ctx.closePath(); ctx.fill();
   ctx.restore();
   // Draw Sparkle on the boat
-  drawKitty(cx, cy + 5 + bob, player.color, player.facing, player.walkFrame, 'horn');
+  drawKitty(cx, cy + 5 + bob, player.color, player.facing, player.walkFrame, 'horn', playerEyeColor, playerHornColors);
   // Dolphin in background
   const dx = cx - 200 + Math.sin(gameTime / 2000) * 150;
   const dy = cy + 60 + Math.sin(gameTime / 600 + 1) * 15;
@@ -3585,7 +3586,7 @@ function drawScubaDivingScene(cam, W, H) {
     const by2 = py - 30 - b * 10 + Math.sin(gameTime / 300 + b * 2) * 2;
     ctx.beginPath(); ctx.arc(bx2, by2, 2 + b * 0.5, 0, Math.PI * 2); ctx.fill();
   }
-  drawKitty(px, py, player.color, player.facing, player.walkFrame, 'horn');
+  drawKitty(px, py, player.color, player.facing, player.walkFrame, 'horn', playerEyeColor, playerHornColors);
   // Scuba mask on Sparkle
   ctx.save(); ctx.translate(px, py); ctx.scale(player.facing, 1);
   ctx.strokeStyle = '#0ea5e9'; ctx.lineWidth = 2;
@@ -4828,7 +4829,7 @@ function drawWateringHoleScene(cam, W, H) {
   ctx.fillStyle = '#c8a96e';
   ctx.fillRect(cam, cy + 25, W, 8);
   // Player splashing
-  drawKitty(cx, cy + 45, player.color, player.facing, player.walkFrame, 'horn');
+  drawKitty(cx, cy + 45, player.color, player.facing, player.walkFrame, 'horn', playerEyeColor, playerHornColors);
   // Splash effects
   ctx.fillStyle = 'rgba(255,255,255,0.5)';
   for (let i = 0; i < 3; i++) {
@@ -5163,7 +5164,7 @@ function drawFlightWorld(W, H, cam, cycle, isNight) {
   ctx.stroke();
 
   // Player cat in cockpit (tiny)
-  drawKitty(px + 8, py + 2, player.color || '#86efac', 1, 0, 'horn');
+  drawKitty(px + 8, py + 2, player.color || '#86efac', 1, 0, 'horn', playerEyeColor, playerHornColors);
 
   // HUD: show "Enter" prompt near Florida
   if (player.x > ww - 500) {
