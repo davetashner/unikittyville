@@ -443,6 +443,10 @@ function updateMusicFade(dt) {
   }
 }
 
+// Character customization — set by character creator
+let playerEyeColor = '#1e1b4b';
+let playerHornColors = ['#fbbf24', '#f472b6', '#a78bfa'];
+
 // Player
 const player = {
   x: 600, y: GROUND_Y, vx: 0, vy: 0,
