@@ -2,7 +2,7 @@
 const WORLD_W = 4800;
 const GROUND_Y = 420;
 const GRAVITY = 0.6;
-const JUMP_VEL = -12;
+const JUMP_VEL = -15;
 const MOVE_SPEED = 4;
 const DAY_LENGTH = 30000; // 30s full cycle
 
