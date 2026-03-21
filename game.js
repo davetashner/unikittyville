@@ -146,6 +146,14 @@ function playMeow() {
 
 // ── Generic SFX player ──
 const sfxCooldowns = {};
+function ensureLoaded(el) {
+  if (el.readyState >= 2) return Promise.resolve();
+  return new Promise(resolve => {
+    el.load();
+    el.addEventListener('canplay', resolve, { once: true });
+  });
+}
+
 function playSfx(id, cooldownMs = 500) {
   if (muted) return;
   const now = performance.now();
@@ -155,7 +163,7 @@ function playSfx(id, cooldownMs = 500) {
   if (!el) return;
   el.volume = getSfxVolume();
   el.currentTime = 0;
-  el.play().catch(() => {});
+  ensureLoaded(el).then(() => el.play().catch(() => {}));
 }
 
 function startLoopSfx(id) {
@@ -163,7 +171,7 @@ function startLoopSfx(id) {
   const el = document.getElementById(id);
   if (!el || !el.paused) return;
   el.volume = getSfxVolume() * 0.5;
-  el.play().catch(() => {});
+  ensureLoaded(el).then(() => el.play().catch(() => {}));
 }
 
 function stopLoopSfx(id) {
@@ -290,7 +298,7 @@ function startLevelMusic(level) {
   const el = document.getElementById(id);
   el.volume = getMusicVolume();
   el.currentTime = 0;
-  el.play().catch(() => {});
+  ensureLoaded(el).then(() => el.play().catch(() => {}));
   currentMusicId = id;
 }
 
@@ -306,7 +314,7 @@ function crossfadeToMusic(newId) {
   const inEl = document.getElementById(newId);
   inEl.volume = 0;
   inEl.currentTime = 0;
-  inEl.play().catch(() => {});
+  ensureLoaded(inEl).then(() => inEl.play().catch(() => {}));
   musicFade = { out: outEl, inEl: inEl, inId: newId, timer: 0 };
 }
 
@@ -404,9 +412,9 @@ let shellCount = 0;
 let scubaPlayer = { x: 200, y: 200, vx: 0, vy: 0 };
 const SCUBA_WORLD_W = 1200;
 const SCUBA_WORLD_H = 500;
-const SCUBA_BUOYANCY = -0.15;
-const SCUBA_SWIM_FORCE = 0.4;
-const SCUBA_DRAG = 0.96;
+const SCUBA_BUOYANCY = -0.04;
+const SCUBA_SWIM_FORCE = 0.45;
+const SCUBA_DRAG = 0.92;
 let scubaCollectibles = [];
 let scubaPearlCount = 0;
 // Level select
@@ -658,6 +666,12 @@ function update(dt) {
       keys['Enter'] = false;
       currentScene = null;
       stopLoopSfx('sfxBubblesSwim');
+      // Force crossfade back to level music even if scuba fade is still in progress
+      if (musicFade) {
+        if (musicFade.out) { musicFade.out.pause(); musicFade.out.currentTime = 0; }
+        currentMusicId = musicFade.inId;
+        musicFade = null;
+      }
       crossfadeToLevel(currentLevel);
       score += 50;
       addPopup(player.x, player.y - 40, '+50 Great dive!', '#38bdf8');
