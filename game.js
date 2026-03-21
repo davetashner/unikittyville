@@ -273,6 +273,18 @@ const SLED_SPEED = 3.0;
 // NPC dialogue system
 const NPC_TALK_RANGE = 60;
 let activeSpeechBubbles = []; // { npc, text, life }
+
+// NPC Quiz system — triggered randomly after NPC dialogue
+let quizActive = false;
+let quizQuestion = '';
+let quizAnswers = [];
+let quizCorrect = 0;       // index of correct answer (0, 1, or 2)
+let quizResultTimer = 0;   // countdown for result message display
+let quizResultText = '';    // "Correct! +50" or "Not quite! The answer is..."
+let quizResultColor = '';   // color for the result message
+const QUIZ_CHANCE = 0.33;  // ~1 in 3 chance of quiz after dialogue
+const QUIZ_BONUS = 50;
+const QUIZ_RESULT_DURATION = 2000; // 2 seconds
 const SLED_WORLD_W = 5000;
 
 // Sledding terrain height function — slopes downhill with rolling bumps
@@ -799,6 +811,8 @@ function completeTransition() {
   bigfootDrinkTimer = 0;
   roasting = { active: false, progress: 0, done: false };
   activeSpeechBubbles = [];
+  quizActive = false;
+  quizResultTimer = 0;
   pizzaMaking.stage = 'idle';
   pizzaMaking.progress = 0;
   // Reset hospital minigame stage (but keep delivery/stroller/color state)
@@ -3605,7 +3619,46 @@ function update(dt) {
   // Update speech bubbles
   for (let i = activeSpeechBubbles.length - 1; i >= 0; i--) {
     activeSpeechBubbles[i].life -= dt;
-    if (activeSpeechBubbles[i].life <= 0) activeSpeechBubbles.splice(i, 1);
+    if (activeSpeechBubbles[i].life <= 0) {
+      activeSpeechBubbles.splice(i, 1);
+      // Chance to trigger a quiz after dialogue ends
+      if (!quizActive && quizResultTimer <= 0) {
+        const quizzes = npcQuizzes[currentLevel];
+        if (quizzes && quizzes.length > 0 && Math.random() < QUIZ_CHANCE) {
+          const q = quizzes[Math.floor(Math.random() * quizzes.length)];
+          quizActive = true;
+          quizQuestion = q.question;
+          quizAnswers = q.answers;
+          quizCorrect = q.correct;
+        }
+      }
+    }
+  }
+
+  // Handle quiz input (1, 2, 3 keys)
+  if (quizActive) {
+    for (let i = 0; i < 3; i++) {
+      if (keys['Digit' + (i + 1)]) {
+        keys['Digit' + (i + 1)] = false;
+        quizActive = false;
+        if (i === quizCorrect) {
+          score += QUIZ_BONUS;
+          quizResultText = 'Correct! +' + QUIZ_BONUS + ' points!';
+          quizResultColor = '#4ade80';
+          addPopup(player.x, player.y - 40, '+' + QUIZ_BONUS + ' Quiz bonus!', '#4ade80');
+        } else {
+          quizResultText = 'Not quite! The answer is: ' + quizAnswers[quizCorrect];
+          quizResultColor = '#fbbf24';
+        }
+        quizResultTimer = QUIZ_RESULT_DURATION;
+        break;
+      }
+    }
+  }
+
+  // Update quiz result timer
+  if (quizResultTimer > 0) {
+    quizResultTimer -= dt;
   }
 
   // Popups

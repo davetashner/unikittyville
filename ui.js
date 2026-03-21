@@ -366,6 +366,35 @@ window.addEventListener('keyup', e => { keys[e.code] = false; });
   );
 })();
 
+// ── Quiz touch support ──
+// Tapping the canvas answer buttons triggers quiz answers (works on mobile and desktop)
+canvas.addEventListener('click', function(e) {
+  if (!quizActive) return;
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const tx = (e.clientX - rect.left) * scaleX;
+  const ty = (e.clientY - rect.top) * scaleY;
+  const W = canvas.width, H = canvas.height;
+  // Match button layout from drawQuizOverlay
+  const boxW = Math.min(W * 0.85, 420);
+  const bx = (W - boxW) / 2;
+  const boxH = 180;
+  const by = (H - boxH) / 2 - 20;
+  // answerY uses 2 lines as estimate (question text wrap); buttons start ~76px from box top
+  const answerY = by + 76;
+  const btnH = 26;
+  const btnW = boxW - 40;
+  for (let i = 0; i < 3; i++) {
+    const btnY = answerY + i * (btnH + 4);
+    if (tx > bx + 20 && tx < bx + 20 + btnW && ty > btnY && ty < btnY + btnH) {
+      keys['Digit' + (i + 1)] = true;
+      setTimeout(() => { keys['Digit' + (i + 1)] = false; }, 100);
+      break;
+    }
+  }
+});
+
 // ── Mobile Fullscreen + Orientation Lock ──
 if (isMobile) {
   canvas.addEventListener('touchstart', function requestFS() {
@@ -519,6 +548,13 @@ function setAction(key, label, key2, label2) {
 
 function updatePrompt(near) {
   const el = document.getElementById('prompt');
+  // Quiz mode overrides all other prompts
+  if (quizActive) {
+    el.textContent = 'Quiz! Press 1, 2, or 3 to answer!';
+    el.style.display = 'block';
+    setAction(null, '');
+    return;
+  }
   if (currentScene === Scene.CAMP_CAMPER) {
     if (campCamperSleeping) {
       el.textContent = 'Sleeping... zzz (Press N to wake up)';

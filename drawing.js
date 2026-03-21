@@ -78,6 +78,13 @@ function draw() {
   if (achievementPopup) {
     drawAchievementPopup(W, H);
   }
+
+  // NPC Quiz overlay
+  if (quizActive) {
+    drawQuizOverlay(W, H);
+  } else if (quizResultTimer > 0) {
+    drawQuizResult(W, H);
+  }
 }
 
 function drawPhotoGallery(W, H) {
@@ -543,6 +550,98 @@ function drawAchievementPopup(W, H) {
   ctx.fillStyle = '#ffffff';
   ctx.font = 'bold ' + Math.round(bannerH * 0.26) + 'px "Segoe UI", system-ui, sans-serif';
   ctx.fillText(achievementPopup.name, bx + iconSize + 28, by + bannerH * 0.72);
+}
+
+function drawQuizOverlay(W, H) {
+  // Semi-transparent backdrop
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Pre-compute question lines for dynamic box height
+  const boxW = Math.min(W * 0.85, 420);
+  ctx.font = '14px "Segoe UI", system-ui, sans-serif';
+  const maxTextW = boxW - 40;
+  const words = quizQuestion.split(' ');
+  const qLines = [];
+  let qLine = '';
+  for (const word of words) {
+    const test = qLine ? qLine + ' ' + word : word;
+    if (ctx.measureText(test).width > maxTextW) { qLines.push(qLine); qLine = word; }
+    else qLine = test;
+  }
+  if (qLine) qLines.push(qLine);
+
+  const btnH = 26;
+  const boxH = 36 + qLines.length * 18 + 12 + 3 * (btnH + 4) + 24;
+  const bx = (W - boxW) / 2;
+  const by = (H - boxH) / 2 - 10;
+
+  // Box background
+  ctx.fillStyle = 'rgba(30, 27, 75, 0.95)';
+  ctx.beginPath(); ctx.roundRect(bx, by, boxW, boxH, 12); ctx.fill();
+  ctx.strokeStyle = '#a78bfa'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.roundRect(bx, by, boxW, boxH, 12); ctx.stroke();
+
+  // "Quiz Time!" header
+  ctx.fillStyle = '#fbbf24';
+  ctx.font = 'bold 16px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Quiz Time!', W / 2, by + 28);
+
+  // Question text
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = '14px "Segoe UI", system-ui, sans-serif';
+  for (let i = 0; i < qLines.length; i++) {
+    ctx.fillText(qLines[i], W / 2, by + 52 + i * 18);
+  }
+
+  // Answer choices as tappable button-like rows
+  const answerY = by + 52 + qLines.length * 18 + 12;
+  const btnW = boxW - 40;
+  const colors = ['#f472b6', '#38bdf8', '#4ade80'];
+  const bgColors = ['rgba(244,114,182,0.15)', 'rgba(56,189,248,0.15)', 'rgba(74,222,128,0.15)'];
+  for (let i = 0; i < quizAnswers.length; i++) {
+    const btnY = answerY + i * (btnH + 4);
+    // Button background
+    ctx.fillStyle = bgColors[i];
+    ctx.beginPath(); ctx.roundRect(bx + 20, btnY, btnW, btnH, 6); ctx.fill();
+    ctx.strokeStyle = colors[i]; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.roundRect(bx + 20, btnY, btnW, btnH, 6); ctx.stroke();
+    // Button text
+    ctx.fillStyle = colors[i];
+    ctx.font = 'bold 13px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText((i + 1) + ')  ' + quizAnswers[i], W / 2, btnY + 18);
+  }
+
+  // Instruction
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '11px "Segoe UI", system-ui, sans-serif';
+  const instrY = answerY + 3 * (btnH + 4) + 8;
+  ctx.fillText(isMobile ? 'Tap an answer!' : 'Press 1, 2, or 3 to answer', W / 2, instrY);
+}
+
+function drawQuizResult(W, H) {
+  // Floating result message at top-center
+  const alpha = Math.min(1, quizResultTimer / 500);
+  ctx.globalAlpha = alpha;
+
+  const boxW = Math.min(W * 0.8, 380);
+  const boxH = 44;
+  const bx = (W - boxW) / 2;
+  const by = 60;
+
+  ctx.fillStyle = 'rgba(30, 27, 75, 0.9)';
+  ctx.beginPath(); ctx.roundRect(bx, by, boxW, boxH, 10); ctx.fill();
+  ctx.strokeStyle = quizResultColor; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.roundRect(bx, by, boxW, boxH, 10); ctx.stroke();
+
+  ctx.fillStyle = quizResultColor;
+  ctx.font = 'bold 14px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(quizResultText, W / 2, by + 28);
+
+  ctx.globalAlpha = 1;
 }
 
 function drawSpeechBubbles() {
