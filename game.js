@@ -633,20 +633,23 @@ function update(dt) {
   // Scuba diving minigame
   if (currentScene === Scene.SCUBA_DIVING) {
     // Swimming physics — buoyancy + 4-directional movement
-    if (keys['ArrowLeft']) scubaPlayer.vx -= SCUBA_SWIM_FORCE;
-    if (keys['ArrowRight']) scubaPlayer.vx += SCUBA_SWIM_FORCE;
-    if (keys['ArrowUp']) scubaPlayer.vy -= SCUBA_SWIM_FORCE;
-    if (keys['ArrowDown']) scubaPlayer.vy += SCUBA_SWIM_FORCE;
-    // Gentle buoyancy (float upward when not pressing down)
-    scubaPlayer.vy += SCUBA_BUOYANCY;
-    // Drag for underwater feel
-    scubaPlayer.vx *= SCUBA_DRAG;
-    scubaPlayer.vy *= SCUBA_DRAG;
-    scubaPlayer.x += scubaPlayer.vx;
-    scubaPlayer.y += scubaPlayer.vy;
+    const swimKeys = {
+      left: !!keys['ArrowLeft'], right: !!keys['ArrowRight'],
+      up: !!keys['ArrowUp'], down: !!keys['ArrowDown']
+    };
+    const swimResult = applySwimmingPhysics(
+      { x: scubaPlayer.x, y: scubaPlayer.y },
+      { vx: scubaPlayer.vx, vy: scubaPlayer.vy },
+      swimKeys, SCUBA_BUOYANCY, SCUBA_SWIM_FORCE, SCUBA_DRAG
+    );
+    scubaPlayer.vx = swimResult.vx;
+    scubaPlayer.vy = swimResult.vy;
+    scubaPlayer.x = swimResult.x;
+    scubaPlayer.y = swimResult.y;
     // Boundaries
-    scubaPlayer.x = Math.max(20, Math.min(SCUBA_WORLD_W - 20, scubaPlayer.x));
-    scubaPlayer.y = Math.max(20, Math.min(SCUBA_WORLD_H - 40, scubaPlayer.y));
+    const swimBounds = applySwimmingBounds(scubaPlayer.x, scubaPlayer.y, SCUBA_WORLD_W, SCUBA_WORLD_H);
+    scubaPlayer.x = swimBounds.x;
+    scubaPlayer.y = swimBounds.y;
     // Facing direction
     if (scubaPlayer.vx > 0.3) player.facing = 1;
     if (scubaPlayer.vx < -0.3) player.facing = -1;
@@ -968,23 +971,18 @@ function update(dt) {
   }
 
   // Physics
-  player.vy += GRAVITY;
+  player.vy = applyGravity(player.vy, GRAVITY);
   player.x += player.vx;
   player.y += player.vy;
 
   // Platform collision (only when falling)
   let onPlatform = false;
-  if (player.vy >= 0) {
-    for (const p of getCurrentPlatforms()) {
-      if (player.x > p.x - 10 && player.x < p.x + p.w + 10 &&
-          player.y >= p.y && player.y - player.vy <= p.y) {
-        player.y = p.y;
-        player.vy = 0;
-        player.onGround = true;
-        onPlatform = true;
-        break;
-      }
-    }
+  const collision = checkPlatformCollision(player.x, player.y, player.vy, getCurrentPlatforms());
+  if (collision) {
+    player.y = collision.y;
+    player.vy = collision.vy;
+    player.onGround = collision.onGround;
+    onPlatform = true;
   }
 
   // Ground collision (only if not on a platform)
@@ -1036,7 +1034,7 @@ function update(dt) {
   }
 
   // World bounds
-  player.x = Math.max(20, Math.min(getCurrentWorldW() - 20, player.x));
+  player.x = applyWorldBounds(player.x, getCurrentWorldW());
 
   // Walk animation
   if (Math.abs(player.vx) > 0) {
