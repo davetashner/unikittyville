@@ -87,6 +87,11 @@ function draw() {
   } else if (quizResultTimer > 0) {
     drawQuizResult(W, H);
   }
+
+  // Geometry minigame overlay (campground level)
+  if (geometryActive && currentLevel === 8) {
+    drawGeometryOverlay(W, H);
+  }
 }
 
 function drawPhotoGallery(W, H) {
@@ -644,6 +649,184 @@ function drawQuizResult(W, H) {
   ctx.fillText(quizResultText, W / 2, by + 28);
 
   ctx.globalAlpha = 1;
+  }
+
+function drawGeometryOverlay(W, H) {
+  // Semi-transparent backdrop
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+  ctx.fillRect(0, 0, W, H);
+
+  const shape = GEOMETRY_SHAPES[geometryShapeIndex];
+  const cx = W / 2;
+  const cy = H / 2 - 20;
+
+  // Title
+  ctx.fillStyle = '#fbbf24';
+  ctx.font = 'bold ' + Math.round(H * 0.05) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Campfire Geometry', cx, H * 0.08);
+
+  // Shape counter
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = Math.round(H * 0.03) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.fillText('Shape ' + (geometryShapeIndex + 1) + ' of ' + GEOMETRY_SHAPES.length + ': ' + shape.name, cx, H * 0.14);
+
+  // Controls hint
+  ctx.fillStyle = '#64748b';
+  ctx.font = Math.round(H * 0.025) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.fillText('Arrow Keys: Rotate | Space: Place stick | Esc: Exit', cx, H * 0.95);
+
+  // Get target edges
+  const edges = getGeometryTargetEdges(geometryShapeIndex);
+
+  // Draw target shape as dotted outline
+  ctx.save();
+  ctx.setLineDash([6, 4]);
+  ctx.strokeStyle = 'rgba(148, 163, 184, 0.4)';
+  ctx.lineWidth = 2;
+  for (let i = 0; i < edges.length; i++) {
+    const e = edges[i];
+    ctx.beginPath();
+    ctx.moveTo(e.x1, e.y1);
+    ctx.lineTo(e.x2, e.y2);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  ctx.restore();
+
+  // Draw next target edge highlighted (if not complete)
+  if (!geometryComplete && geometrySticks.length < edges.length) {
+    const nextEdge = edges[geometrySticks.length];
+    ctx.save();
+    ctx.setLineDash([8, 4]);
+    ctx.strokeStyle = 'rgba(251, 191, 36, 0.6)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(nextEdge.x1, nextEdge.y1);
+    ctx.lineTo(nextEdge.x2, nextEdge.y2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+
+    // Draw target angle indicator at the midpoint
+    const midX = (nextEdge.x1 + nextEdge.x2) / 2;
+    const midY = (nextEdge.y1 + nextEdge.y2) / 2;
+    ctx.fillStyle = 'rgba(251, 191, 36, 0.3)';
+    ctx.beginPath();
+    ctx.arc(midX, midY, 6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Draw placed sticks as solid brown lines
+  ctx.strokeStyle = '#92400e';
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
+  for (const stick of geometrySticks) {
+    ctx.beginPath();
+    ctx.moveTo(stick.x1, stick.y1);
+    ctx.lineTo(stick.x2, stick.y2);
+    ctx.stroke();
+  }
+  // Darker outline for depth
+  ctx.strokeStyle = '#6B4226';
+  ctx.lineWidth = 2;
+  for (const stick of geometrySticks) {
+    ctx.beginPath();
+    ctx.moveTo(stick.x1, stick.y1);
+    ctx.lineTo(stick.x2, stick.y2);
+    ctx.stroke();
+  }
+
+  // Draw current stick being rotated (preview)
+  if (!geometryComplete && geometrySticks.length < edges.length) {
+    const stickLen = 60;
+    const previewX = cx;
+    const previewY = cy + 130;
+    const endX = previewX + Math.cos(geometryAngle) * stickLen;
+    const endY = previewY + Math.sin(geometryAngle) * stickLen;
+
+    // Glow effect
+    ctx.strokeStyle = 'rgba(251, 191, 36, 0.3)';
+    ctx.lineWidth = 8;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(previewX, previewY);
+    ctx.lineTo(endX, endY);
+    ctx.stroke();
+
+    // Stick
+    ctx.strokeStyle = '#c9881a';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(previewX, previewY);
+    ctx.lineTo(endX, endY);
+    ctx.stroke();
+
+    // Label
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = Math.round(H * 0.025) + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Stick ' + (geometrySticks.length + 1) + ' of ' + edges.length, cx, previewY + 40);
+  }
+
+  // Shape completion message
+  if (geometryComplete) {
+    // Glowing background for fact
+    ctx.fillStyle = 'rgba(168, 85, 247, 0.15)';
+    const factBoxY = cy + 95;
+    const factBoxH = 80;
+    ctx.fillRect(W * 0.1, factBoxY, W * 0.8, factBoxH);
+
+    // Border
+    ctx.strokeStyle = '#a855f7';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(W * 0.1, factBoxY, W * 0.8, factBoxH);
+
+    // Shape name with checkmark
+    ctx.fillStyle = '#4ade80';
+    ctx.font = 'bold ' + Math.round(H * 0.04) + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('\u2713 ' + shape.name + ' Complete!', cx, factBoxY + 28);
+
+    // Fun fact
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = Math.round(H * 0.028) + 'px "Segoe UI", system-ui, sans-serif';
+    // Word-wrap the fact
+    const words = shape.fact.split(' ');
+    let lines = [];
+    let currentLine = '';
+    for (const word of words) {
+      const testLine = currentLine ? currentLine + ' ' + word : word;
+      if (ctx.measureText(testLine).width > W * 0.7) {
+        lines.push(currentLine);
+        currentLine = word;
+      } else {
+        currentLine = testLine;
+      }
+    }
+    if (currentLine) lines.push(currentLine);
+    for (let i = 0; i < lines.length; i++) {
+      ctx.fillText(lines[i], cx, factBoxY + 52 + i * 20);
+    }
+  }
+
+  // Progress dots
+  const dotY = H * 0.19;
+  const dotSpacing = 30;
+  const dotsStartX = cx - (GEOMETRY_SHAPES.length - 1) * dotSpacing / 2;
+  for (let i = 0; i < GEOMETRY_SHAPES.length; i++) {
+    const dx = dotsStartX + i * dotSpacing;
+    if (i < geometryShapeIndex || (i === geometryShapeIndex && geometryComplete)) {
+      ctx.fillStyle = '#4ade80'; // completed
+    } else if (i === geometryShapeIndex) {
+      ctx.fillStyle = '#fbbf24'; // current
+    } else {
+      ctx.fillStyle = '#475569'; // upcoming
+    }
+    ctx.beginPath();
+    ctx.arc(dx, dotY, 6, 0, Math.PI * 2);
+    ctx.fill();
+  }
 }
 
 function drawSpeechBubbles() {
