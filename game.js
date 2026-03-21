@@ -23,6 +23,7 @@ const POINTS = {
   HOTDOG_MATH: 25,
   LIGHT_SHOW_CHALLENGE: 40, LIGHT_SHOW_BONUS: 150,
   TELEGRAM_BASE: 30,
+  SCROLL: 35, SCROLL_BONUS: 100,
   PANTHEON_PUZZLE: 100,
 
   BUG_CORRECT: 15, BUG_WRONG: 5,
@@ -283,6 +284,28 @@ const PANTHEON_PIECES = [
   { name: 'Oculus', fact: "The oculus (eye) at the top is 27 feet wide \u2014 the only source of light!" },
 ];
 const FIAT_POS = { x: 4500 };
+// Scroll transcription minigame (Pantheon)
+const SCROLL_TEXTS = [
+  { text: 'All roads lead to Rome', fact: 'The Roman road network stretched over 250,000 miles!' },
+  { text: 'Veni Vidi Vici', fact: '"I came, I saw, I conquered" — Julius Caesar, 47 BC' },
+  { text: 'When in Rome do as the Romans do', fact: 'This proverb dates back to Saint Augustine in 390 AD!' },
+  { text: 'Rome was not built in a day', fact: 'It took over 1,000 years to build the Roman Empire!' },
+  { text: 'The Roman Empire lasted over 1000 years', fact: 'From 27 BC to 476 AD in the West — and even longer in the East!' },
+];
+let scrollActive = false;
+let scrollRound = 0; // 0-4
+let scrollText = '';
+let scrollTyped = 0; // index into scrollText
+let scrollErrors = 0;
+let scrollStartTime = 0;
+let scrollComplete = false; // current scroll complete
+let scrollAllDone = false; // all 5 scrolls done
+let scrollShowFact = false; // showing fact after completion
+let scrollFactTimer = 0;
+let scrollFlashRed = 0; // timer for red flash on wrong key
+let scrollTotalErrors = 0; // total errors across all scrolls
+let scrollBonusAwarded = false; // all-5 bonus
+
 // Gelato Shop minigame state
 const GELATO_FLAVORS = [
   { name: 'Strawberry', color: '#ef4444' },
@@ -1087,6 +1110,9 @@ function completeTransition() {
   campCamperShowerTimer = 0;
   ridingCheetah = false;
   safariPhotography = { active: false, timer: 0, targetAnimal: '' };
+  scrollActive = false;
+  scrollComplete = false;
+  scrollShowFact = false;
   journalActive = false;
   journalAnimal = '';
   journalResult = '';
@@ -2187,6 +2213,68 @@ function update(dt) {
   }
 
   if (currentScene === Scene.PANTHEON) {
+    // Scroll transcription minigame
+    if (scrollActive) {
+      if (scrollFlashRed > 0) scrollFlashRed -= dt;
+      if (scrollComplete) {
+        scrollFactTimer += dt;
+        if (scrollFactTimer > 3000) {
+          // Move to next scroll or finish
+          scrollRound++;
+          if (scrollRound >= SCROLL_TEXTS.length) {
+            scrollAllDone = true;
+            scrollActive = false;
+            if (!scrollBonusAwarded) {
+              scrollBonusAwarded = true;
+              score += POINTS.SCROLL_BONUS;
+              addPopup(player.x, player.y - 40, '+' + POINTS.SCROLL_BONUS + ' All scrolls complete!', '#fbbf24');
+              playChaChing();
+            }
+          } else {
+            scrollText = SCROLL_TEXTS[scrollRound].text;
+            scrollTyped = 0;
+            scrollErrors = 0;
+            scrollComplete = false;
+            scrollShowFact = false;
+            scrollFactTimer = 0;
+          }
+        }
+      }
+      // Enter during fact display skips wait
+      if (scrollComplete && keys['Enter']) {
+        keys['Enter'] = false;
+        scrollFactTimer = 3001;
+      }
+      // Escape to cancel scroll mode
+      if (keys['Escape']) {
+        keys['Escape'] = false;
+        scrollActive = false;
+      }
+    } else {
+      // T starts scroll transcription (if not all done)
+      if (keys['KeyT'] && !scrollAllDone) {
+        keys['KeyT'] = false;
+        scrollActive = true;
+        scrollRound = 0;
+        scrollText = SCROLL_TEXTS[0].text;
+        scrollTyped = 0;
+        scrollErrors = 0;
+        scrollComplete = false;
+        scrollShowFact = false;
+        scrollFactTimer = 0;
+        scrollFlashRed = 0;
+        scrollTotalErrors = 0;
+        scrollBonusAwarded = false;
+        scrollStartTime = Date.now();
+      }
+      if (keys['Enter']) {
+        keys['Enter'] = false;
+        currentScene = null;
+        player.y = GROUND_Y;
+        player.vy = 0;
+        player.onGround = true;
+      }
+    }
     // Animate piece placement
     if (pantheonPuzzle.animating) {
       pantheonPuzzle.animProgress += dt / 600; // ~0.6s animation
@@ -2202,7 +2290,7 @@ function update(dt) {
       if (pantheonPuzzle.feedbackTimer <= 0) pantheonPuzzle.feedback = '';
     }
     // Start puzzle with A
-    if (!pantheonPuzzle.active && keys['KeyA']) {
+    if (!pantheonPuzzle.active && !scrollActive && keys['KeyA']) {
       keys['KeyA'] = false;
       pantheonPuzzle.active = true;
       pantheonPuzzle.placed = 0;
@@ -2237,8 +2325,8 @@ function update(dt) {
         }
       }
     }
-    // Exit with Enter
-    if (keys['Enter']) {
+    // Exit with Enter (when not in scroll mode)
+    if (!scrollActive && keys['Enter']) {
       keys['Enter'] = false;
       pantheonPuzzle.active = false;
       currentScene = null;
