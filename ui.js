@@ -41,7 +41,7 @@ window.addEventListener('orientationchange', () => { setTimeout(resize, 100); })
 // ── Input ──
 window.addEventListener('keydown', e => {
   if (!e.repeat) keys[e.code] = true;
-  if (e.code === 'Space') e.preventDefault();
+  if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'ArrowDown') e.preventDefault();
 });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 

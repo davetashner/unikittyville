@@ -414,8 +414,8 @@ let scubaDiving = false;
 let scubaPlayer = { x: 200, y: 200, vx: 0, vy: 0 };
 const SCUBA_WORLD_W = 1200;
 const SCUBA_WORLD_H = 500;
-const SCUBA_BUOYANCY = -0.15;
-const SCUBA_SWIM_FORCE = 0.4;
+const SCUBA_BUOYANCY = -0.04;
+const SCUBA_SWIM_FORCE = 0.5;
 const SCUBA_DRAG = 0.96;
 let scubaCollectibles = [];
 let scubaPearlCount = 0;
@@ -672,6 +672,12 @@ function update(dt) {
       keys['Enter'] = false;
       scubaDiving = false;
       stopLoopSfx('sfxBubblesSwim');
+      // Force crossfade back to level music even if scuba fade is still in progress
+      if (musicFade) {
+        if (musicFade.out) { musicFade.out.pause(); musicFade.out.currentTime = 0; }
+        currentMusicId = musicFade.inId;
+        musicFade = null;
+      }
       crossfadeToLevel(currentLevel);
       score += 50;
       addPopup(player.x, player.y - 40, '+50 Great dive!', '#38bdf8');
