@@ -96,6 +96,67 @@ if (isMobile) {
   document.addEventListener('webkitfullscreenchange', () => setTimeout(resize, 150));
 }
 
+// ── Level Select ──
+const levelColors = ['#86efac','#bae6fd','#fca5a5','#fde68a','#38bdf8','#67e8f9','#ddd6fe','#bbf7d0'];
+
+function buildLevelGrid() {
+  const grid = document.getElementById('levelGrid');
+  grid.innerHTML = '';
+  for (let i = 0; i < TOTAL_LEVELS; i++) {
+    const btn = document.createElement('button');
+    btn.textContent = LEVEL_NAMES[i];
+    btn.style.cssText = `padding:14px 8px;border-radius:12px;border:2px solid rgba(255,255,255,0.4);font-weight:700;font-size:0.9rem;cursor:pointer;transition:transform 0.15s;background:${levelColors[i]};color:#1e1b4b;`;
+    btn.addEventListener('click', () => {
+      startGameAtLevel(i + 1);
+    });
+    btn.addEventListener('mouseenter', () => { btn.style.transform = 'scale(1.08)'; });
+    btn.addEventListener('mouseleave', () => { btn.style.transform = 'scale(1)'; });
+    grid.appendChild(btn);
+  }
+}
+
+document.getElementById('levelSelectBtn').addEventListener('click', () => {
+  buildLevelGrid();
+  document.getElementById('startScreen').style.display = 'none';
+  document.getElementById('levelSelectScreen').style.display = 'flex';
+});
+
+document.getElementById('levelSelectBack').addEventListener('click', () => {
+  document.getElementById('levelSelectScreen').style.display = 'none';
+  document.getElementById('startScreen').style.display = 'flex';
+});
+
+function startGameAtLevel(lvl) {
+  const name = document.getElementById('nameInput').value.trim();
+  playerName = name || 'Sparkle';
+  document.getElementById('levelSelectScreen').style.display = 'none';
+  document.getElementById('startScreen').style.display = 'none';
+  document.getElementById('hud').style.display = 'flex';
+  if (isMobile) {
+    document.getElementById('controls').style.display = 'none';
+    document.getElementById('touch-controls').style.display = 'block';
+    document.body.classList.add('touch-active');
+  } else {
+    document.getElementById('controls').style.display = 'flex';
+  }
+  document.getElementById('volumeControl').style.display = 'flex';
+  document.getElementById('hudName').textContent = playerName;
+  initMeows();
+  for (const sfx of [...meowSounds, chaChingSound]) {
+    if (sfx) {
+      const p = sfx.play();
+      if (p) p.then(() => { sfx.pause(); sfx.currentTime = 0; }).catch(() => {});
+    }
+  }
+  currentLevel = lvl;
+  player.x = 100;
+  player.y = GROUND_Y;
+  player.vy = 0;
+  player.onGround = true;
+  startLevelMusic(lvl);
+  requestAnimationFrame(loop);
+}
+
 // ── Start ──
 document.getElementById('startBtn').addEventListener('click', startGame);
 document.getElementById('nameInput').addEventListener('keydown', e => {
@@ -146,7 +207,7 @@ function setAction(key, label) {
   }
 }
 
-function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf, nearAirport, nearChalet, nearTrain, nearNpc, nearStick, nearFirePit, nearHammock, nearBigfoot, nearDigSite, nearWaterPump, nearPool, nearCampCamper) {
+function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive, nearPizza, nearHotdog, nearPark, nearTaxi, nearFountain, nearGelato, nearPantheonDoor, nearFiat, nearTiki, nearCoconut, nearSurf, nearAirport, nearChalet, nearTrain, nearNpc, nearStick, nearFirePit, nearHammock, nearBigfoot, nearDigSite, nearWaterPump, nearPool, nearCampCamper, nearSailboat, nearDiveSpot) {
   const el = document.getElementById('prompt');
   if (insideCampCamper) {
     if (campCamperSleeping) {
@@ -359,7 +420,7 @@ function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, ne
     el.style.display = 'block';
     setAction('KeyS', 'Surf');
   } else if (nearAirport) {
-    el.textContent = 'Press Enter to fly to the Alps!';
+    el.textContent = 'Press Enter to fly to Oriental, NC!';
     el.style.display = 'block';
     setAction('Enter', 'Fly');
   } else if (nearChalet) {
@@ -438,10 +499,32 @@ function updatePrompt(inPond, nearGrill, nearHouse, nearCamper, nearWindmill, ne
     el.textContent = 'Sled downhill! Dodge snowmen, collect snowballs!';
     el.style.display = 'block';
     setAction(null, '');
-  } else if (currentLevel === 6) {
+  } else if (scubaDiving) {
+    el.textContent = 'Swim with arrow keys! Collect pearls! Q: Talk to mercats | Enter: Surface';
+    el.style.display = 'block';
+    setAction('Enter', 'Surface');
+    return;
+  } else if (sailing) {
+    el.textContent = 'Sailing the Neuse River! Left/Right to steer | Enter: Dock';
+    el.style.display = 'block';
+    setAction('Enter', 'Dock');
+    return;
+  } else if (nearSailboat) {
+    el.textContent = 'Press Enter to go sailing!';
+    el.style.display = 'block';
+    setAction('Enter', 'Sail');
+  } else if (nearDiveSpot) {
+    el.textContent = 'Press Enter to go scuba diving!';
+    el.style.display = 'block';
+    setAction('Enter', 'Dive');
+  } else if (currentLevel === 7) {
     el.textContent = 'Ski downhill! Dodge trees, jump cornices, collect diamonds!';
     el.style.display = 'block';
     setAction(null, '');
+  } else if (currentLevel === 6 && player.x > ORIENTAL_WORLD_W - 150) {
+    el.textContent = 'Press Enter to head to the Alps!';
+    el.style.display = 'block';
+    setAction('Enter', 'Alps');
   } else if (currentLevel === 1 && Math.abs(player.x - BRIDGE_PORTAL.x) < 60) {
     el.textContent = 'Press Enter to go sledding!';
     el.style.display = 'block';
