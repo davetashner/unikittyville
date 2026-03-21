@@ -1854,7 +1854,7 @@ function drawFaoSchwarzInterior(cam, W, H) {
   const keyColors = ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#6366f1','#a855f7'];
   for (let i = 0; i < 7; i++) {
     const kx = cam + keyW * 0.5 + i * keyW;
-    const isActive = (faoPlayerX + 3) === i;
+    const isActive = faoPlayerX === i;
     ctx.fillStyle = isActive ? keyColors[i] : '#f1f5f9';
     ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 2;
     ctx.fillRect(kx, keyY, keyW - 4, keyH);
@@ -1867,15 +1867,42 @@ function drawFaoSchwarzInterior(cam, W, H) {
       ctx.fillRect(kx - 5, keyY - 10, keyW + 6, keyH + 20);
     }
   }
-  // Target melody
-  ctx.fillStyle = '#1e1b4b'; ctx.font = '14px system-ui';
-  ctx.fillText('Play this melody:', cx, keyY - 30);
-  for (let i = 0; i < faoMelodyTarget.length; i++) {
-    ctx.fillStyle = i < faoMelody.length ? '#4ade80' : keyColors[faoMelodyTarget[i]];
-    ctx.font = 'bold 16px system-ui';
-    ctx.fillText(noteNames[faoMelodyTarget[i]], cx - 80 + i * 35, keyY - 10);
+  // Twinkle Twinkle target notes — show which note to play next
+  ctx.fillStyle = '#1e1b4b'; ctx.font = 'bold 14px system-ui';
+  ctx.fillText('\u266B Twinkle, Twinkle, Little Star \u266B', cx, 65);
+  ctx.font = '12px system-ui'; ctx.fillStyle = '#78716c';
+  ctx.fillText('Left/Right to move, Space to play note', cx, 80);
+  // Note sequence display
+  const seqY = keyY - 15;
+  const noteSpacing = Math.min(28, (W - 60) / FAO_MELODY_TARGET.length);
+  const seqStartX = cx - (FAO_MELODY_TARGET.length * noteSpacing) / 2;
+  for (let i = 0; i < FAO_MELODY_TARGET.length; i++) {
+    const nx = seqStartX + i * noteSpacing + noteSpacing / 2;
+    if (i < faoMelody.length) {
+      // Played — green if correct, red if wrong
+      ctx.fillStyle = faoMelody[i] === FAO_MELODY_TARGET[i] ? '#4ade80' : '#ef4444';
+    } else if (i === faoMelody.length) {
+      // Next note to play — highlighted
+      ctx.fillStyle = keyColors[FAO_MELODY_TARGET[i]];
+    } else {
+      ctx.fillStyle = '#cbd5e1';
+    }
+    ctx.font = 'bold 14px system-ui';
+    ctx.fillText(noteNames[FAO_MELODY_TARGET[i]], nx, seqY);
+    // Measure bar after note 7
+    if (i === 6) {
+      ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(nx + noteSpacing / 2 + 2, seqY - 10);
+      ctx.lineTo(nx + noteSpacing / 2 + 2, seqY + 4); ctx.stroke();
+    }
   }
-  drawKitty(cam + keyW * 0.5 + (faoPlayerX + 3) * keyW + keyW / 2, keyY - 15, player.color, 1, player.walkFrame, 'horn', playerEyeColor, playerHornColors);
+  // Complete message
+  if (faoComplete) {
+    ctx.fillStyle = '#f472b6'; ctx.font = 'bold 18px system-ui';
+    ctx.fillText('Bravo! Press Enter to leave', cx, keyY - 40);
+  }
+  // Player on current key
+  drawKitty(cam + keyW * 0.5 + faoPlayerX * keyW + keyW / 2, keyY - 15, player.color, 1, player.walkFrame, 'horn', playerEyeColor, playerHornColors);
   ctx.textAlign = 'left';
 }
 

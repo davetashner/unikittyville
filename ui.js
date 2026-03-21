@@ -658,9 +658,13 @@ function updatePrompt(near) {
     return;
   }
   if (currentScene === Scene.FAO_SCHWARZ) {
-    el.textContent = 'Walk the piano keys! Left/Right to play notes | Enter to leave';
+    if (faoComplete) {
+      el.textContent = 'Bravo! Press Enter to leave';
+    } else {
+      el.textContent = 'Left/Right: move | Space: play note (' + faoMelody.length + '/' + FAO_MELODY_TARGET.length + ')';
+    }
     el.style.display = 'block';
-    setAction('Enter', 'Exit');
+    setAction('Space', 'Play', 'Enter', 'Exit');
     return;
   }
   if (currentScene === Scene.EMPIRE_STATE) {

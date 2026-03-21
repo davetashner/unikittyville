@@ -118,11 +118,29 @@ const THIRTY_ROCK_POS = { x: 2800, w: 100 };
 const GRAND_CENTRAL_POS = { x: 3200, w: 120 };
 const MET_MUSEUM_POS = { x: 3800, w: 120 };
 // FAO Schwarz piano state
-let faoPlayerX = 0; // -3 to 3 (7 piano keys)
+let faoPlayerX = 0; // 0-6 (7 piano keys: C D E F G A B)
 let faoNoteTimer = 0;
-let faoMelody = [];
-let faoMelodyTarget = [];
+let faoMelody = []; // notes the player has played
+// Twinkle Twinkle Little Star — first 2 measures: C C G G A A G, F F E E D D C
+const FAO_MELODY_TARGET = [0, 0, 4, 4, 5, 5, 4, 3, 3, 2, 2, 1, 1, 0];
 let faoMelodyScore = 0;
+let faoComplete = false;
+// Web Audio piano note frequencies (C4 to B4)
+const FAO_FREQS = [261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88];
+let faoAudioCtx = null;
+function faoPlayNote(noteIdx) {
+  if (!faoAudioCtx) faoAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const osc = faoAudioCtx.createOscillator();
+  const gain = faoAudioCtx.createGain();
+  osc.type = 'sine';
+  osc.frequency.value = FAO_FREQS[noteIdx];
+  gain.gain.setValueAtTime(0.3, faoAudioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, faoAudioCtx.currentTime + 0.5);
+  osc.connect(gain);
+  gain.connect(faoAudioCtx.destination);
+  osc.start();
+  osc.stop(faoAudioCtx.currentTime + 0.5);
+}
 // Empire State elevator
 let empireElevator = 0; // 0-100 progress
 let empireAtTop = false;
@@ -1140,28 +1158,58 @@ function update(dt) {
     return;
   }
 
-  // FAO Schwarz — giant floor piano
+  // FAO Schwarz — giant floor piano (play Twinkle Twinkle)
   if (currentScene === Scene.FAO_SCHWARZ) {
-    if (keys['ArrowLeft']) { keys['ArrowLeft'] = false; faoPlayerX = Math.max(-3, faoPlayerX - 1); faoNoteTimer = 300; faoMelody.push(faoPlayerX + 3); }
-    if (keys['ArrowRight']) { keys['ArrowRight'] = false; faoPlayerX = Math.min(3, faoPlayerX + 1); faoNoteTimer = 300; faoMelody.push(faoPlayerX + 3); }
+    // Pause background music while on the piano
+    if (currentMusicId) {
+      const musicEl = document.getElementById(currentMusicId);
+      if (musicEl && !musicEl.paused && !muted) musicEl.pause();
+    }
+    // Move between keys
+    if (keys['ArrowLeft']) { keys['ArrowLeft'] = false; faoPlayerX = Math.max(0, faoPlayerX - 1); }
+    if (keys['ArrowRight']) { keys['ArrowRight'] = false; faoPlayerX = Math.min(6, faoPlayerX + 1); }
     if (faoNoteTimer > 0) faoNoteTimer -= dt;
-    // Check melody match
-    if (faoMelody.length >= faoMelodyTarget.length) {
-      let match = 0;
-      for (let i = 0; i < faoMelodyTarget.length; i++) {
-        if (faoMelody[faoMelody.length - faoMelodyTarget.length + i] === faoMelodyTarget[i]) match++;
+    // Space bar plays the current key
+    if (keys['Space'] && !faoComplete) {
+      keys['Space'] = false;
+      faoPlayNote(faoPlayerX);
+      faoNoteTimer = 400;
+      faoMelody.push(faoPlayerX);
+      // Check if the note matches the expected next note
+      const idx = faoMelody.length - 1;
+      if (faoPlayerX === FAO_MELODY_TARGET[idx]) {
+        addPopup(player.x, player.y - 30, '\u266A', '#4ade80');
+      } else {
+        addPopup(player.x, player.y - 30, '\u2717', '#ef4444');
       }
-      if (match >= 3) {
-        faoMelodyScore++;
-        score += 30;
-        addPopup(player.x, player.y - 40, '+30 Great melody!', '#f472b6');
-        playChaChing();
-        faoMelodyTarget = [];
-        for (let i = 0; i < 5; i++) faoMelodyTarget.push(Math.floor(Math.random() * 7));
-        faoMelody = [];
+      // Check if melody is complete
+      if (faoMelody.length >= FAO_MELODY_TARGET.length) {
+        let correct = 0;
+        for (let i = 0; i < FAO_MELODY_TARGET.length; i++) {
+          if (faoMelody[i] === FAO_MELODY_TARGET[i]) correct++;
+        }
+        faoComplete = true;
+        if (correct >= 10) {
+          score += 100;
+          addPopup(player.x, player.y - 50, '+100 Twinkle Twinkle!', '#f472b6');
+          playChaChing();
+        } else {
+          score += 25;
+          addPopup(player.x, player.y - 50, '+25 Good try! ' + correct + '/' + FAO_MELODY_TARGET.length, '#fbbf24');
+        }
       }
     }
-    if (keys['Enter']) { keys['Enter'] = false; currentScene = null; }
+    // Exit — resume music
+    if (keys['Enter']) {
+      keys['Enter'] = false;
+      currentScene = null;
+      faoComplete = false;
+      // Resume music
+      if (currentMusicId && !muted) {
+        const musicEl = document.getElementById(currentMusicId);
+        if (musicEl) ensureLoaded(musicEl).then(() => musicEl.play().catch(() => {}));
+      }
+    }
     return;
   }
 
@@ -1745,10 +1793,8 @@ function update(dt) {
     currentScene = Scene.FAO_SCHWARZ;
     faoPlayerX = 0;
     faoMelodyScore = 0;
-    // Generate a random 5-note target melody
-    faoMelodyTarget = [];
-    for (let i = 0; i < 5; i++) faoMelodyTarget.push(Math.floor(Math.random() * 7));
     faoMelody = [];
+    faoComplete = false;
   }
   // Empire State Building entry
   const nearEmpire = currentLevel === 3 && Math.abs(player.x - EMPIRE_STATE_POS.x) < BUILDING_RANGE;
