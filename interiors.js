@@ -1448,6 +1448,53 @@ function drawHospitalInterior(cam, W, H) {
 
   // ── Stage-specific visuals ──
 
+  // ── Step progress indicator (top of screen) ──
+  const stages = ['Prep Room', 'Vitals', 'Breathing', 'Deliver!', 'Celebrate', 'Name Kit'];
+  const stageIndex = { prep: 0, vitals: 1, breathing: 2, delivery: 3, celebrate: 4, color_pick: 5 };
+  const curIdx = stageIndex[hospitalStage] || 0;
+
+  // Progress bar background
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.beginPath();
+  ctx.roundRect(cx - 180, 8, 360, 32, 8);
+  ctx.fill();
+
+  // Step dots and labels
+  for (let i = 0; i < 4; i++) {
+    const dotX = cx - 120 + i * 80;
+    const dotY = 18;
+    // Connector line
+    if (i < 3) {
+      ctx.strokeStyle = i < curIdx ? '#22c55e' : '#475569';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(dotX + 8, dotY + 6);
+      ctx.lineTo(dotX + 72, dotY + 6);
+      ctx.stroke();
+    }
+    // Dot
+    ctx.fillStyle = i < curIdx ? '#22c55e' : i === curIdx ? '#fbbf24' : '#475569';
+    ctx.beginPath();
+    ctx.arc(dotX, dotY + 6, 6, 0, Math.PI * 2);
+    ctx.fill();
+    // Checkmark or number
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 8px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText(i < curIdx ? '\u2713' : (i + 1).toString(), dotX, dotY + 9);
+    // Label
+    ctx.fillStyle = i === curIdx ? '#fbbf24' : 'rgba(255,255,255,0.6)';
+    ctx.font = '7px system-ui';
+    ctx.fillText(stages[i], dotX, dotY + 22);
+  }
+
+  // Story context line
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.font = '10px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText("Helping Mom deliver your baby sibling!", cx, 52);
+  ctx.textAlign = 'left';
+
   // PREP STAGE
   if (hospitalStage === 'prep') {
     const stations = ['Blankets', 'Supplies', 'Equipment'];
@@ -1471,10 +1518,16 @@ function drawHospitalInterior(cam, W, H) {
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 16px system-ui';
     ctx.textAlign = 'center';
-    ctx.fillText('Prepare the delivery room!', cx, cy - 140);
-    ctx.font = '12px system-ui';
-    ctx.fillStyle = 'rgba(255,255,255,0.8)';
-    ctx.fillText('Press C to prepare each station (' + hospitalPrepStations + '/3)', cx, cy + 140);
+    ctx.fillText('Step 1: Prepare the delivery room!', cx, cy - 140);
+    ctx.font = '11px system-ui';
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.fillText('Get everything ready for Mom before the baby arrives.', cx, cy - 122);
+    ctx.font = 'bold 13px system-ui';
+    ctx.fillStyle = '#fbbf24';
+    ctx.fillText('Press C to prepare each station (' + hospitalPrepStations + '/3)', cx, cy + 130);
+    ctx.font = '10px system-ui';
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.fillText('C = Prepare Station', cx, cy + 148);
   }
 
   // VITALS STAGE
@@ -1502,10 +1555,16 @@ function drawHospitalInterior(cam, W, H) {
 
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 16px system-ui';
-    ctx.fillText("Monitor mom's vitals!", cx, barY - 8);
-    ctx.font = '12px system-ui';
-    ctx.fillStyle = 'rgba(255,255,255,0.8)';
-    ctx.fillText('Press Space when heart is in the GREEN zone', cx, cy + 140);
+    ctx.fillText("Step 2: Monitor Mom's vitals!", cx, barY - 8);
+    ctx.font = '11px system-ui';
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.fillText('Watch the heart — press Space at just the right moment!', cx, barY + 30);
+    ctx.font = 'bold 13px system-ui';
+    ctx.fillStyle = '#fbbf24';
+    ctx.fillText('Press SPACE when the heart is in the GREEN zone', cx, cy + 130);
+    ctx.font = '10px system-ui';
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.fillText('Space = Check Vitals', cx, cy + 148);
   }
 
   // BREATHING STAGE
@@ -1534,10 +1593,16 @@ function drawHospitalInterior(cam, W, H) {
 
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 16px system-ui';
-    ctx.fillText('Coach breathing!', cx, cy - 130);
-    ctx.font = '12px system-ui';
-    ctx.fillStyle = 'rgba(255,255,255,0.8)';
-    ctx.fillText('Press Space at the peak of each breath (' + hospitalBreathingHits + '/5)', cx, cy + 140);
+    ctx.fillText('Step 3: Coach breathing!', cx, cy - 130);
+    ctx.font = '11px system-ui';
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.fillText('Help Mom breathe! Press Space when the circle is biggest.', cx, cy - 112);
+    ctx.font = 'bold 13px system-ui';
+    ctx.fillStyle = '#fbbf24';
+    ctx.fillText('Press SPACE at the peak (' + hospitalBreathingHits + '/5)', cx, cy + 130);
+    ctx.font = '10px system-ui';
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.fillText('Space = Breathe (when circle is GREEN)', cx, cy + 148);
   }
 
   // DELIVERY STAGE
@@ -1564,10 +1629,16 @@ function drawHospitalInterior(cam, W, H) {
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 16px system-ui';
     ctx.textAlign = 'center';
-    ctx.fillText('Time to deliver!', cx, barY - 8);
-    ctx.font = '12px system-ui';
-    ctx.fillStyle = 'rgba(255,255,255,0.8)';
-    ctx.fillText('Hold Space to build power, release in the GREEN zone!', cx, cy + 140);
+    ctx.fillText('Step 4: Time to deliver!', cx, barY - 8);
+    ctx.font = '11px system-ui';
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.fillText('Hold Space to build power — release in the green sweet spot!', cx, barY + 30);
+    ctx.font = 'bold 13px system-ui';
+    ctx.fillStyle = '#fbbf24';
+    ctx.fillText('HOLD Space \u2192 release in GREEN zone (70-95%)', cx, cy + 130);
+    ctx.font = '10px system-ui';
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.fillText('Hold Space = Build Power | Release = Deliver!', cx, cy + 148);
   }
 
   // CELEBRATE STAGE
