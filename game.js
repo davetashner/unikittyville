@@ -603,7 +603,10 @@ function completeTransition() {
   safariPhotography = { active: false, timer: 0, targetAnimal: '' };
   cheetahSpeech = { text: '', timer: 0 };
   dustParticles = [];
-  capeSpaceSuit = false;
+  // Keep space suit on for levels 11-13 (Cape → Space → Moon)
+  if (!(levelTransition.toLevel >= 11 && levelTransition.toLevel <= 13 && capeSpaceSuit)) {
+    capeSpaceSuit = false;
+  }
   capeFueling = 0;
   capeFueled = false;
   capeLaunching = false;

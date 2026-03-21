@@ -409,6 +409,71 @@ function drawPlayerAndUI() {
   const sledOffset = (currentLevel === 2 && sledding) ? 5 : 0;
   drawKitty(player.x, player.y - (ridingCheetah ? 15 : sledOffset), player.color, player.facing, player.walkFrame, 'horn', playerEyeColor, playerHornColors);
 
+  // Space suit overlay (Cape Canaveral through Moon levels)
+  if (capeSpaceSuit && currentLevel >= 11 && currentLevel <= 13 && currentScene === null) {
+    const sx = player.x;
+    const sy = player.y - (ridingCheetah ? 15 : sledOffset);
+    // Suit body (white with slight transparency so fur color peeks through)
+    ctx.fillStyle = 'rgba(240, 240, 245, 0.85)';
+    ctx.beginPath();
+    ctx.ellipse(sx, sy - 12, 11, 15, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Suit legs
+    ctx.fillRect(sx - 8, sy + 1, 6, 8);
+    ctx.fillRect(sx + 2, sy + 1, 6, 8);
+    // Boots
+    ctx.fillStyle = '#6b7280';
+    ctx.fillRect(sx - 9, sy + 7, 8, 4);
+    ctx.fillRect(sx + 1, sy + 7, 8, 4);
+    // Helmet (round, over head)
+    ctx.fillStyle = 'rgba(230, 230, 235, 0.9)';
+    ctx.beginPath();
+    ctx.arc(sx, sy - 28, 12, 0, Math.PI * 2);
+    ctx.fill();
+    // Helmet outline
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    // Visor (gold reflective)
+    ctx.fillStyle = 'rgba(251, 191, 36, 0.6)';
+    ctx.beginPath();
+    ctx.arc(sx + player.facing * 2, sy - 28, 8, 0, Math.PI * 2);
+    ctx.fill();
+    // Visor shine
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.beginPath();
+    ctx.arc(sx + player.facing * 4, sy - 30, 3, 0, Math.PI * 2);
+    ctx.fill();
+    // Horn poking through top of helmet
+    ctx.fillStyle = playerHornColors ? playerHornColors[0] : '#c084fc';
+    ctx.beginPath();
+    ctx.moveTo(sx - 2, sy - 39);
+    ctx.lineTo(sx, sy - 50);
+    ctx.lineTo(sx + 2, sy - 39);
+    ctx.closePath();
+    ctx.fill();
+    // Ear bumps on helmet
+    ctx.fillStyle = 'rgba(230, 230, 235, 0.9)';
+    ctx.beginPath(); ctx.arc(sx - 8, sy - 35, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(sx + 8, sy - 35, 4, 0, Math.PI * 2); ctx.fill();
+    // NASA patch on chest
+    ctx.fillStyle = '#1e40af';
+    ctx.beginPath();
+    ctx.arc(sx + player.facing * 4, sy - 15, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 3px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('N', sx + player.facing * 4, sy - 14);
+    ctx.textAlign = 'left';
+    // Life support backpack
+    ctx.fillStyle = '#d1d5db';
+    ctx.fillRect(sx - player.facing * 8, sy - 22, 6, 14);
+    ctx.fillStyle = '#9ca3af';
+    ctx.fillRect(sx - player.facing * 8 + 1, sy - 20, 4, 3);
+    ctx.fillRect(sx - player.facing * 8 + 1, sy - 15, 4, 3);
+  }
+
   // Draw Kit's stroller behind player (all levels except flight/space where player is in a vehicle)
   if (hasStroller && currentLevel !== 10 && currentLevel !== 12 && currentScene === null) {
     drawStroller(player.x - player.facing * 25, player.y, kitFurColor);
