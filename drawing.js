@@ -6603,7 +6603,7 @@ function drawMoonWorld(W, H, cam, cycle, isNight) {
   // Platforms — lunar rock style
   for (const p of level13Moon.platforms) {
     const px = p.x;
-    if (px + p.w < 0 || px > W) continue;
+    if (px + p.w < cam - 20 || px > cam + W + 20) continue;
     ctx.fillStyle = '#9ca3af';
     ctx.fillRect(px, p.y, p.w, 8);
     ctx.fillStyle = '#6b7280';
