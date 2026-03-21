@@ -227,6 +227,16 @@ for (var lvl = 1; lvl <= TOTAL_LEVELS; lvl++) {
 // ============================================================
 // Summary
 // ============================================================
+// ============================================================
+// Tour Guide Facts
+// ============================================================
+section('Tour Guide Facts');
+assert('tourGuideFacts exists', typeof tourGuideFacts === 'object');
+assert('tourGuideFacts has entry for every level', Object.keys(levelRegistry).every(function(k) { return tourGuideFacts[k] && tourGuideFacts[k].length === 3; }));
+for (var tg = 1; tg <= TOTAL_LEVELS; tg++) {
+  assert('tourGuideFacts[' + tg + '] has 3 string facts', tourGuideFacts[tg] && tourGuideFacts[tg].length === 3 && tourGuideFacts[tg].every(function(f) { return typeof f === 'string' && f.length > 10; }));
+}
+
 var summaryClass = failed === 0 ? 'all-pass' : 'has-fail';
 log('<div class="summary ' + summaryClass + '">Results: ' + passed + '/' + total + ' passed, ' + failed + ' failed</div>');
 
