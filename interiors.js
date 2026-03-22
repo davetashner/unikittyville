@@ -1300,6 +1300,141 @@ function drawChaletInterior(cam, W, H) {
   } else if (!drinkingCocoa) {
     ctx.fillText('Up/Down: Aim    Space: Toss    Enter: Leave', cx, cy + 140);
   }
+
+  // Baby Kit sleeping in crib (only after hospital delivery)
+  if (hospitalDelivered) {
+    const cribX = cx + 150;   // right side of chalet
+    const cribY = cy + 55;    // sitting on the floor
+    const breathe = Math.sin(gameTime / 400) * 1.5; // gentle breathing bob
+
+    // Crib rockers (curved bottom runners)
+    ctx.strokeStyle = '#78350f'; ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(cribX, cribY + 28, 32, 0.15 * Math.PI, 0.85 * Math.PI);
+    ctx.stroke();
+
+    // Crib body (wooden box)
+    ctx.fillStyle = '#b45309';
+    ctx.beginPath();
+    ctx.roundRect(cribX - 28, cribY - 12, 56, 34, 3);
+    ctx.fill();
+    // Crib inner (darker)
+    ctx.fillStyle = '#92400e';
+    ctx.fillRect(cribX - 24, cribY - 8, 48, 26);
+
+    // Pillow (small, left side of crib interior)
+    ctx.fillStyle = '#fef3c7';
+    ctx.beginPath();
+    ctx.ellipse(cribX - 12, cribY + 4 + breathe, 9, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Baby Kit body (tiny sleeping kitty)
+    const bx = cribX, by = cribY + breathe;
+    // Body
+    ctx.fillStyle = kitFurColor;
+    ctx.beginPath();
+    ctx.ellipse(bx + 2, by + 6, 12, 7, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Head
+    ctx.beginPath();
+    ctx.arc(bx - 10, by + 2, 8, 0, Math.PI * 2);
+    ctx.fill();
+    // Ears (tiny triangles)
+    ctx.beginPath();
+    ctx.moveTo(bx - 16, by - 4); ctx.lineTo(bx - 13, by - 10); ctx.lineTo(bx - 10, by - 4);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(bx - 10, by - 4); ctx.lineTo(bx - 7, by - 10); ctx.lineTo(bx - 4, by - 4);
+    ctx.fill();
+    // Inner ears (lighter tint of kitFurColor)
+    const earR = parseInt(kitFurColor.slice(1, 3), 16);
+    const earG = parseInt(kitFurColor.slice(3, 5), 16);
+    const earB = parseInt(kitFurColor.slice(5, 7), 16);
+    ctx.fillStyle = `rgb(${Math.round((earR + 255) / 2)}, ${Math.round((earG + 255) / 2)}, ${Math.round((earB + 255) / 2)})`;
+    ctx.beginPath();
+    ctx.moveTo(bx - 15, by - 4); ctx.lineTo(bx - 13, by - 8); ctx.lineTo(bx - 11, by - 4);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(bx - 9, by - 4); ctx.lineTo(bx - 7, by - 8); ctx.lineTo(bx - 5, by - 4);
+    ctx.fill();
+    // Tiny horn
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath();
+    ctx.moveTo(bx - 10, by - 6); ctx.lineTo(bx - 8, by - 15); ctx.lineTo(bx - 6, by - 6);
+    ctx.fill();
+    // Closed eyes (curved lines)
+    ctx.strokeStyle = '#1f2937'; ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.arc(bx - 13, by + 1, 2.5, 0.1 * Math.PI, 0.9 * Math.PI);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(bx - 7, by + 1, 2.5, 0.1 * Math.PI, 0.9 * Math.PI);
+    ctx.stroke();
+    // Tiny smile
+    ctx.beginPath();
+    ctx.arc(bx - 10, by + 3, 2, 0.1 * Math.PI, 0.9 * Math.PI);
+    ctx.stroke();
+
+    // Crib side rails (front posts) — drawn before blanket so blanket drapes over
+    ctx.fillStyle = '#b45309';
+    ctx.fillRect(cribX - 28, cribY - 20, 4, 42);
+    ctx.fillRect(cribX + 24, cribY - 20, 4, 42);
+    // Rail top bar
+    ctx.fillRect(cribX - 28, cribY - 22, 56, 4);
+
+    // Blanket draped over crib edge and baby
+    ctx.fillStyle = 'rgba(196, 181, 253, 0.7)'; // soft lavender
+    ctx.beginPath();
+    ctx.moveTo(cribX - 24, cribY - 8);
+    ctx.quadraticCurveTo(cribX - 5, cribY + 2, cribX + 8, cribY - 2);
+    ctx.lineTo(cribX + 8, cribY + 16);
+    ctx.quadraticCurveTo(cribX - 5, cribY + 12, cribX - 24, cribY + 16);
+    ctx.closePath();
+    ctx.fill();
+
+    // Floating "zzz" animation (note: font is reset by name label below)
+    const zTime = gameTime / 600;
+    for (let zi = 0; zi < 3; zi++) {
+      const zPhase = (zTime + zi * 0.35) % 1.0;
+      const zx = cribX + 18 + zi * 6 + Math.sin(gameTime / 400 + zi) * 3;
+      const zy = cribY - 20 - zPhase * 35;
+      const zAlpha = 1 - zPhase;
+      ctx.globalAlpha = zAlpha * 0.6;
+      ctx.fillStyle = '#e0e7ff';
+      ctx.font = (9 + zi * 2) + 'px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText('z', zx, zy);
+    }
+    ctx.globalAlpha = 1;
+
+    // Name label below crib
+    ctx.fillStyle = '#fde68a'; ctx.font = 'bold 11px system-ui'; ctx.textAlign = 'center';
+    ctx.fillText(kitName, cribX, cribY + 46);
+
+    // Discovery heart effect — pulsing pink heart fades over first 2 seconds
+    if (chaletBabyDiscoverTimer > 0) {
+      const elapsed = gameTime - chaletBabyDiscoverTimer;
+      if (elapsed < 2000) {
+        const heartAlpha = 1 - elapsed / 2000;
+        const heartScale = 0.8 + Math.sin(gameTime / 150) * 0.2;
+        const heartY = cribY - 28 - elapsed * 0.015;
+        ctx.save();
+        ctx.globalAlpha = heartAlpha;
+        ctx.fillStyle = '#f9a8d4';
+        ctx.translate(cribX, heartY);
+        ctx.scale(heartScale, heartScale);
+        ctx.beginPath();
+        ctx.moveTo(0, -3);
+        ctx.bezierCurveTo(-5, -8, -10, -3, 0, 5);
+        ctx.moveTo(0, -3);
+        ctx.bezierCurveTo(5, -8, 10, -3, 0, 5);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    ctx.textAlign = 'left';
+  }
 }
 
 function drawSurfingScene(cam, W, H) {

@@ -386,6 +386,8 @@ let hospitalDeliveryPower = 0; // delivery push power
 let hospitalDelivered = false; // has Kit been delivered this session?
 let kitFurColor = '#fda4af'; // baby Kit's chosen fur color (default pink)
 let kitName = 'Kit'; // baby's name (default Kit)
+let chaletBabyDiscovered = false; // one-time discovery moment for baby in crib
+let chaletBabyDiscoverTimer = 0; // timer for discovery heart effect
 let kitNameInput = ''; // typing buffer for name input
 let hasStroller = false; // does player have the stroller?
 let kitParkBonus = false; // has player taken Kit to Central Park?
@@ -3565,6 +3567,11 @@ function update(dt) {
           currentScene = Scene.CHALET;
           marshmallowAngle = Math.PI / 5;
           crossfadeToMusic(CHALET_MUSIC_ID);
+          if (hospitalDelivered && !chaletBabyDiscovered) {
+            chaletBabyDiscovered = true;
+            chaletBabyDiscoverTimer = gameTime;
+            addPopup(player.x, player.y - 40, kitName + ' is sleeping here!', '#f9a8d4');
+          }
         }
       }
     } // end else (not choosing)
