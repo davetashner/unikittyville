@@ -48,6 +48,7 @@ const POINTS = {
 
   BUG_CORRECT: 15, BUG_WRONG: 5,
   DIVE_LOG_PIECE: 30, DIVE_LOG_BONUS: 150,
+  ROVER_CHALLENGE: 50, ROVER_BONUS: 200,
 };
 
 // ── Timing durations (ms) ──
@@ -105,6 +106,7 @@ const Scene = {
   TELEGRAM: 'telegram',
 
   APOLLO_MISSION: 'apolloMission',
+  ROVER_PROGRAMMING: 'roverProgramming',
 
   GELATO_SHOP: 'gelatoShop',
 };
@@ -631,6 +633,67 @@ let apolloMission = {
   complete: false,
   celebrateTimer: 0,
   stepTimer: 0,       // timing for step 1 press-at-right-moment
+};
+
+// Rover Programming minigame state (Moon level)
+const ROVER_CHALLENGES = [
+  {
+    name: 'Go forward 3 and pick up',
+    gridW: 5, gridH: 5,
+    roverStart: { x: 0, y: 2, dir: 0 }, // dir: 0=right,1=down,2=left,3=up
+    samples: [{ x: 3, y: 2 }],
+    walls: [],
+    solution: 'FFFP',
+  },
+  {
+    name: 'Turn and collect',
+    gridW: 5, gridH: 5,
+    roverStart: { x: 0, y: 2, dir: 0 },
+    samples: [{ x: 2, y: 0 }],
+    walls: [],
+    solution: 'FFLFFP',
+  },
+  {
+    name: 'Navigate around obstacle',
+    gridW: 5, gridH: 5,
+    roverStart: { x: 0, y: 2, dir: 0 },
+    samples: [{ x: 3, y: 2 }],
+    walls: [{ x: 2, y: 2 }],
+    solution: 'FLFRFFP',
+  },
+  {
+    name: 'Collect 2 samples',
+    gridW: 5, gridH: 5,
+    roverStart: { x: 0, y: 2, dir: 0 },
+    samples: [{ x: 2, y: 2 }, { x: 4, y: 2 }],
+    walls: [],
+    solution: 'FFPFFP',
+  },
+  {
+    name: 'Complex path',
+    gridW: 5, gridH: 5,
+    roverStart: { x: 0, y: 0, dir: 0 },
+    samples: [{ x: 2, y: 2 }, { x: 4, y: 0 }],
+    walls: [{ x: 1, y: 1 }, { x: 3, y: 1 }],
+    solution: null, // multiple solutions
+  },
+];
+
+let roverProg = {
+  active: false,
+  challenge: 0,         // 0-4
+  program: [],           // array of 'F','L','R','P'
+  running: false,        // animation in progress
+  runStep: 0,            // current command index during run
+  runTimer: 0,           // ms timer for step animation
+  roverPos: { x: 0, y: 0 },
+  roverDir: 0,           // 0=right,1=down,2=left,3=up
+  samples: [],           // {x,y,collected}
+  walls: [],
+  feedback: '',          // '' | 'success' | 'fail'
+  feedbackTimer: 0,
+  complete: false,
+  challengesDone: 0,     // count of completed challenges
 };
 
 // Space flight alien collection — persists to Moon level (defined in level 12 section)
@@ -1325,6 +1388,12 @@ function completeTransition() {
     active: false, step: 0, progress: 0, rocksCollected: 0,
     rockPositions: [], rockPlayerX: 0, bootY: 0, complete: false,
     celebrateTimer: 0, stepTimer: 0,
+  };
+  roverProg = {
+    active: false, challenge: 0, program: [], running: false,
+    runStep: 0, runTimer: 0, roverPos: { x: 0, y: 0 }, roverDir: 0,
+    samples: [], walls: [], feedback: '', feedbackTimer: 0,
+    complete: false, challengesDone: 0,
   };
 
   // Reset bug catcher (keep hasBugNet and bugCatcherFinished across level switches)
@@ -4139,6 +4208,16 @@ function update(dt) {
       smoothieProgress = 0;
     }
 
+    // Rover Station entry
+    if (Math.abs(player.x - ROVER_STATION_POS.x) < BUILDING_RANGE && keys['Enter'] && currentScene === null && !roverProg.complete) {
+      keys['Enter'] = false;
+      currentScene = Scene.ROVER_PROGRAMMING;
+      roverProg.active = true;
+      roverProg.challenge = 0;
+      roverProg.challengesDone = 0;
+      initRoverChallenge(0);
+    }
+
     // TopGolf entry
     if (Math.abs(player.x - TOPGOLF_POS.x) < BUILDING_RANGE && keys['Enter'] && currentScene === null) {
       keys['Enter'] = false;
@@ -4513,6 +4592,136 @@ function update(dt) {
     }
   }
 
+  // Rover Programming minigame
+  if (currentScene === Scene.ROVER_PROGRAMMING) {
+    const rp = roverProg;
+
+    if (rp.feedbackTimer > 0) {
+      rp.feedbackTimer -= dt;
+      if (rp.feedbackTimer <= 0) {
+        if (rp.feedback === 'success') {
+          rp.challenge++;
+          if (rp.challenge >= ROVER_CHALLENGES.length) {
+            // All challenges complete!
+            if (rp.challengesDone >= ROVER_CHALLENGES.length) {
+              score += POINTS.ROVER_BONUS;
+              addPopup(player.x, player.y - 40, '+' + POINTS.ROVER_BONUS + ' All Challenges Complete!', '#fbbf24');
+              playChaChing();
+            }
+            rp.active = false;
+            rp.complete = true;
+            currentScene = null;
+          } else {
+            initRoverChallenge(rp.challenge);
+          }
+        } else {
+          // fail — reset to try again
+          initRoverChallenge(rp.challenge);
+        }
+      }
+    } else if (rp.running) {
+      // Animate command execution
+      rp.runTimer -= dt;
+      if (rp.runTimer <= 0) {
+        if (rp.runStep >= rp.program.length) {
+          // Check if all samples collected
+          const allCollected = rp.samples.every(s => s.collected);
+          if (allCollected) {
+            rp.feedback = 'success';
+            rp.feedbackTimer = 1200;
+            rp.challengesDone++;
+            score += POINTS.ROVER_CHALLENGE;
+            addPopup(player.x, player.y - 40, '+' + POINTS.ROVER_CHALLENGE + ' Challenge Complete!', '#4ade80');
+            playChaChing();
+          } else {
+            rp.feedback = 'fail';
+            rp.feedbackTimer = 1500;
+            addPopup(player.x, player.y - 40, 'Missed samples! Try again', '#ef4444');
+          }
+          rp.running = false;
+        } else {
+          const cmd = rp.program[rp.runStep];
+          let valid = true;
+          if (cmd === 'F') {
+            const dirs = [{x:1,y:0},{x:0,y:1},{x:-1,y:0},{x:0,y:-1}];
+            const d = dirs[rp.roverDir];
+            const nx = rp.roverPos.x + d.x;
+            const ny = rp.roverPos.y + d.y;
+            const ch = ROVER_CHALLENGES[rp.challenge];
+            // Check bounds and walls
+            if (nx < 0 || nx >= ch.gridW || ny < 0 || ny >= ch.gridH ||
+                rp.walls.some(w => w.x === nx && w.y === ny)) {
+              valid = false;
+              rp.feedback = 'fail';
+              rp.feedbackTimer = 1500;
+              rp.running = false;
+              addPopup(player.x, player.y - 40, 'Rover hit a wall!', '#ef4444');
+            } else {
+              rp.roverPos.x = nx;
+              rp.roverPos.y = ny;
+            }
+          } else if (cmd === 'L') {
+            rp.roverDir = (rp.roverDir + 3) % 4; // turn left
+          } else if (cmd === 'R') {
+            rp.roverDir = (rp.roverDir + 1) % 4; // turn right
+          } else if (cmd === 'P') {
+            // Pick up sample at current position
+            for (const s of rp.samples) {
+              if (!s.collected && s.x === rp.roverPos.x && s.y === rp.roverPos.y) {
+                s.collected = true;
+              }
+            }
+          }
+          if (valid) {
+            rp.runStep++;
+            rp.runTimer = 400; // 400ms per step
+          }
+        }
+      }
+    } else {
+      // Input mode — build command sequence
+      if (keys['KeyF']) {
+        keys['KeyF'] = false;
+        if (rp.program.length < 20) rp.program.push('F');
+      }
+      if (keys['KeyL']) {
+        keys['KeyL'] = false;
+        if (rp.program.length < 20) rp.program.push('L');
+      }
+      if (keys['KeyR']) {
+        keys['KeyR'] = false;
+        if (rp.program.length < 20) rp.program.push('R');
+      }
+      if (keys['KeyP']) {
+        keys['KeyP'] = false;
+        if (rp.program.length < 20) rp.program.push('P');
+      }
+      if (keys['Backspace']) {
+        keys['Backspace'] = false;
+        rp.program.pop();
+      }
+      if (keys['Space'] && rp.program.length > 0) {
+        keys['Space'] = false;
+        // Start running the program
+        rp.running = true;
+        rp.runStep = 0;
+        rp.runTimer = 400;
+        rp.feedback = '';
+        // Reset rover to start position
+        const ch = ROVER_CHALLENGES[rp.challenge];
+        rp.roverPos = { x: ch.roverStart.x, y: ch.roverStart.y };
+        rp.roverDir = ch.roverStart.dir;
+        rp.samples = ch.samples.map(s => ({ x: s.x, y: s.y, collected: false }));
+      }
+      // Exit with Escape
+      if (keys['Escape']) {
+        keys['Escape'] = false;
+        currentScene = null;
+        rp.active = false;
+      }
+    }
+  }
+
   // Rainbow bridge portal (level 1 → level 2 sledding)
   if (currentLevel === 1) {
     const dx = player.x - BRIDGE_PORTAL.x;
@@ -4871,6 +5080,20 @@ function getGroundLevel(x) {
 
 function addPopup(x, y, text, color) {
   popups.push({ x, y, text, color, life: TIMING.POPUP_LIFE });
+}
+
+function initRoverChallenge(idx) {
+  const ch = ROVER_CHALLENGES[idx];
+  roverProg.program = [];
+  roverProg.running = false;
+  roverProg.runStep = 0;
+  roverProg.runTimer = 0;
+  roverProg.roverPos = { x: ch.roverStart.x, y: ch.roverStart.y };
+  roverProg.roverDir = ch.roverStart.dir;
+  roverProg.samples = ch.samples.map(s => ({ x: s.x, y: s.y, collected: false }));
+  roverProg.walls = ch.walls.map(w => ({ x: w.x, y: w.y }));
+  roverProg.feedback = '';
+  roverProg.feedbackTimer = 0;
 }
 
 function updateHotdogMath() {

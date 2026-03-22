@@ -1552,6 +1552,23 @@ function updatePrompt(near) {
       setAction('KeyS', 'Salute');
     }
     el.style.display = 'block';
+  } else if (currentScene === Scene.ROVER_PROGRAMMING) {
+    const rp = roverProg;
+    if (rp.running) {
+      el.textContent = 'Running program... step ' + (rp.runStep + 1) + ' of ' + rp.program.length;
+    } else if (rp.feedback === 'success') {
+      el.textContent = 'Challenge complete! +' + POINTS.ROVER_CHALLENGE;
+    } else if (rp.feedback === 'fail') {
+      el.textContent = 'Try again! Press F/L/R/P to build commands';
+    } else {
+      el.textContent = 'Press F/L/R/P to program rover, Space to RUN, Backspace to delete';
+      setAction('Space', 'Run');
+    }
+    el.style.display = 'block';
+  } else if (currentLevel === 13 && Math.abs(player.x - ROVER_STATION_POS.x) < BUILDING_RANGE && !roverProg.complete) {
+    el.textContent = 'Press Enter for Rover Programming!';
+    el.style.display = 'block';
+    setAction('Enter', 'Enter');
   } else if (currentLevel === 13 && Math.abs(player.x - APOLLO_SITE_POS.x) < BUILDING_RANGE && !apolloMission.complete) {
     el.textContent = 'Press Enter for Apollo Landing Recreation!';
     el.style.display = 'block';
