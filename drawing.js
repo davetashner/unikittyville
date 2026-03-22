@@ -142,6 +142,12 @@ function draw() {
     drawHotdogMathOverlay(W, H);
   }
 
+  // Bigfoot photo camera flash
+  if (bigfootPhotoFlash > 0) {
+    ctx.fillStyle = 'rgba(255, 255, 255, ' + Math.min(1, bigfootPhotoFlash / 200) + ')';
+    ctx.fillRect(0, 0, W, H);
+  }
+
   // Postcard overlay
   if (postcardOpen) {
     drawPostcard(W, H);
@@ -2085,18 +2091,24 @@ function drawPostcardWrite(W, H) {
   const illusH = Math.round(cardH * 0.3);
   const illusX = cx + 16;
   const illusY = cy + headerH + 12;
-  ctx.fillStyle = theme.color;
-  ctx.globalAlpha = 0.3;
-  ctx.fillRect(illusX, illusY, illusW, illusH);
-  ctx.globalAlpha = 1;
-  ctx.strokeStyle = theme.color;
-  ctx.lineWidth = 1.5;
-  ctx.strokeRect(illusX, illusY, illusW, illusH);
-  // Level name inside illustration
-  ctx.fillStyle = isDark ? '#e2e8f0' : '#334155';
-  ctx.font = 'bold ' + Math.round(illusH * 0.16) + 'px "Segoe UI", system-ui, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText(levelName, illusX + illusW / 2, illusY + illusH * 0.55);
+
+  if (currentLevel === 8 && bigfootPhotoTaken) {
+    // Polaroid-style photo with Bigfoot
+    drawBigfootPolaroid(illusX, illusY, illusW, illusH * 0.85);
+  } else {
+    ctx.fillStyle = theme.color;
+    ctx.globalAlpha = 0.3;
+    ctx.fillRect(illusX, illusY, illusW, illusH);
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = theme.color;
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(illusX, illusY, illusW, illusH);
+    // Level name inside illustration
+    ctx.fillStyle = isDark ? '#e2e8f0' : '#334155';
+    ctx.font = 'bold ' + Math.round(illusH * 0.16) + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(levelName, illusX + illusW / 2, illusY + illusH * 0.55);
+  }
 
   // Divider line (vertical) between illustration and writing area
   const writeX = illusX + illusW + 16;
@@ -2263,6 +2275,25 @@ function drawPostcardGallery(W, H) {
       ctx.fillText(textLines[j], px + 12, py + hH + sS + 20 + j * Math.round(H * 0.03));
     }
 
+    // Bigfoot photo icon on campground postcards
+    if (p.bigfootPhoto) {
+      // Small polaroid icon in bottom-left
+      const iconSize = Math.round(cardH * 0.14);
+      const iconX = px + 8;
+      const iconY = py + cardH - iconSize - 6;
+      ctx.fillStyle = '#fefce8';
+      ctx.fillRect(iconX, iconY, iconSize, iconSize);
+      ctx.strokeStyle = '#d1d5db';
+      ctx.lineWidth = 0.5;
+      ctx.strokeRect(iconX, iconY, iconSize, iconSize);
+      // Tiny Bigfoot silhouette
+      ctx.fillStyle = '#5c3a1e';
+      const bx = iconX + iconSize * 0.5;
+      const by = iconY + iconSize * 0.85;
+      ctx.beginPath(); ctx.ellipse(bx, by - iconSize * 0.35, iconSize * 0.15, iconSize * 0.3, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(bx, by - iconSize * 0.7, iconSize * 0.12, 0, Math.PI * 2); ctx.fill();
+    }
+
     // Level label
     ctx.fillStyle = '#94a3b8';
     ctx.font = Math.round(H * 0.018) + 'px "Segoe UI", system-ui, sans-serif';
@@ -2289,6 +2320,126 @@ function drawPostcardGallery(W, H) {
   ctx.font = 'bold ' + Math.round(H * 0.025) + 'px "Segoe UI", system-ui, sans-serif';
   ctx.textAlign = 'center';
   ctx.fillText(postcardSentLevels.size + '/' + TOTAL_LEVELS + ' unique level postcards', W / 2, H * 0.93);
+}
+
+// Draw a polaroid-style photo of player kitty with Bigfoot for postcard
+function drawBigfootPolaroid(px, py, pw, ph) {
+  // White polaroid border
+  const border = 4;
+  const captionH = Math.round(ph * 0.18);
+  ctx.fillStyle = '#fefce8';
+  ctx.fillRect(px, py, pw, ph + captionH);
+  ctx.strokeStyle = '#d1d5db';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(px, py, pw, ph + captionH);
+
+  // Photo area — campground background
+  const photoX = px + border;
+  const photoY = py + border;
+  const photoW = pw - border * 2;
+  const photoH = ph - border * 2;
+
+  // Forest/campground background gradient
+  const skyGrad = ctx.createLinearGradient(photoX, photoY, photoX, photoY + photoH);
+  skyGrad.addColorStop(0, '#1e3a5f');
+  skyGrad.addColorStop(0.5, '#065f46');
+  skyGrad.addColorStop(1, '#3f6212');
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(photoX, photoY, photoW, photoH);
+
+  // Stars in sky
+  ctx.fillStyle = '#fef08a';
+  for (let i = 0; i < 5; i++) {
+    const sx = photoX + photoW * (0.1 + i * 0.2);
+    const sy = photoY + photoH * (0.05 + (i % 3) * 0.08);
+    ctx.beginPath(); ctx.arc(sx, sy, 1.5, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // Campfire glow at bottom
+  const fireX = photoX + photoW * 0.5;
+  const fireY = photoY + photoH * 0.85;
+  const glow = ctx.createRadialGradient(fireX, fireY, 0, fireX, fireY, photoW * 0.3);
+  glow.addColorStop(0, 'rgba(251, 146, 60, 0.5)');
+  glow.addColorStop(1, 'rgba(251, 146, 60, 0)');
+  ctx.fillStyle = glow;
+  ctx.beginPath(); ctx.arc(fireX, fireY, photoW * 0.3, 0, Math.PI * 2); ctx.fill();
+
+  // Ground
+  ctx.fillStyle = '#3f6212';
+  ctx.fillRect(photoX, photoY + photoH * 0.78, photoW, photoH * 0.22);
+
+  // Trees in background
+  ctx.fillStyle = '#14532d';
+  for (let i = 0; i < 4; i++) {
+    const tx = photoX + photoW * (0.1 + i * 0.25);
+    const ty = photoY + photoH * 0.45;
+    ctx.beginPath();
+    ctx.moveTo(tx - photoW * 0.06, ty + photoH * 0.35);
+    ctx.lineTo(tx, ty);
+    ctx.lineTo(tx + photoW * 0.06, ty + photoH * 0.35);
+    ctx.closePath(); ctx.fill();
+  }
+
+  // Clip to photo area for characters
+  ctx.save();
+  ctx.beginPath(); ctx.rect(photoX, photoY, photoW, photoH); ctx.clip();
+
+  const groundY = photoY + photoH * 0.78;
+  const scale = photoW / 140;
+
+  // Bigfoot on the right (scaled down)
+  ctx.save();
+  ctx.translate(photoX + photoW * 0.65, groundY);
+  ctx.scale(scale, scale);
+  // Simplified Bigfoot drawing at origin
+  ctx.fillStyle = '#5c3a1e';
+  ctx.beginPath(); ctx.ellipse(0, -5, 12, 6, 0, 0, Math.PI * 2); ctx.fill(); // feet
+  ctx.beginPath(); ctx.ellipse(0, -45, 25, 40, 0, 0, Math.PI * 2); ctx.fill(); // body
+  ctx.beginPath(); ctx.arc(0, -90, 20, 0, Math.PI * 2); ctx.fill(); // head
+  ctx.fillStyle = '#8B6914';
+  ctx.beginPath(); ctx.ellipse(0, -82, 12, 8, 0, 0, Math.PI * 2); ctx.fill(); // face
+  ctx.fillStyle = '#1a1a2e';
+  ctx.beginPath(); ctx.arc(-7, -92, 3, 0, Math.PI * 2); ctx.fill(); // eyes
+  ctx.beginPath(); ctx.arc(7, -92, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(-6, -93, 1, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(8, -93, 1, 0, Math.PI * 2); ctx.fill();
+  // Big smile for photo
+  ctx.strokeStyle = '#1a1a2e'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(0, -84, 8, 0.1, Math.PI - 0.1); ctx.stroke();
+  // Arm around kitty (left arm reaching toward kitty)
+  ctx.strokeStyle = '#5c3a1e'; ctx.lineWidth = 8; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(-22, -50); ctx.lineTo(-40, -45); ctx.stroke();
+  // Right arm waving
+  ctx.beginPath(); ctx.moveTo(22, -50); ctx.lineTo(35, -65); ctx.stroke();
+  ctx.restore();
+
+  // Player kitty on the left (reuse drawPhotoKitty pattern)
+  ctx.save();
+  ctx.translate(photoX + photoW * 0.3, groundY);
+  ctx.scale(scale * 0.8, scale * 0.8);
+  if (typeof drawPhotoKitty === 'function') drawPhotoKitty(0, 0);
+  ctx.restore();
+
+  // Small campfire between them
+  ctx.save();
+  ctx.translate(fireX, groundY);
+  ctx.scale(scale * 0.5, scale * 0.5);
+  ctx.fillStyle = '#92400e';
+  ctx.fillRect(-8, -5, 16, 5); // logs
+  ctx.fillStyle = '#f97316';
+  ctx.beginPath(); ctx.moveTo(-6, -5); ctx.lineTo(0, -18); ctx.lineTo(6, -5); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#fbbf24';
+  ctx.beginPath(); ctx.moveTo(-3, -5); ctx.lineTo(0, -13); ctx.lineTo(3, -5); ctx.closePath(); ctx.fill();
+  ctx.restore();
+
+  ctx.restore(); // end clip
+
+  // Caption below photo
+  ctx.fillStyle = '#5c3a1e';
+  ctx.font = 'bold ' + Math.round(captionH * 0.55) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Photo with Bigfoot!', px + pw / 2, py + ph + captionH * 0.7);
 }
 
 function drawTrainPuzzleOverlay(W, H) {

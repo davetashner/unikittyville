@@ -53,6 +53,7 @@ const POINTS = {
   TIME_CAPSULE: 75,
   WISH_OUTER: 10, WISH_MIDDLE: 25, WISH_CENTER: 50,
   WISH_LUCKY_BONUS: 30, WISH_MASTER_BONUS: 100,
+  BIGFOOT_PHOTO: 30,
 };
 
 // ── Timing durations (ms) ──
@@ -1411,6 +1412,10 @@ function completeTransition() {
   hammockNapTimer = 0;
   bigfootDrinking = false;
   bigfootDrinkTimer = 0;
+  bigfootPhotoTaken = false;
+  bigfootPhotoFlash = 0;
+  leprechaunGold = 0;
+  bigfootHintShown = false;
   roasting = { active: false, progress: 0, done: false };
   activeSpeechBubbles = [];
   quizActive = false;
@@ -1662,6 +1667,9 @@ const BIGFOOT_DRINK_DURATION = 3000;
 let campPool = { dug: false, filled: false, digging: false, digProgress: 0, filling: false, fillProgress: 0 };
 let leprechaunGold = 0;
 let leprechaunSpeech = { text: '', timer: 0 };
+let bigfootPhotoTaken = false;
+let bigfootPhotoFlash = 0; // countdown timer for camera flash effect
+let bigfootHintShown = false; // one-time breadcrumb hint per level visit
 // Campfire Light Show minigame
 let lightShowActive = false;
 let lightShowProgram = '';     // string of color codes: R, B, G, Y, W
@@ -3762,6 +3770,18 @@ function update(dt) {
         playChaChing();
       }
     }
+    // Bigfoot breadcrumb hint — show once when player is nearby but not yet in range
+    if (!bigfootHintShown && !bigfootPhotoTaken) {
+      const bigfootDist = Math.abs(player.x - BIGFOOT_POS.x);
+      if (bigfootDist < 200 && bigfootDist >= 60) {
+        bigfootHintShown = true;
+        activeSpeechBubbles.push({
+          npc: { x: BIGFOOT_POS.x, y: GROUND_Y },
+          text: "Hey! Bring me a gold coin and I'll take a photo with ya!",
+          life: TIMING.SPEECH_BUBBLE_LIFE
+        });
+      }
+    }
     // Bigfoot — chocolate milk
     if (Math.abs(player.x - BIGFOOT_POS.x) < 60) {
       nearBigfoot = true;
@@ -3780,6 +3800,23 @@ function update(dt) {
         addPopup(BIGFOOT_POS.x, player.y - 40, '+' + POINTS.BIGFOOT_MILK + ' Chocolate milk with Bigfoot!', '#92400e');
         playChaChing();
       }
+    }
+    // Bigfoot photo — press P when near and have leprechaun gold
+    if (nearBigfoot && !bigfootPhotoTaken && !bigfootDrinking && keys['KeyP']) {
+      keys['KeyP'] = false;
+      if (leprechaunGold >= 1) {
+        leprechaunGold -= 1;
+        bigfootPhotoTaken = true;
+        bigfootPhotoFlash = 200; // 200ms white flash
+        score += POINTS.BIGFOOT_PHOTO;
+        addPopup(BIGFOOT_POS.x, player.y - 40, '+' + POINTS.BIGFOOT_PHOTO + ' Photo with Bigfoot!', '#92400e');
+        playSfx('sfxCameraShutter');
+        playChaChing();
+      }
+    }
+    // Camera flash countdown
+    if (bigfootPhotoFlash > 0) {
+      bigfootPhotoFlash -= dt;
     }
     // Dig site — dig a pool
     if (Math.abs(player.x - DIG_SITE_POS.x) < 50) {
