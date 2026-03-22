@@ -49,6 +49,7 @@ function draw() {
       [Scene.TELEGRAM]: () => drawTelegramOffice(cam, W, H),
 
       [Scene.APOLLO_MISSION]: () => drawApolloMissionScene(cam, W, H),
+      [Scene.ROVER_PROGRAMMING]: () => drawRoverProgramming(cam, W, H),
 
       [Scene.GELATO_SHOP]: () => drawGelatoShopInterior(cam, W, H),
     };
@@ -9137,6 +9138,59 @@ function drawMoonWorld(W, H, cam, cycle, isNight) {
     }
   }
 
+  // Rover Station building
+  const rsScene = level13Moon.scenes.find(s => s.type === 'rover_station');
+  if (rsScene) {
+    const rx = rsScene.x;
+    if (rx > cam - 150 && rx < cam + W + 150) {
+      // Rectangular hab module
+      ctx.fillStyle = '#64748b';
+      ctx.fillRect(rx - 50, GROUND_Y - 55, 100, 55);
+      // Roof stripe
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillRect(rx - 50, GROUND_Y - 55, 100, 5);
+      // Window
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillRect(rx - 30, GROUND_Y - 45, 18, 14);
+      ctx.fillRect(rx + 12, GROUND_Y - 45, 18, 14);
+      // Door
+      ctx.fillStyle = '#475569';
+      ctx.fillRect(rx - 8, GROUND_Y - 32, 16, 32);
+      // Antenna
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(rx + 35, GROUND_Y - 55);
+      ctx.lineTo(rx + 35, GROUND_Y - 80);
+      ctx.stroke();
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.arc(rx + 35, GROUND_Y - 82, 3, 0, Math.PI * 2);
+      ctx.fill();
+      // Small rover parked outside
+      ctx.fillStyle = '#d4d4d8';
+      ctx.fillRect(rx - 55, GROUND_Y - 10, 20, 8);
+      ctx.fillStyle = '#71717a';
+      ctx.beginPath();
+      ctx.arc(rx - 50, GROUND_Y, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(rx - 40, GROUND_Y, 4, 0, Math.PI * 2);
+      ctx.fill();
+      // Sign
+      ctx.fillStyle = '#fbbf24';
+      ctx.font = 'bold 11px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText('Rover Station', rx, GROUND_Y - 60);
+      if (roverProg.complete) {
+        ctx.fillStyle = '#4ade80';
+        ctx.font = '9px system-ui';
+        ctx.fillText('COMPLETE', rx, GROUND_Y - 70);
+      }
+      ctx.textAlign = 'left';
+    }
+  }
+
   // Platforms — lunar rock style
   for (const p of level13Moon.platforms) {
     const px = p.x;
@@ -10466,6 +10520,202 @@ const levelRegistry = {
 
 // Derive constants from registry
 const LEVEL_NAMES = Object.values(levelRegistry).map(l => l.name);
+// ── Rover Programming Overlay ──
+function drawRoverProgramming(cam, W, H) {
+  const cx = cam + W / 2;
+  const cy = H / 2;
+  const rp = roverProg;
+  const ch = ROVER_CHALLENGES[rp.challenge];
+  if (!ch) return;
+
+  // Dark overlay background
+  ctx.fillStyle = 'rgba(3, 7, 18, 0.95)';
+  ctx.fillRect(cx - 310, cy - 200, 620, 420);
+  ctx.strokeStyle = '#f59e0b';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(cx - 310, cy - 200, 620, 420);
+
+  // Title
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#f59e0b';
+  ctx.font = 'bold ' + Math.round(H * 0.045) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.fillText('Rover Programming', cx, cy - 175);
+
+  // Progress dots
+  const dotR = 7;
+  const dotGap = 26;
+  const dotsStartX = cx - (ROVER_CHALLENGES.length - 1) * dotGap / 2;
+  for (let i = 0; i < ROVER_CHALLENGES.length; i++) {
+    ctx.beginPath();
+    ctx.arc(dotsStartX + i * dotGap, cy - 155, dotR, 0, Math.PI * 2);
+    if (i < rp.challenge) {
+      ctx.fillStyle = '#4ade80';
+    } else if (i === rp.challenge) {
+      ctx.fillStyle = '#f59e0b';
+    } else {
+      ctx.fillStyle = '#374151';
+    }
+    ctx.fill();
+    ctx.strokeStyle = '#6b7280';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  // Challenge name
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = Math.round(H * 0.032) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.fillText('Challenge ' + (rp.challenge + 1) + ': ' + ch.name, cx, cy - 133);
+
+  // ── Draw 5x5 Grid ──
+  const gridSize = 5;
+  const cellSize = 38;
+  const gridW = gridSize * cellSize;
+  const gridH = gridSize * cellSize;
+  const gridX = cx - gridW / 2;
+  const gridY = cy - 110;
+
+  // Grid background
+  ctx.fillStyle = '#1e293b';
+  ctx.fillRect(gridX, gridY, gridW, gridH);
+
+  // Grid lines
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= gridSize; i++) {
+    ctx.beginPath();
+    ctx.moveTo(gridX + i * cellSize, gridY);
+    ctx.lineTo(gridX + i * cellSize, gridY + gridH);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(gridX, gridY + i * cellSize);
+    ctx.lineTo(gridX + gridW, gridY + i * cellSize);
+    ctx.stroke();
+  }
+
+  // Draw walls (gray blocks)
+  for (const w of rp.walls) {
+    const wx = gridX + w.x * cellSize + 2;
+    const wy = gridY + w.y * cellSize + 2;
+    ctx.fillStyle = '#6b7280';
+    ctx.fillRect(wx, wy, cellSize - 4, cellSize - 4);
+    ctx.strokeStyle = '#4b5563';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(wx, wy, cellSize - 4, cellSize - 4);
+    // Cross pattern
+    ctx.strokeStyle = '#9ca3af';
+    ctx.beginPath();
+    ctx.moveTo(wx + 4, wy + 4);
+    ctx.lineTo(wx + cellSize - 8, wy + cellSize - 8);
+    ctx.moveTo(wx + cellSize - 8, wy + 4);
+    ctx.lineTo(wx + 4, wy + cellSize - 8);
+    ctx.stroke();
+  }
+
+  // Draw samples (colored circles)
+  for (const s of rp.samples) {
+    if (s.collected) continue;
+    const sx = gridX + s.x * cellSize + cellSize / 2;
+    const sy = gridY + s.y * cellSize + cellSize / 2;
+    ctx.fillStyle = '#22d3ee';
+    ctx.beginPath();
+    ctx.arc(sx, sy, 10, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#0e7490';
+    ctx.beginPath();
+    ctx.arc(sx - 3, sy - 3, 3, 0, Math.PI * 2);
+    ctx.fill();
+    // Sparkle
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.beginPath();
+    ctx.arc(sx + 4, sy - 5, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Draw rover (triangle pointing in direction)
+  const rvx = gridX + rp.roverPos.x * cellSize + cellSize / 2;
+  const rvy = gridY + rp.roverPos.y * cellSize + cellSize / 2;
+  ctx.save();
+  ctx.translate(rvx, rvy);
+  ctx.rotate(rp.roverDir * Math.PI / 2); // 0=right, 1=down, 2=left, 3=up
+  // Triangle pointing right (before rotation)
+  ctx.fillStyle = '#f59e0b';
+  ctx.beginPath();
+  ctx.moveTo(12, 0);
+  ctx.lineTo(-8, -9);
+  ctx.lineTo(-8, 9);
+  ctx.closePath();
+  ctx.fill();
+  // Body circle
+  ctx.fillStyle = '#d97706';
+  ctx.beginPath();
+  ctx.arc(-2, 0, 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // ── Command Sequence Display ──
+  const seqY = gridY + gridH + 14;
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = Math.round(H * 0.025) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('Commands:', gridX, seqY);
+
+  const cmdColors = { F: '#22c55e', L: '#eab308', R: '#eab308', P: '#3b82f6' };
+  const cmdBlockW = 24;
+  const cmdBlockH = 22;
+  const cmdStartX = gridX + 80;
+  for (let i = 0; i < rp.program.length; i++) {
+    const cmd = rp.program[i];
+    const bx = cmdStartX + i * (cmdBlockW + 3);
+    const by = seqY - 14;
+    // Highlight currently executing command
+    if (rp.running && i === rp.runStep) {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(bx - 2, by - 2, cmdBlockW + 4, cmdBlockH + 4);
+    }
+    ctx.fillStyle = cmdColors[cmd] || '#64748b';
+    ctx.fillRect(bx, by, cmdBlockW, cmdBlockH);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 13px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(cmd, bx + cmdBlockW / 2, by + 16);
+  }
+  // Cursor blink if not running
+  if (!rp.running && rp.program.length < 20) {
+    const cursorX = cmdStartX + rp.program.length * (cmdBlockW + 3);
+    const blink = Math.sin(Date.now() / 300) > 0;
+    if (blink) {
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillRect(cursorX, seqY - 14, 2, cmdBlockH);
+    }
+  }
+
+  // Instructions
+  const instrY = seqY + 20;
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = Math.round(H * 0.023) + 'px "Segoe UI", system-ui, sans-serif';
+  if (rp.running) {
+    ctx.fillText('Running program...', cx, instrY);
+  } else if (rp.feedback === 'success') {
+    ctx.fillStyle = '#4ade80';
+    ctx.font = 'bold ' + Math.round(H * 0.03) + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.fillText('Challenge Complete!', cx, instrY);
+  } else if (rp.feedback === 'fail') {
+    ctx.fillStyle = '#ef4444';
+    ctx.font = 'bold ' + Math.round(H * 0.03) + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.fillText('Try Again!', cx, instrY);
+  } else {
+    ctx.fillText('F=Forward  L=Left  R=Right  P=Pick Up  |  Space=RUN  Backspace=Delete', cx, instrY);
+  }
+
+  // Escape hint
+  ctx.fillStyle = '#64748b';
+  ctx.font = Math.round(H * 0.02) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.fillText('Esc to exit', cx, cy + 210);
+
+  ctx.textAlign = 'left';
+}
+
 const TOTAL_LEVELS = Object.keys(levelRegistry).length;
 
 // Validate registry completeness at startup

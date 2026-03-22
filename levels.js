@@ -2215,6 +2215,7 @@ const level13Moon = {
     { type: 'rock', x: 3800 },
     { type: 'rock', x: 5000 },
     { type: 'smoothie_shop', x: 1400 },
+    { type: 'rover_station', x: 3000 },
     { type: 'topgolf', x: 3200 },
   ],
 };
@@ -2223,6 +2224,8 @@ const level13Moon = {
 const SMOOTHIE_SHOP_POS = { x: 1400, w: 120 };
 // TopGolf position
 const TOPGOLF_POS = { x: 3200, w: 140 };
+// Rover Station position
+const ROVER_STATION_POS = { x: 3000, w: 100 };
 // Apollo Landing Site — near end of Moon level, before the completion zone
 const APOLLO_SITE_POS = { x: 4700, w: 100 };
 
