@@ -52,6 +52,7 @@ function draw() {
       [Scene.ROVER_PROGRAMMING]: () => drawRoverProgramming(cam, W, H),
 
       [Scene.GELATO_SHOP]: () => drawGelatoShopInterior(cam, W, H),
+      [Scene.MARKET]: () => drawMarketInterior(cam, W, H),
     };
     if (sceneDrawMap[currentScene]) sceneDrawMap[currentScene]();
   } else {
@@ -7244,6 +7245,7 @@ function drawSafariScenes(cam, W) {
       case 'cheetah': if (!ridingCheetah) drawCheetah(scene.x); break;
       case 'safari_jeep': drawSafariJeep(scene.x); break;
       case 'safari_rock': drawSafariRock(scene.x); break;
+      case 'market_stall': drawMarketStall(scene.x); break;
       case 'animal_tracks': drawAnimalTracks(scene.x); break;
     }
   }
@@ -7650,6 +7652,62 @@ function drawSafariRock(x) {
   ctx.fill();
 }
 
+function drawMarketStall(x) {
+  const gy = GROUND_Y;
+  // Wooden table/counter
+  ctx.fillStyle = '#92400e';
+  ctx.fillRect(x - 40, gy - 40, 80, 10);
+  // Table legs
+  ctx.fillRect(x - 38, gy - 30, 6, 30);
+  ctx.fillRect(x + 32, gy - 30, 6, 30);
+  // Colorful canopy (striped)
+  const stripeColors = ['#ef4444', '#f59e0b', '#22c55e', '#3b82f6', '#a855f7'];
+  for (let i = 0; i < 5; i++) {
+    ctx.fillStyle = stripeColors[i];
+    ctx.fillRect(x - 50 + i * 20, gy - 70, 20, 12);
+  }
+  // Canopy poles
+  ctx.fillStyle = '#78350f';
+  ctx.fillRect(x - 48, gy - 70, 4, 70);
+  ctx.fillRect(x + 44, gy - 70, 4, 70);
+  // Items on table: necklace, mask, basket, drum, fabric
+  // Necklace (beads)
+  ctx.strokeStyle = '#fbbf24';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(x - 28, gy - 48, 6, 0.3, Math.PI - 0.3); ctx.stroke();
+  ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(x - 32, gy - 44, 2, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#22c55e'; ctx.beginPath(); ctx.arc(x - 28, gy - 42, 2, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#3b82f6'; ctx.beginPath(); ctx.arc(x - 24, gy - 44, 2, 0, Math.PI * 2); ctx.fill();
+  // Mask (oval face)
+  ctx.fillStyle = '#d97706';
+  ctx.beginPath(); ctx.ellipse(x - 10, gy - 50, 7, 10, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#1e293b';
+  ctx.beginPath(); ctx.ellipse(x - 13, gy - 52, 2, 2, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x - 7, gy - 52, 2, 2, 0, 0, Math.PI * 2); ctx.fill();
+  // Basket
+  ctx.fillStyle = '#a16207';
+  ctx.beginPath();
+  ctx.moveTo(x + 2, gy - 42);
+  ctx.lineTo(x + 6, gy - 52);
+  ctx.lineTo(x + 18, gy - 52);
+  ctx.lineTo(x + 22, gy - 42);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#78350f'; ctx.lineWidth = 1;
+  ctx.strokeRect(x + 5, gy - 50, 14, 3);
+  // Drum
+  ctx.fillStyle = '#b45309';
+  ctx.fillRect(x + 26, gy - 54, 12, 14);
+  ctx.fillStyle = '#fef3c7';
+  ctx.fillRect(x + 26, gy - 54, 12, 3);
+  // "MARKET" text
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 10px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText('MARKET', x, gy - 74);
+  ctx.textAlign = 'left';
+}
+
 function drawAnimalTracks(x) {
   const gy = GROUND_Y;
   ctx.fillStyle = '#8a6e44';
@@ -7846,6 +7904,198 @@ function drawWateringHoleScene(cam, W, H) {
   if (parrotState === 'shoulder') promptText = 'A parrot is on your shoulder! Press N to name it | S to exit';
   ctx.fillText(promptText, cx, cy - 10);
   ctx.textAlign = 'left';
+}
+
+function drawMarketInterior(cam, W, H) {
+  const cx = cam + W / 2;
+  const cy = H / 2;
+
+  // Background — warm market interior
+  ctx.fillStyle = '#f5e6c8';
+  ctx.fillRect(cam, 0, W, H);
+
+  // Colorful textile banner across top
+  const bannerColors = ['#ef4444', '#f59e0b', '#22c55e', '#3b82f6', '#a855f7', '#ec4899'];
+  for (let i = 0; i < 24; i++) {
+    ctx.fillStyle = bannerColors[i % bannerColors.length];
+    const bx = cam + i * (W / 24);
+    ctx.beginPath();
+    ctx.moveTo(bx, 20);
+    ctx.lineTo(bx + W / 48, 40);
+    ctx.lineTo(bx + W / 24, 20);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Wooden shelves with items on left and right
+  ctx.fillStyle = '#92400e';
+  ctx.fillRect(cam + 20, H * 0.2, W * 0.18, 8);
+  ctx.fillRect(cam + 20, H * 0.4, W * 0.18, 8);
+  ctx.fillRect(cam + W - 20 - W * 0.18, H * 0.2, W * 0.18, 8);
+  ctx.fillRect(cam + W - 20 - W * 0.18, H * 0.4, W * 0.18, 8);
+
+  // Items on left shelves — necklaces, masks
+  const lsx = cam + 20;
+  // Necklaces (beaded circles)
+  for (let i = 0; i < 3; i++) {
+    const nx = lsx + 15 + i * 25;
+    ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(nx, H * 0.2 - 12, 8, 0.3, Math.PI - 0.3); ctx.stroke();
+    ctx.fillStyle = ['#ef4444', '#22c55e', '#3b82f6'][i];
+    ctx.beginPath(); ctx.arc(nx - 5, H * 0.2 - 7, 2.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(nx + 5, H * 0.2 - 7, 2.5, 0, Math.PI * 2); ctx.fill();
+  }
+  // Masks on second shelf
+  const maskColors = ['#d97706', '#b45309', '#78350f'];
+  for (let i = 0; i < 3; i++) {
+    const mx = lsx + 15 + i * 25;
+    ctx.fillStyle = maskColors[i];
+    ctx.beginPath(); ctx.ellipse(mx, H * 0.4 - 14, 8, 12, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#1e293b';
+    ctx.beginPath(); ctx.ellipse(mx - 3, H * 0.4 - 16, 2, 2, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(mx + 3, H * 0.4 - 16, 2, 2, 0, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // Items on right shelves — baskets, drums, fabric
+  const rsx = cam + W - 20 - W * 0.18;
+  // Baskets
+  for (let i = 0; i < 2; i++) {
+    const bx = rsx + 15 + i * 30;
+    ctx.fillStyle = '#a16207';
+    ctx.beginPath();
+    ctx.moveTo(bx - 8, H * 0.2 - 4);
+    ctx.lineTo(bx - 5, H * 0.2 - 16);
+    ctx.lineTo(bx + 5, H * 0.2 - 16);
+    ctx.lineTo(bx + 8, H * 0.2 - 4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#78350f'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(bx - 6, H * 0.2 - 10); ctx.lineTo(bx + 6, H * 0.2 - 10); ctx.stroke();
+  }
+  // Drums on second shelf
+  for (let i = 0; i < 2; i++) {
+    const dx = rsx + 15 + i * 30;
+    ctx.fillStyle = '#b45309';
+    ctx.fillRect(dx - 7, H * 0.4 - 18, 14, 16);
+    ctx.fillStyle = '#fef3c7';
+    ctx.fillRect(dx - 7, H * 0.4 - 18, 14, 4);
+  }
+
+  // Fabric rolls (bottom right corner)
+  const fabricColors = ['#ef4444', '#f59e0b', '#22c55e', '#a855f7'];
+  for (let i = 0; i < fabricColors.length; i++) {
+    ctx.fillStyle = fabricColors[i];
+    ctx.fillRect(rsx + i * 18, H * 0.55, 14, 30);
+    ctx.fillStyle = '#1e293b';
+    ctx.globalAlpha = 0.15;
+    ctx.fillRect(rsx + i * 18 + 3, H * 0.55, 2, 30);
+    ctx.globalAlpha = 1;
+  }
+
+  // Floor — woven mat
+  ctx.fillStyle = '#d4a574';
+  ctx.fillRect(cam, H * 0.75, W, H * 0.25);
+  ctx.strokeStyle = '#b8976e'; ctx.lineWidth = 0.5;
+  for (let i = 0; i < W / 20; i++) {
+    ctx.beginPath();
+    ctx.moveTo(cam + i * 20, H * 0.75);
+    ctx.lineTo(cam + i * 20, H);
+    ctx.stroke();
+  }
+
+  // Title
+  ctx.fillStyle = '#78350f';
+  ctx.font = 'bold 20px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText('Safari Market — Budget Haggling!', cx, H * 0.12);
+
+  // Progress bar
+  const barX = cx - W * 0.25;
+  const barW = W * 0.5;
+  const barY = H * 0.15;
+  ctx.fillStyle = '#e5e7eb';
+  ctx.fillRect(barX, barY, barW, 12);
+  ctx.fillStyle = '#f59e0b';
+  ctx.fillRect(barX, barY, barW * (marketCorrect / MARKET_PROBLEMS.length), 12);
+  ctx.strokeStyle = '#78350f'; ctx.lineWidth = 1;
+  ctx.strokeRect(barX, barY, barW, 12);
+  ctx.fillStyle = '#78350f';
+  ctx.font = '10px system-ui';
+  ctx.fillText(marketCorrect + '/' + MARKET_PROBLEMS.length + ' correct', cx, barY + 10);
+
+  // Problem area
+  if (marketComplete) {
+    // All done!
+    ctx.fillStyle = '#15803d';
+    ctx.font = 'bold 22px system-ui';
+    if (marketCorrect >= MARKET_PROBLEMS.length) {
+      ctx.fillText('PERFECT HAGGLER!', cx, cy - 10);
+      ctx.font = '14px system-ui';
+      ctx.fillText('You answered all 5 correctly!', cx, cy + 15);
+    } else {
+      ctx.fillText('Market Closed', cx, cy - 10);
+      ctx.font = '14px system-ui';
+      ctx.fillText('You got ' + marketCorrect + ' out of ' + MARKET_PROBLEMS.length + ' right!', cx, cy + 15);
+    }
+  } else if (marketProblem < MARKET_PROBLEMS.length) {
+    // Show problem number
+    ctx.fillStyle = '#92400e';
+    ctx.font = 'bold 14px system-ui';
+    ctx.fillText('Problem ' + (marketProblem + 1) + ' of ' + MARKET_PROBLEMS.length, cx, H * 0.26);
+
+    // Draw the question text (multi-line)
+    const problem = MARKET_PROBLEMS[marketProblem];
+    const lines = problem.question.split('\n');
+    ctx.fillStyle = '#1e293b';
+    ctx.font = '16px system-ui';
+    lines.forEach((line, i) => {
+      ctx.fillText(line, cx, H * 0.34 + i * 24);
+    });
+
+    // Coin icon next to question
+    const coinY = H * 0.34 + lines.length * 24 + 10;
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath(); ctx.arc(cx - 60, coinY, 10, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#92400e'; ctx.font = 'bold 10px system-ui';
+    ctx.fillText('$', cx - 60, coinY + 4);
+
+    // Input field
+    const inputY = coinY + 15;
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(cx - 80, inputY, 160, 32);
+    ctx.strokeStyle = '#92400e'; ctx.lineWidth = 2;
+    ctx.strokeRect(cx - 80, inputY, 160, 32);
+    // Typed answer with blinking cursor
+    ctx.fillStyle = '#1e293b';
+    ctx.font = 'bold 20px system-ui';
+    const cursor = Math.floor(Date.now() / 500) % 2 === 0 ? '|' : '';
+    ctx.fillText(marketAnswer + cursor, cx, inputY + 22);
+    // Hint
+    ctx.fillStyle = '#6b7280';
+    ctx.font = '11px system-ui';
+    ctx.fillText('Type your answer and press Enter', cx, inputY + 50);
+  }
+
+  // Feedback
+  if (marketFeedback === 'correct') {
+    ctx.fillStyle = '#15803d';
+    ctx.font = 'bold 20px system-ui';
+    ctx.fillText('CORRECT! +' + POINTS.MARKET_HAGGLE + ' pts!', cx, H * 0.82);
+  } else if (marketFeedback === 'wrong') {
+    ctx.fillStyle = '#ef4444';
+    ctx.font = 'bold 20px system-ui';
+    const problem = MARKET_PROBLEMS[Math.max(0, marketProblem - 1)];
+    ctx.fillText('Not quite! The answer was ' + problem.answer, cx, H * 0.82);
+  }
+
+  // Exit instruction
+  ctx.fillStyle = 'rgba(120,53,15,0.5)';
+  ctx.font = '12px system-ui';
+  ctx.fillText('Press Escape to leave the market', cx, H * 0.95);
+  ctx.textAlign = 'left';
+
+  // Draw player at bottom
+  drawKitty(cx, H * 0.72, player.color, player.facing, 0, 'horn', playerEyeColor, playerHornColors);
 }
 
 function drawCheetahSpeech(x, gy) {

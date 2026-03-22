@@ -487,6 +487,34 @@ window.addEventListener('keydown', e => {
       }
     }
   }
+  // Market haggling digit input
+  if (currentScene === Scene.MARKET && marketActive && !e.repeat) {
+    keys[e.code] = false; // block game from seeing these keys
+    if (marketFeedbackTimer <= 0) {
+      if (/^[0-9]$/.test(e.key) && marketAnswer.length < 6) {
+        marketAnswer += e.key;
+      } else if (e.key === 'Backspace') {
+        marketAnswer = marketAnswer.slice(0, -1);
+      } else if (e.key === 'Enter' && marketAnswer.length > 0) {
+        const correctAnswer = MARKET_PROBLEMS[marketProblem].answer;
+        if (parseInt(marketAnswer) === correctAnswer) {
+          marketFeedback = 'correct';
+          marketCorrect++;
+          score += POINTS.MARKET_HAGGLE;
+          addPopup(player.x, player.y - 40, '+' + POINTS.MARKET_HAGGLE + ' Correct!', '#4ade80');
+          playChaChing();
+        } else {
+          marketFeedback = 'wrong';
+        }
+        marketProblem++;
+        marketAnswer = '';
+        marketFeedbackTimer = 1500;
+      } else if (e.key === 'Escape') {
+        currentScene = null;
+        marketActive = false;
+      }
+    }
+  }
   // Telegram typing input
   if (currentScene === Scene.TELEGRAM && telegramActive && !telegramComplete && !e.repeat) {
     if (e.key.length === 1) {
@@ -1484,6 +1512,14 @@ function updatePrompt(near) {
     el.textContent = 'Riding the cheetah! G: Dismount | Yarn auto-collects nearby!';
     el.style.display = 'block';
     setAction('KeyG', 'Off');
+  } else if (near.nearMarket && !marketComplete) {
+    el.textContent = 'Press Enter to haggle at the market!';
+    el.style.display = 'block';
+    setAction('Enter', 'Enter');
+  } else if (near.nearMarket && marketComplete) {
+    el.textContent = 'Market complete! Great haggling!';
+    el.style.display = 'block';
+    setAction(null, '');
   } else if (near.nearBaobab) {
     el.textContent = 'Press F to pick baobab fruit!';
     el.style.display = 'block';
