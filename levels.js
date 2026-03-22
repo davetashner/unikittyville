@@ -2305,7 +2305,113 @@ const timeCapsules = {
   11: { x: 1200, name: 'Apollo Patch',             year: '1969',   fact: 'NASA mission patches are designed by astronaut crews.' },
   12: { x: 4000, name: 'Voyager Record',           year: '1977',   fact: 'The Voyager Golden Record carries sounds from Earth.' },
   13: { x: 2500, name: 'Moon Rock',                year: '1969',   fact: 'Apollo astronauts brought back 842 pounds of moon rocks.' },
+  14: { x: 2200, name: 'Sugar Crystal Bottle',    year: '1847',   fact: 'The first US candy factory opened in 1847.' },
 };
+
+// ── Level 14: Candy Kingdom ──
+const CANDY_WORLD_W = 5200;
+const MOON_CANDY_PORTAL = { x: 5250, radius: 30 };
+const CANDY_MOON_PORTAL = { x: 5100, radius: 30 };
+const CUPCAKE_BAKERY_POS = { x: 1100, w: 100 };
+const LEMON_BOSS_ZONE = { xMin: 2700, xMax: 3100 };
+const LEMON_BOSS_POS = { x: 2800 };
+const DRAGON_LANDING_POS = { x: 3900, w: 80 };
+const DANCE_STAGE_POS = { x: 4700, w: 100 };
+
+const level14Candy = {
+  worldW: CANDY_WORLD_W,
+  platforms: [
+    { x: 150, y: 370, w: 80 }, { x: 350, y: 320, w: 90 }, { x: 560, y: 280, w: 80 },
+    { x: 780, y: 350, w: 90 }, { x: 1000, y: 290, w: 80 }, { x: 1200, y: 340, w: 85 },
+    { x: 1500, y: 260, w: 80 }, { x: 1720, y: 300, w: 90 }, { x: 1950, y: 370, w: 80 },
+    { x: 2150, y: 300, w: 90 }, { x: 2400, y: 250, w: 80 }, { x: 2650, y: 330, w: 90 },
+    { x: 2900, y: 270, w: 80 }, { x: 3050, y: 240, w: 90 }, { x: 3250, y: 260, w: 80 },
+    { x: 3550, y: 340, w: 90 }, { x: 3800, y: 300, w: 80 }, { x: 4050, y: 360, w: 90 },
+    { x: 4300, y: 280, w: 80 }, { x: 4600, y: 330, w: 90 }, { x: 4850, y: 260, w: 80 },
+  ],
+  yarnBalls: [],
+  npcs: [],
+  chocolateRivers: [
+    { x: 1600, w: 300, hasBridge: true },
+    { x: 3100, w: 200, hasBridge: false },
+  ],
+  lollipopTrees: [
+    { x: 200, color: '#f472b6' }, { x: 500, color: '#a78bfa' },
+    { x: 900, color: '#34d399' }, { x: 1300, color: '#fbbf24' },
+    { x: 2000, color: '#38bdf8' }, { x: 2500, color: '#f43f5e' },
+    { x: 3500, color: '#c084fc' }, { x: 4200, color: '#f472b6' },
+  ],
+  gumdropBushes: [
+    { x: 100 }, { x: 650 }, { x: 1150 }, { x: 1800 },
+    { x: 2300 }, { x: 3000 }, { x: 3700 }, // 7 clusters
+  ],
+  sprinkleDots: [],
+};
+
+// Generate sprinkle dots on ground
+for (let i = 0; i < 50; i++) {
+  level14Candy.sprinkleDots.push({
+    x: Math.random() * CANDY_WORLD_W,
+    y: GROUND_Y + 2 + Math.random() * 8,
+    color: ['#f43f5e', '#f59e0b', '#22c55e', '#a855f7', '#38bdf8'][Math.floor(Math.random() * 5)],
+  });
+}
+
+// Candy Kingdom yarn balls (sprinkle gems) on platforms where p.y < 330
+const candyGemColors = ['#f43f5e', '#f59e0b', '#22c55e', '#a855f7', '#38bdf8'];
+for (const p of level14Candy.platforms) {
+  if (p.y < 330) {
+    level14Candy.yarnBalls.push({
+      x: p.x + p.w / 2,
+      y: p.y - 14,
+      color: candyGemColors[level14Candy.yarnBalls.length % candyGemColors.length],
+      collected: false,
+      bobPhase: Math.random() * Math.PI * 2,
+    });
+  }
+}
+
+// Candy Kingdom NPCs
+const candyNpcs = [];
+const candyNpcPositions = [300, 800, 1400, 2200, 3300, 4100, 4900];
+const candyNpcColors = ['#f472b6', '#a78bfa', '#34d399', '#fbbf24', '#38bdf8', '#f43f5e', '#c084fc'];
+const candyNpcAccessories = ['bow', 'glasses', 'flower', 'scarf', 'bow', 'glasses', 'flower'];
+for (let i = 0; i < 7; i++) {
+  candyNpcs.push({
+    x: candyNpcPositions[i],
+    y: GROUND_Y,
+    color: candyNpcColors[i],
+    accessory: candyNpcAccessories[i],
+    vx: (Math.random() - 0.5) * 0.8,
+    walkFrame: 0, walkTimer: 0,
+    facing: 1,
+    idleTimer: Math.random() * 200,
+  });
+}
+level14Candy.npcs = candyNpcs;
+
+npcDialogs[14] = [
+  "Welcome to Candy Kingdom! Everything here is edible... well, almost!",
+  "The chocolate rivers are delicious but don't fall in!",
+  "King Lemon Drop has been souring up the whole kingdom!",
+  "Try the Cupcake Bakery! Their frosting is legendary!",
+  "The gumdrops here grow on bushes! Nature is amazing!",
+  "Fluffernutter the dragon LOVES cotton candy. She's very friendly!",
+  "The dance floor lights up every evening! You should join the party!",
+  "Sugar crystals have been used since ancient times!",
+  "I once ate an entire lollipop tree. No regrets!",
+  "The cotton candy clouds are actually edible! Don't tell anyone!",
+  "King Lemon Drop wasn't always sour. He used to be sweet as honey!",
+  "The sprinkle gems sparkle brightest at sunset!",
+  "If you bake three perfect cupcakes, you earn the Master Baker title!",
+  "The dragon ride through the cotton candy storm is WILD!",
+  "Every candy here is made with love and a pinch of magic!",
+  "The cookie ground is baked fresh every morning by the sun!",
+  "Those gumdrop bushes are mint-flavored. My favorite!",
+  "The Candy Kingdom was founded by a cat who loved sweets!",
+  "Watch out for the Lemon Drop Boss! He throws sour projectiles!",
+  "Complete all the activities to become a Sweet Kingdom champion!",
+];
 
 // ── NPC Quiz Questions ──
 // Triggered randomly (~33%) after dismissing an NPC speech bubble.
@@ -2352,5 +2458,12 @@ const npcQuizzes = {
     { question: "How did the town of Oriental get its name?", answers: ["Asian settlers", "A wrecked ship called USS Oriental", "A compass pointing east"], correct: 1 },
     { question: "What is the Pamlico Sound?", answers: ["A musical note", "Largest lagoon on US East Coast", "A type of whale call"], correct: 1 },
     { question: "What are horseshoe crabs actually related to?", answers: ["Lobsters", "Spiders", "Turtles"], correct: 1 },
+  ],
+  14: [ // Candy Kingdom
+    { question: "When was the first US candy factory opened?", answers: ["1776", "1847", "1920"], correct: 1 },
+    { question: "What flavor are the gumdrop bushes?", answers: ["Strawberry", "Mint", "Grape"], correct: 1 },
+    { question: "What is the dragon's name?", answers: ["Peppermint", "Fluffernutter", "Sugarplum"], correct: 1 },
+    { question: "What was King Lemon Drop like before?", answers: ["Always sour", "Sweet as honey", "Very sleepy"], correct: 1 },
+    { question: "What are the cookie grounds baked by?", answers: ["An oven", "The sun", "Magic"], correct: 1 },
   ],
 };

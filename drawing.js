@@ -54,6 +54,8 @@ function draw() {
       [Scene.GELATO_SHOP]: () => drawGelatoShopInterior(cam, W, H),
       [Scene.MARKET]: () => drawMarketInterior(cam, W, H),
       [Scene.FOUNTAIN_WISHES]: () => drawFountainWishesInterior(cam, W, H),
+      [Scene.CUPCAKE_BAKERY]: () => drawCupcakeBakeryInterior(cam, W, H),
+      [Scene.DANCE_PARTY]: () => drawDancePartyInterior(cam, W, H),
     };
     if (sceneDrawMap[currentScene]) sceneDrawMap[currentScene]();
   } else {
@@ -2991,8 +2993,11 @@ function drawPlayerAndUI() {
     drawRidingCheetah(player.x, player.y, player.facing);
   }
   // On sledding level, draw kitty sitting in sled (offset lower into sled)
+  // When riding dragon, kitty is drawn on the dragon's back in the dragon section
   const sledOffset = (currentLevel === 2 && sledding) ? 5 : 0;
-  drawKitty(player.x, player.y - (ridingCheetah ? 15 : sledOffset), player.color, player.facing, player.walkFrame, 'horn', playerEyeColor, playerHornColors);
+  if (!ridingDragon) {
+    drawKitty(player.x, player.y - (ridingCheetah ? 15 : sledOffset), player.color, player.facing, player.walkFrame, 'horn', playerEyeColor, playerHornColors);
+  }
 
   // Space suit overlay (Cape Canaveral through Moon levels)
   if (capeSpaceSuit && currentLevel >= 11 && currentLevel <= 13 && currentScene === null) {
@@ -10146,6 +10151,44 @@ function drawMoonWorld(W, H, cam, cycle, isNight) {
     }
   }
 
+  // Candy Kingdom portal (pink glowing portal at end of Moon)
+  const portalX = MOON_CANDY_PORTAL.x;
+  if (portalX > cam - 60 && portalX < cam + W + 60) {
+    const pulse = Math.sin(gameTime / 300) * 0.3 + 0.7;
+    // Glow
+    ctx.fillStyle = 'rgba(249, 168, 212, ' + (pulse * 0.25) + ')';
+    ctx.beginPath();
+    ctx.arc(portalX, GROUND_Y - 25, 40, 0, Math.PI * 2);
+    ctx.fill();
+    // Portal circle
+    const grad = ctx.createRadialGradient(portalX, GROUND_Y - 25, 5, portalX, GROUND_Y - 25, 25);
+    grad.addColorStop(0, '#fce7f3');
+    grad.addColorStop(0.5, '#f9a8d4');
+    grad.addColorStop(1, '#ec4899');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(portalX, GROUND_Y - 25, 25, 0, Math.PI * 2);
+    ctx.fill();
+    // Sparkles
+    for (let i = 0; i < 6; i++) {
+      const angle = gameTime / 500 + i * Math.PI / 3;
+      const sx = portalX + Math.cos(angle) * 30;
+      const sy = GROUND_Y - 25 + Math.sin(angle) * 20;
+      ctx.fillStyle = '#fce7f3';
+      ctx.beginPath();
+      ctx.arc(sx, sy, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Label
+    ctx.fillStyle = '#f9a8d4';
+    ctx.font = 'bold 12px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('Candy Kingdom', portalX, GROUND_Y - 58);
+    ctx.font = '10px system-ui';
+    ctx.fillText('Press Enter', portalX, GROUND_Y - 45);
+    ctx.textAlign = 'left';
+  }
+
   // Game completion area at end of level
   if (player.x > ww - 300) {
     ctx.fillStyle = '#fbbf24';
@@ -11242,6 +11285,554 @@ function drawGelatoShopInterior(cam, W, H) {
   ctx.textAlign = 'left';
 }
 
+// ── Candy Kingdom (Level 14) ──
+function drawCandyKingdomSky(W, H, cycle, isNight, cam) {
+  // Always pastel candy sunset — ignores day/night
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#fcd7f5');
+  grad.addColorStop(0.3, '#fbb6e8');
+  grad.addColorStop(0.6, '#fde68a');
+  grad.addColorStop(1, '#fca5a5');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Floating sparkle dots in upper 40%
+  for (let i = 0; i < 30; i++) {
+    const sx = (i * 137 + 50) % W;
+    const sy = (i * 89 + 20) % (H * 0.4);
+    const colorIdx = Math.floor((gameTime / 200 + i) % 3);
+    ctx.fillStyle = ['#fff', '#f9a8d4', '#e0e7ff'][colorIdx];
+    ctx.globalAlpha = 0.5 + Math.sin(gameTime / 300 + i) * 0.3;
+    ctx.beginPath();
+    ctx.arc(sx, sy, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Cotton candy clouds with parallax
+  const cloudColors = ['#f9a8d4', '#c4b5fd', '#bae6fd', '#f9a8d4', '#c4b5fd', '#bae6fd', '#f9a8d4', '#c4b5fd'];
+  for (let i = 0; i < 8; i++) {
+    const baseX = i * 180 + 60;
+    const cx = ((baseX - cam * 0.3) % (W + 200) + W + 200) % (W + 200) - 100;
+    const cy = 60 + (i % 3) * 35;
+    ctx.fillStyle = cloudColors[i];
+    ctx.globalAlpha = 0.6;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 25 + (i % 3) * 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(cx + 20, cy - 5, 20 + (i % 2) * 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(cx - 18, cy + 3, 18 + (i % 2) * 5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawCandyKingdomWorld(W, H, cam, cycle, isNight) {
+  const ww = level14Candy.worldW;
+  const t = gameTime;
+
+  // Cookie dough ground
+  ctx.fillStyle = '#f5c97a';
+  ctx.fillRect(0, GROUND_Y, ww + 200, H - GROUND_Y + 10);
+  // Cookie grid overlay
+  ctx.strokeStyle = '#d4a15a';
+  ctx.lineWidth = 0.5;
+  for (let gx = 0; gx < ww + 200; gx += 40) {
+    if (gx < cam - 40 || gx > cam + W + 40) continue;
+    ctx.beginPath();
+    ctx.moveTo(gx, GROUND_Y);
+    ctx.lineTo(gx, H);
+    ctx.stroke();
+  }
+  for (let gy = GROUND_Y; gy < H; gy += 40) {
+    ctx.beginPath();
+    ctx.moveTo(Math.max(0, cam - 40), gy);
+    ctx.lineTo(Math.min(ww + 200, cam + W + 40), gy);
+    ctx.stroke();
+  }
+
+  // Sprinkle dots on ground
+  for (const dot of level14Candy.sprinkleDots) {
+    if (dot.x < cam - 5 || dot.x > cam + W + 5) continue;
+    ctx.fillStyle = dot.color;
+    ctx.fillRect(dot.x, dot.y, 3, 1.5);
+  }
+
+  // Chocolate rivers
+  for (const river of level14Candy.chocolateRivers) {
+    if (river.x + river.w < cam - 20 || river.x > cam + W + 20) continue;
+    // River body
+    ctx.fillStyle = '#5c2d0e';
+    ctx.fillRect(river.x, GROUND_Y - 5, river.w, H - GROUND_Y + 15);
+    // Surface shimmer
+    ctx.fillStyle = '#8b4513';
+    ctx.fillRect(river.x, GROUND_Y - 5, river.w, 4);
+    // Bubbles
+    for (let i = 0; i < 5; i++) {
+      const bx = river.x + 20 + i * (river.w / 5);
+      const by = GROUND_Y + 10 + Math.sin(t / 400 + i * 2) * 5;
+      ctx.fillStyle = 'rgba(139, 69, 19, 0.6)';
+      ctx.beginPath();
+      ctx.arc(bx, by, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Bridge
+    if (river.hasBridge) {
+      const bx = river.x + river.w / 2;
+      ctx.fillStyle = '#d4a574';
+      ctx.fillRect(bx - 40, GROUND_Y - 8, 80, 10);
+      ctx.fillStyle = '#92400e';
+      ctx.fillRect(bx - 42, GROUND_Y - 8, 4, 10);
+      ctx.fillRect(bx + 38, GROUND_Y - 8, 4, 10);
+      // Railing
+      ctx.strokeStyle = '#92400e';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(bx - 40, GROUND_Y - 8);
+      ctx.lineTo(bx - 40, GROUND_Y - 25);
+      ctx.moveTo(bx + 40, GROUND_Y - 8);
+      ctx.lineTo(bx + 40, GROUND_Y - 25);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(bx - 40, GROUND_Y - 20);
+      ctx.lineTo(bx + 40, GROUND_Y - 20);
+      ctx.stroke();
+    }
+  }
+
+  // Lollipop trees
+  for (const tree of level14Candy.lollipopTrees) {
+    const tx = tree.x;
+    if (tx < cam - 30 || tx > cam + W + 30) continue;
+    const sway = Math.sin(t / 1000 + tx) * 3;
+    // Stick
+    ctx.fillStyle = '#f5f5f4';
+    ctx.fillRect(tx - 2, GROUND_Y - 60, 4, 60);
+    // Circle candy
+    ctx.fillStyle = tree.color;
+    ctx.beginPath();
+    ctx.arc(tx + sway, GROUND_Y - 75, 18, 0, Math.PI * 2);
+    ctx.fill();
+    // Spiral
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let a = 0; a < Math.PI * 4; a += 0.3) {
+      const r = a * 2;
+      const sx = tx + sway + Math.cos(a) * r;
+      const sy = GROUND_Y - 75 + Math.sin(a) * r;
+      if (r > 16) break;
+      if (a === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+    }
+    ctx.stroke();
+  }
+
+  // Gumdrop bushes
+  for (const bush of level14Candy.gumdropBushes) {
+    const bx = bush.x;
+    if (bx < cam - 40 || bx > cam + W + 40) continue;
+    // Mint green drops
+    ctx.fillStyle = '#86efac';
+    ctx.beginPath();
+    ctx.ellipse(bx - 12, GROUND_Y - 8, 12, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(bx + 12, GROUND_Y - 8, 12, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Pink drops
+    ctx.fillStyle = '#f9a8d4';
+    ctx.beginPath();
+    ctx.ellipse(bx, GROUND_Y - 12, 10, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Cupcake Bakery building
+  const bakeryX = CUPCAKE_BAKERY_POS.x;
+  if (bakeryX > cam - 100 && bakeryX < cam + W + 100) {
+    // Building
+    ctx.fillStyle = '#fce7f3';
+    ctx.fillRect(bakeryX - 50, GROUND_Y - 70, 100, 70);
+    // Roof (frosting)
+    ctx.fillStyle = '#f472b6';
+    ctx.beginPath();
+    ctx.moveTo(bakeryX - 55, GROUND_Y - 70);
+    ctx.quadraticCurveTo(bakeryX - 25, GROUND_Y - 95, bakeryX, GROUND_Y - 85);
+    ctx.quadraticCurveTo(bakeryX + 25, GROUND_Y - 95, bakeryX + 55, GROUND_Y - 70);
+    ctx.closePath();
+    ctx.fill();
+    // Door
+    ctx.fillStyle = '#ec4899';
+    ctx.fillRect(bakeryX - 10, GROUND_Y - 30, 20, 30);
+    // Window
+    ctx.fillStyle = '#fde68a';
+    ctx.fillRect(bakeryX - 35, GROUND_Y - 55, 20, 15);
+    ctx.fillRect(bakeryX + 15, GROUND_Y - 55, 20, 15);
+    // Sign
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 11px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('Cupcake Bakery', bakeryX, GROUND_Y - 95);
+    // Prompt
+    if (Math.abs(player.x - bakeryX) < BUILDING_RANGE) {
+      ctx.fillStyle = '#fbbf24';
+      ctx.font = 'bold 14px system-ui';
+      ctx.fillText('Press Enter to Bake!', bakeryX, GROUND_Y - 105);
+    }
+    ctx.textAlign = 'left';
+  }
+
+  // Dragon Landing Pad
+  const dragonPadX = DRAGON_LANDING_POS.x;
+  if (dragonPadX > cam - 100 && dragonPadX < cam + W + 100) {
+    // Landing pad
+    ctx.fillStyle = '#e879f9';
+    ctx.globalAlpha = 0.3;
+    ctx.beginPath();
+    ctx.ellipse(dragonPadX, GROUND_Y + 3, 40, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    // Dragon waiting
+    if (!ridingDragon) {
+      // Dragon body
+      ctx.fillStyle = '#f9a8d4';
+      ctx.beginPath();
+      ctx.ellipse(dragonPadX, GROUND_Y - 25, 25, 18, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Wings
+      ctx.fillStyle = '#c4b5fd';
+      ctx.beginPath();
+      ctx.moveTo(dragonPadX - 15, GROUND_Y - 30);
+      ctx.quadraticCurveTo(dragonPadX - 45, GROUND_Y - 55, dragonPadX - 20, GROUND_Y - 20);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(dragonPadX + 15, GROUND_Y - 30);
+      ctx.quadraticCurveTo(dragonPadX + 45, GROUND_Y - 55, dragonPadX + 20, GROUND_Y - 20);
+      ctx.fill();
+      // Head
+      ctx.fillStyle = '#f9a8d4';
+      ctx.beginPath();
+      ctx.arc(dragonPadX + 20, GROUND_Y - 38, 10, 0, Math.PI * 2);
+      ctx.fill();
+      // Eyes
+      ctx.fillStyle = '#1f2937';
+      ctx.beginPath();
+      ctx.arc(dragonPadX + 23, GROUND_Y - 40, 2, 0, Math.PI * 2);
+      ctx.fill();
+      // Label
+      ctx.fillStyle = '#f9a8d4';
+      ctx.font = 'bold 11px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText('Fluffernutter', dragonPadX, GROUND_Y - 55);
+      if (Math.abs(player.x - dragonPadX) < BUILDING_RANGE) {
+        ctx.fillStyle = '#fbbf24';
+        ctx.font = 'bold 14px system-ui';
+        ctx.fillText('Press Enter to Ride!', dragonPadX, GROUND_Y - 65);
+      }
+      ctx.textAlign = 'left';
+    }
+  }
+
+  // Dance Stage
+  const danceX = DANCE_STAGE_POS.x;
+  if (danceX > cam - 100 && danceX < cam + W + 100) {
+    // Stage platform
+    ctx.fillStyle = '#a78bfa';
+    ctx.fillRect(danceX - 60, GROUND_Y - 5, 120, 8);
+    // Disco ball
+    const discoBob = Math.sin(t / 500) * 3;
+    ctx.fillStyle = '#e2e8f0';
+    ctx.beginPath();
+    ctx.arc(danceX, GROUND_Y - 60 + discoBob, 12, 0, Math.PI * 2);
+    ctx.fill();
+    // Reflections
+    for (let i = 0; i < 4; i++) {
+      const angle = t / 200 + i * Math.PI / 2;
+      ctx.fillStyle = ['#f472b6', '#38bdf8', '#fbbf24', '#4ade80'][i];
+      ctx.globalAlpha = 0.4;
+      ctx.beginPath();
+      ctx.arc(danceX + Math.cos(angle) * 8, GROUND_Y - 60 + discoBob + Math.sin(angle) * 8, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    // NPC dancers
+    const dancerColors = ['#f472b6', '#38bdf8', '#fbbf24'];
+    for (let i = 0; i < 3; i++) {
+      const dx = danceX - 30 + i * 30;
+      const dy = GROUND_Y;
+      const bounce = Math.sin(t / 200 + i * 2) * 3;
+      drawKitty(dx, dy + bounce, dancerColors[i], (i % 2) * 2 - 1, Math.floor(t / 200) % 4, 'bow');
+    }
+    // Label
+    ctx.fillStyle = '#e879f9';
+    ctx.font = 'bold 11px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('Dance Party!', danceX, GROUND_Y - 80);
+    if (Math.abs(player.x - danceX) < BUILDING_RANGE && !danceParty.complete) {
+      ctx.fillStyle = '#fbbf24';
+      ctx.font = 'bold 14px system-ui';
+      ctx.fillText('Press Enter to Dance!', danceX, GROUND_Y - 90);
+    }
+    if (danceParty.complete) {
+      ctx.fillStyle = '#4ade80';
+      ctx.font = '9px system-ui';
+      ctx.fillText('COMPLETE', danceX, GROUND_Y - 90);
+    }
+    ctx.textAlign = 'left';
+  }
+
+  // Lemon Boss
+  if (lemonBoss.active || lemonBoss.defeated) {
+    const bx = lemonBoss.x;
+    if (bx > cam - 40 && bx < cam + W + 40) {
+      if (lemonBoss.defeated) {
+        // Defeat animation: shrinking & spinning
+        const shrink = Math.max(0, lemonBoss.defeatTimer / 2000);
+        const spin = (2000 - lemonBoss.defeatTimer) / 100;
+        ctx.save();
+        ctx.translate(bx, lemonBoss.y - 25);
+        ctx.rotate(spin);
+        ctx.scale(shrink, shrink);
+        ctx.fillStyle = '#fbbf24';
+        ctx.beginPath();
+        ctx.arc(0, 0, 22, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        // Sparkle burst
+        if (lemonBoss.defeatTimer > 500) {
+          for (let i = 0; i < 8; i++) {
+            const angle = t / 100 + i * Math.PI / 4;
+            const dist = (2000 - lemonBoss.defeatTimer) / 30;
+            ctx.fillStyle = '#fbbf24';
+            ctx.globalAlpha = shrink;
+            ctx.beginPath();
+            ctx.arc(bx + Math.cos(angle) * dist, lemonBoss.y - 25 + Math.sin(angle) * dist, 3, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.globalAlpha = 1;
+        }
+      } else {
+        // Lemon boss body
+        ctx.fillStyle = '#fbbf24';
+        ctx.beginPath();
+        ctx.ellipse(bx, lemonBoss.y - 20, 22, 28, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Crown
+        ctx.fillStyle = '#f59e0b';
+        ctx.beginPath();
+        ctx.moveTo(bx - 12, lemonBoss.y - 45);
+        ctx.lineTo(bx - 8, lemonBoss.y - 55);
+        ctx.lineTo(bx - 4, lemonBoss.y - 45);
+        ctx.lineTo(bx, lemonBoss.y - 58);
+        ctx.lineTo(bx + 4, lemonBoss.y - 45);
+        ctx.lineTo(bx + 8, lemonBoss.y - 55);
+        ctx.lineTo(bx + 12, lemonBoss.y - 45);
+        ctx.closePath();
+        ctx.fill();
+        // Face
+        ctx.fillStyle = '#1f2937';
+        ctx.beginPath();
+        ctx.arc(bx - 6, lemonBoss.y - 25, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(bx + 6, lemonBoss.y - 25, 3, 0, Math.PI * 2);
+        ctx.fill();
+        // Sour mouth
+        ctx.strokeStyle = '#1f2937';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(bx, lemonBoss.y - 12, 6, 0.2, Math.PI - 0.2);
+        ctx.stroke();
+        // HP bar
+        ctx.fillStyle = '#1f2937';
+        ctx.fillRect(bx - 20, lemonBoss.y - 65, 40, 6);
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(bx - 20, lemonBoss.y - 65, 40 * (lemonBoss.hp / 5), 6);
+      }
+    }
+
+    // Boss projectiles
+    for (const proj of lemonBoss.projectiles) {
+      if (proj.x < cam - 10 || proj.x > cam + W + 10) continue;
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath();
+      ctx.arc(proj.x, proj.y, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // Sugar balls
+  for (const sb of sugarBalls) {
+    if (sb.x < cam - 10 || sb.x > cam + W + 10) continue;
+    ctx.fillStyle = '#f5f5f4';
+    ctx.beginPath();
+    ctx.arc(sb.x, sb.y, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.beginPath();
+    ctx.arc(sb.x - 1, sb.y - 1, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Cotton candy puffs (in the air)
+  for (const puff of cottonCandyPuffs) {
+    if (puff.collected) continue;
+    if (puff.x < cam - 20 || puff.x > cam + W + 20) continue;
+    const bob = Math.sin(t / 400 + puff.bobPhase) * 5;
+    ctx.fillStyle = '#f9a8d4';
+    ctx.globalAlpha = 0.8;
+    ctx.beginPath();
+    ctx.arc(puff.x, puff.y + bob, 12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(puff.x + 8, puff.y + bob - 4, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(puff.x - 7, puff.y + bob + 3, 9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  // Cotton candy storm particles
+  for (const p of cottonCandyStormParticles) {
+    ctx.fillStyle = '#f9a8d4';
+    ctx.globalAlpha = 0.6;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Storm zone indicator
+  if (cam + W > 4300 && cam < 4600) {
+    ctx.fillStyle = 'rgba(249, 168, 212, 0.08)';
+    ctx.fillRect(4300, 0, 300, GROUND_Y);
+    ctx.fillStyle = '#f9a8d4';
+    ctx.font = 'bold 10px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('Cotton Candy Storm!', 4450, 30);
+    ctx.textAlign = 'left';
+  }
+
+  // Dragon flying (when riding)
+  if (ridingDragon) {
+    // Dragon body
+    ctx.fillStyle = '#f9a8d4';
+    ctx.beginPath();
+    ctx.ellipse(dragonX, dragonY, 30, 20, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Wings flapping
+    const wingFlap = Math.sin(t / 150) * 15;
+    ctx.fillStyle = '#c4b5fd';
+    ctx.beginPath();
+    ctx.moveTo(dragonX - 15, dragonY);
+    ctx.quadraticCurveTo(dragonX - 50, dragonY - 30 + wingFlap, dragonX - 20, dragonY + 10);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(dragonX + 15, dragonY);
+    ctx.quadraticCurveTo(dragonX + 50, dragonY - 30 + wingFlap, dragonX + 20, dragonY + 10);
+    ctx.fill();
+    // Head
+    ctx.fillStyle = '#f9a8d4';
+    ctx.beginPath();
+    ctx.arc(dragonX + 25, dragonY - 12, 10, 0, Math.PI * 2);
+    ctx.fill();
+    // Eye
+    ctx.fillStyle = '#1f2937';
+    ctx.beginPath();
+    ctx.arc(dragonX + 28, dragonY - 14, 2, 0, Math.PI * 2);
+    ctx.fill();
+    // Tail
+    ctx.strokeStyle = '#f9a8d4';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(dragonX - 28, dragonY);
+    ctx.quadraticCurveTo(dragonX - 50, dragonY + 15, dragonX - 40, dragonY - 5);
+    ctx.stroke();
+    // Draw kitty riding on dragon's back
+    drawKitty(dragonX, dragonY - 18, player.color, player.facing, 0, 'horn', playerEyeColor, playerHornColors);
+  }
+
+  // Portal back to Moon
+  const moonPortalX = CANDY_MOON_PORTAL.x;
+  if (moonPortalX > cam - 60 && moonPortalX < cam + W + 60) {
+    const pulse = Math.sin(t / 300) * 0.3 + 0.7;
+    ctx.fillStyle = 'rgba(249, 168, 212, ' + (pulse * 0.2) + ')';
+    ctx.beginPath();
+    ctx.arc(moonPortalX, GROUND_Y - 25, 35, 0, Math.PI * 2);
+    ctx.fill();
+    const grad = ctx.createRadialGradient(moonPortalX, GROUND_Y - 25, 5, moonPortalX, GROUND_Y - 25, 22);
+    grad.addColorStop(0, '#e0e7ff');
+    grad.addColorStop(0.5, '#c4b5fd');
+    grad.addColorStop(1, '#7c3aed');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(moonPortalX, GROUND_Y - 25, 22, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#c4b5fd';
+    ctx.font = 'bold 12px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('Back to Moon', moonPortalX, GROUND_Y - 55);
+    ctx.font = '10px system-ui';
+    ctx.fillText('Press Enter', moonPortalX, GROUND_Y - 42);
+    ctx.textAlign = 'left';
+  }
+
+  // Platforms — candy decorated
+  for (const p of level14Candy.platforms) {
+    if (p.x + p.w < cam - 20 || p.x > cam + W + 20) continue;
+    // Platform base
+    ctx.fillStyle = '#f9a8d4';
+    ctx.fillRect(p.x, p.y, p.w, 8);
+    ctx.fillStyle = '#ec4899';
+    ctx.fillRect(p.x, p.y + 8, p.w, 4);
+    // Gumdrop decorations along top
+    const numDrops = Math.floor(p.w / 15);
+    for (let i = 0; i < numDrops; i++) {
+      const dx = p.x + 7 + i * (p.w / numDrops);
+      ctx.fillStyle = candyGemColors[i % candyGemColors.length];
+      ctx.beginPath();
+      ctx.arc(dx, p.y - 3, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // Yarn balls (sprinkle gems)
+  for (const yb of level14Candy.yarnBalls) {
+    if (yb.collected) continue;
+    if (yb.x < cam - 15 || yb.x > cam + W + 15) continue;
+    const bob = Math.sin(t / 300 + yb.bobPhase) * 3;
+    ctx.fillStyle = yb.color;
+    ctx.beginPath();
+    ctx.arc(yb.x, yb.y + bob, 8, 0, Math.PI * 2);
+    ctx.fill();
+    // Sparkle effect
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.beginPath();
+    ctx.arc(yb.x - 2, yb.y + bob - 2, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // NPCs
+  for (const npc of level14Candy.npcs) {
+    if (npc.x < cam - 30 || npc.x > cam + W + 30) continue;
+    drawKitty(npc.x, npc.y, npc.color, npc.facing, npc.walkFrame, npc.accessory);
+  }
+
+  // Boss hint
+  if (!lemonBoss.defeated && !lemonBoss.active && player.x > 2500 && player.x < 2700) {
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 12px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('King Lemon Drop ahead!', player.x, GROUND_Y - 60);
+    ctx.textAlign = 'left';
+  }
+
+  drawPlayerAndUI();
+}
+
 const levelRegistry = {
   1: {
     name: 'Meadow',
@@ -11372,6 +11963,16 @@ const levelRegistry = {
     musicId: 'musicMoon',
     drawSky: drawMoonSky,
     drawWorld: drawMoonWorld,
+  },
+  14: {
+    name: 'Candy Kingdom',
+    worldW: level14Candy.worldW,
+    platforms: level14Candy.platforms,
+    yarnBalls: level14Candy.yarnBalls,
+    npcs: candyNpcs,
+    musicId: 'musicCandyKingdom',
+    drawSky: drawCandyKingdomSky,
+    drawWorld: drawCandyKingdomWorld,
   },
 };
 
