@@ -674,6 +674,7 @@ let wishHits = [];  // track zone of each hit: 'outer', 'middle', 'center', or '
 let wishSummary = false;
 let wishPrevY = 0;  // previous frame Y for crossing detection
 let wishFirstTossShown = false;  // whether first-toss instructions have been shown
+let wishMasterCelebration = 0;  // timer (ms) for rainbow water burst on Master Wisher
 
 // Apollo Mission minigame state
 let apolloMission = {
@@ -1468,6 +1469,7 @@ function completeTransition() {
   wishSummary = false;
   wishPrevY = 0;
   wishFirstTossShown = false;
+  wishMasterCelebration = 0;
   apolloMission = {
     active: false, step: 0, progress: 0, rocksCollected: 0,
     rockPositions: [], rockPlayerX: 0, bootY: 0, complete: false,
@@ -3262,6 +3264,7 @@ function update(dt) {
         wishSummary = false;
         wishPrevY = 0;
         wishFirstTossShown = false;
+        wishMasterCelebration = 0;
       }
     }
     // Gelato
@@ -4726,6 +4729,22 @@ function update(dt) {
       if (p.life <= 0) wishSplashParticles.splice(i, 1);
     }
 
+    // Tick down Master Wisher celebration timer
+    if (wishMasterCelebration > 0) {
+      wishMasterCelebration = Math.max(0, wishMasterCelebration - 16);
+      // Add extra sparkle particles during celebration
+      if (Math.random() < 0.4) {
+        wishSplashParticles.push({
+          x: fwCx + (Math.random() - 0.5) * 120, y: fwCy + 30 - Math.random() * 60,
+          vx: (Math.random() - 0.5) * 3,
+          vy: -Math.random() * 3 - 1,
+          life: 500 + Math.random() * 300,
+          size: 1.5 + Math.random() * 2,
+          rainbow: true,
+        });
+      }
+    }
+
     if (wishSummary) {
       // Summary screen — Enter to exit (replayable, no wishComplete lock)
       if (keys['Enter']) {
@@ -4744,6 +4763,7 @@ function update(dt) {
       } else if (wishCharging) {
         // Release — toss coin!
         wishCharging = false;
+        wishFirstTossShown = true;
         wishCoin.active = true;
         wishCoin.x = fwCx - 160;
         wishCoin.y = fwCy + 45;
@@ -4782,23 +4802,27 @@ function update(dt) {
         let msg = '';
         let color = '#ef4444';
 
+        const wishMsgCenter = ['World peace for kitties!', 'Infinite sparkly yarn!', 'A rainbow every day!', 'A castle made of cupcakes!', 'Wings for all kitties!', 'Best friends forever!'];
+        const wishMsgMiddle = ['A trip to the moon!', 'A swimming pool of gelato!', 'My own pizza restaurant!', 'A kitty playground on Jupiter!', 'A pet dragon!', 'Sparkles everywhere!'];
+        const wishMsgOuter = ['More gelato!', 'Extra bedtime stories!', 'A new ball of yarn!', 'Sunny days forever!', 'A kitten friend!', 'The biggest pizza ever!'];
+
         if (absDx <= 12) {
           // Center spout
           zone = 'center';
           pts = POINTS.WISH_CENTER;
-          msg = 'Wish: World peace for kitties!';
+          msg = 'Wish: ' + wishMsgCenter[Math.floor(Math.random() * wishMsgCenter.length)];
           color = '#fbbf24';
         } else if (absDx <= 30) {
           // Middle tier
           zone = 'middle';
           pts = POINTS.WISH_MIDDLE;
-          msg = 'Wish: A trip to the moon!';
+          msg = 'Wish: ' + wishMsgMiddle[Math.floor(Math.random() * wishMsgMiddle.length)];
           color = '#a78bfa';
         } else if (absDx <= 55) {
           // Outer basin
           zone = 'outer';
           pts = POINTS.WISH_OUTER;
-          msg = 'Wish: More gelato!';
+          msg = 'Wish: ' + wishMsgOuter[Math.floor(Math.random() * wishMsgOuter.length)];
           color = '#34d399';
         }
 
@@ -4853,6 +4877,7 @@ function update(dt) {
           wishScore += POINTS.WISH_MASTER_BONUS;
           score += POINTS.WISH_MASTER_BONUS;
           addPopup(fwCx, fwCy - 40, '+' + POINTS.WISH_MASTER_BONUS + ' Master Wisher!', '#fbbf24');
+          wishMasterCelebration = 2000;  // 2 second rainbow burst
         } else if (waterHits.length === 3) {
           wishScore += POINTS.WISH_LUCKY_BONUS;
           score += POINTS.WISH_LUCKY_BONUS;

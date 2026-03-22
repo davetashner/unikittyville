@@ -1692,6 +1692,11 @@ function updatePrompt(near) {
     el.style.display = 'block';
     setAction('Space', 'Shoot');
     return;
+  } else if (currentScene === Scene.FOUNTAIN_WISHES) {
+    el.textContent = 'Up/Down = Aim | Hold Space = Toss | Enter = Exit';
+    el.style.display = 'block';
+    setAction('Space', 'Toss');
+    return;
   } else if (currentLevel === 13 && Math.abs(player.x - SMOOTHIE_SHOP_POS.x) < BUILDING_RANGE) {
     el.textContent = 'Press Enter for Smoothie Shop!';
     el.style.display = 'block';

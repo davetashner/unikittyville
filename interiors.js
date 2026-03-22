@@ -3716,8 +3716,10 @@ function drawFountainWishesInterior(cam, W, H) {
   ctx.beginPath();
   ctx.ellipse(fx, fy + 10, 55, 16, 0, 0, Math.PI * 2);
   ctx.fill();
-  // Water in outer basin
-  ctx.fillStyle = '#38bdf8';
+  // Water in outer basin — rainbow during Master Wisher celebration
+  const isRainbowBurst = wishMasterCelebration > 0;
+  const rainbowHue = (gameTime / 3) % 360;
+  ctx.fillStyle = isRainbowBurst ? 'hsl(' + rainbowHue + ', 80%, 60%)' : '#38bdf8';
   ctx.globalAlpha = 0.7;
   ctx.beginPath();
   ctx.ellipse(fx, fy + 8, 50, 13, 0, 0, Math.PI * 2);
@@ -3731,7 +3733,7 @@ function drawFountainWishesInterior(cam, W, H) {
   ctx.ellipse(fx, fy - 25, 28, 10, 0, 0, Math.PI * 2);
   ctx.fill();
   // Water in middle tier
-  ctx.fillStyle = '#38bdf8';
+  ctx.fillStyle = isRainbowBurst ? 'hsl(' + ((rainbowHue + 60) % 360) + ', 80%, 60%)' : '#38bdf8';
   ctx.globalAlpha = 0.6;
   ctx.beginPath();
   ctx.ellipse(fx, fy - 27, 23, 7, 0, 0, Math.PI * 2);
@@ -3749,10 +3751,11 @@ function drawFountainWishesInterior(cam, W, H) {
 
   // Water jets from spout
   const jt = Math.sin(gameTime / 200) * 3;
-  ctx.strokeStyle = '#38bdf8';
-  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = isRainbowBurst ? 'hsl(' + ((rainbowHue + 120) % 360) + ', 80%, 60%)' : '#38bdf8';
+  ctx.lineWidth = isRainbowBurst ? 2.5 : 1.5;
   ctx.globalAlpha = 0.8;
   for (let i = -1; i <= 1; i++) {
+    if (isRainbowBurst) ctx.strokeStyle = 'hsl(' + ((rainbowHue + i * 40 + 120) % 360) + ', 80%, 65%)';
     ctx.beginPath();
     ctx.moveTo(fx + i * 5, fy - 55);
     ctx.quadraticCurveTo(fx + i * 12, fy - 70 + jt, fx + i * 18, fy - 25);
@@ -3837,6 +3840,22 @@ function drawFountainWishesInterior(cam, W, H) {
     }
     ctx.stroke();
     ctx.setLineDash([]);
+
+    // Sparkle crosshair at aim line endpoint
+    const sparkleAlpha = 0.5 + 0.3 * Math.sin(gameTime / 150);
+    ctx.strokeStyle = 'rgba(251,191,36,' + sparkleAlpha + ')';
+    ctx.lineWidth = 1.5;
+    const cs = 5; // crosshair size
+    ctx.beginPath();
+    ctx.moveTo(px - cs, py); ctx.lineTo(px + cs, py);
+    ctx.moveTo(px, py - cs); ctx.lineTo(px, py + cs);
+    ctx.stroke();
+    // Diamond outline
+    ctx.beginPath();
+    ctx.moveTo(px, py - cs); ctx.lineTo(px + cs, py);
+    ctx.lineTo(px, py + cs); ctx.lineTo(px - cs, py);
+    ctx.closePath();
+    ctx.stroke();
   }
 
   // Power meter (vertical bar on left)
@@ -3853,9 +3872,9 @@ function drawFountainWishesInterior(cam, W, H) {
     ctx.lineWidth = 1;
     ctx.strokeRect(barX, barY, 12, barH);
     ctx.fillStyle = '#fff';
-    ctx.font = '9px system-ui';
+    ctx.font = '10px system-ui';
     ctx.textAlign = 'center';
-    ctx.fillText('PWR', barX + 6, barY - 5);
+    ctx.fillText('Power', barX + 6, barY - 5);
   }
 
   // Coin in flight (gold circle with spin animation — 7px radius)
@@ -3889,7 +3908,10 @@ function drawFountainWishesInterior(cam, W, H) {
   for (const p of wishSplashParticles) {
     const alpha = Math.min(1, p.life / 300);
     const r = p.size || 2;
-    if (p.flash) {
+    if (p.rainbow) {
+      const hue = (gameTime / 2 + p.x * 3) % 360;
+      ctx.fillStyle = 'hsla(' + hue + ', 90%, 65%, ' + alpha + ')';
+    } else if (p.flash) {
       ctx.fillStyle = 'rgba(255,255,255,' + alpha + ')';
     } else {
       ctx.fillStyle = 'rgba(56,189,248,' + alpha + ')';
