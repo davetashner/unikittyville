@@ -3379,6 +3379,7 @@ function update(dt) {
         alpsEquipment = 'skis';
         alpsChoosing = false;
         skiing = true;
+        activeSpeechBubbles.length = 0; // clear NPC dialogue for clean FP view
         addPopup(player.x, player.y - 40, 'Skis equipped!', '#60a5fa');
       }
       if (keys['Digit2'] || keys['KeyB']) {
@@ -3386,6 +3387,7 @@ function update(dt) {
         alpsEquipment = 'snowboard';
         alpsChoosing = false;
         skiing = true;
+        activeSpeechBubbles.length = 0; // clear NPC dialogue for clean FP view
         addPopup(player.x, player.y - 40, 'Snowboard equipped!', '#a78bfa');
       }
     }
