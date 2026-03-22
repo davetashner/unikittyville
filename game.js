@@ -273,6 +273,11 @@ let telegramLevel = 0; // 0-2 (difficulty)
 let telegramErrorFlash = 0; // timestamp of last error for red flash
 // Met Museum
 let metPaintingIndex = 0;
+let artDescActive = false;
+let artDescText = '';
+let artDescPaintingIdx = -1;
+let artDescriptions = JSON.parse(localStorage.getItem('unikittyville_artDescriptions') || '{}');
+function saveArtDescriptions() { localStorage.setItem('unikittyville_artDescriptions', JSON.stringify(artDescriptions)); }
 const MET_PAINTINGS = [
   { title: 'Meadow at Sunrise', artist: 'Claude Meownet', level: 'Meadow', color: '#86efac', draw: 'meadow' },
   { title: 'Starry Sled Night', artist: 'Vincent van Paw', level: 'Sledding', color: '#1e3a5f', draw: 'sled' },
@@ -2105,8 +2110,18 @@ function update(dt) {
 
   // The Met Museum — art gallery
   if (currentScene === Scene.THE_MET) {
+    if (artDescActive) {
+      // Art description mode — input handled by keydown listener
+      return;
+    }
     if (keys['ArrowRight']) { keys['ArrowRight'] = false; metPaintingIndex = Math.min(MET_PAINTINGS.length - 1, metPaintingIndex + 1); }
     if (keys['ArrowLeft']) { keys['ArrowLeft'] = false; metPaintingIndex = Math.max(0, metPaintingIndex - 1); }
+    if (keys['KeyD']) {
+      keys['KeyD'] = false;
+      artDescActive = true;
+      artDescText = '';
+      artDescPaintingIdx = metPaintingIndex;
+    }
     if (keys['Enter']) {
       keys['Enter'] = false;
       score += 10;

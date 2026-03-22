@@ -363,6 +363,32 @@ window.addEventListener('keydown', e => {
     return;
   }
 
+  // Art description typing at the Met Museum
+  if (artDescActive && currentScene === Scene.THE_MET && !e.repeat) {
+    e.preventDefault();
+    keys[e.code] = false; // block game from seeing these keys
+    if (e.key === 'Escape') {
+      artDescActive = false;
+      artDescText = '';
+    } else if (e.key === 'Enter' && artDescText.length > 0) {
+      // Save the description
+      const key = 'painting_' + artDescPaintingIdx;
+      if (!artDescriptions[key]) artDescriptions[key] = [];
+      artDescriptions[key].push(artDescText);
+      saveArtDescriptions();
+      score += 20;
+      addPopup(player.x, player.y - 40, '+20 Art description!', '#c084fc');
+      playChaChing();
+      artDescActive = false;
+      artDescText = '';
+    } else if (e.key === 'Backspace') {
+      artDescText = artDescText.slice(0, -1);
+    } else if (e.key.length === 1 && artDescText.length < 100 && /[a-zA-Z0-9 !?.,;:'"()\-]/.test(e.key)) {
+      artDescText += e.key;
+    }
+    return;
+  }
+
   // Baby name typing in hospital name_pick stage
   if (hospitalStage === 'name_pick' && !e.repeat) {
     if (e.key === 'Backspace') {
@@ -954,9 +980,14 @@ function updatePrompt(near) {
   }
   if (currentScene === Scene.THE_MET) {
     const p = MET_PAINTINGS[metPaintingIndex];
-    el.textContent = '"' + p.title + '" — ' + p.level + ' (' + (metPaintingIndex + 1) + '/' + MET_PAINTINGS.length + ') Left/Right | Enter to leave';
+    if (artDescActive) {
+      el.textContent = 'Describe "' + p.title + '" — Type your description, Enter to submit, Esc to cancel';
+      setAction('Enter', 'Submit');
+    } else {
+      el.textContent = '"' + p.title + '" — ' + p.level + ' (' + (metPaintingIndex + 1) + '/' + MET_PAINTINGS.length + ') Left/Right | D: Describe | Enter to leave';
+      setAction('KeyD', 'Describe');
+    }
     el.style.display = 'block';
-    setAction('Enter', 'Exit');
     return;
   }
   if (currentScene === Scene.PIZZA) {

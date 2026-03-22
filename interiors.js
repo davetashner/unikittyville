@@ -2529,6 +2529,103 @@ function drawMetMuseumInterior(cam, W, H) {
   ctx.textAlign = 'left';
 }
 
+// ── Art Description Overlay (Met Museum) ──
+function drawArtDescOverlay(W, H) {
+  const cx = W / 2;
+  const cardW = W * 0.7, cardH = H * 0.55;
+  const cardX = cx - cardW / 2, cardY = H * 0.18;
+
+  // Dimmed backdrop
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Card background — cream/parchment
+  ctx.fillStyle = '#fef3c7';
+  ctx.fillRect(cardX, cardY, cardW, cardH);
+  ctx.strokeStyle = '#92400e'; ctx.lineWidth = 3;
+  ctx.strokeRect(cardX, cardY, cardW, cardH);
+
+  // Inner border
+  ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 1;
+  ctx.strokeRect(cardX + 6, cardY + 6, cardW - 12, cardH - 12);
+
+  ctx.textAlign = 'center';
+
+  // Painting title
+  const p = MET_PAINTINGS[artDescPaintingIdx];
+  ctx.fillStyle = '#1e1b4b'; ctx.font = 'bold 16px system-ui';
+  ctx.fillText('"' + p.title + '"', cx, cardY + 30);
+
+  // Prompt
+  ctx.fillStyle = '#78716c'; ctx.font = 'italic 13px system-ui';
+  ctx.fillText('Describe this painting in your own words!', cx, cardY + 52);
+
+  // Lined writing area
+  const areaX = cardX + 20, areaY = cardY + 66;
+  const areaW = cardW - 40, areaH = cardH - 110;
+  ctx.fillStyle = '#fff'; ctx.fillRect(areaX, areaY, areaW, areaH);
+  ctx.strokeStyle = '#d6d3d1'; ctx.lineWidth = 1;
+  ctx.strokeRect(areaX, areaY, areaW, areaH);
+
+  // Horizontal ruled lines
+  ctx.strokeStyle = '#e7e5e4';
+  const lineSpacing = 22;
+  for (let ly = areaY + lineSpacing; ly < areaY + areaH - 5; ly += lineSpacing) {
+    ctx.beginPath(); ctx.moveTo(areaX + 5, ly); ctx.lineTo(areaX + areaW - 5, ly); ctx.stroke();
+  }
+
+  // Typed text with word wrapping
+  ctx.fillStyle = '#1e1b4b'; ctx.font = '14px system-ui'; ctx.textAlign = 'left';
+  const maxLineW = areaW - 20;
+  const words = artDescText.split(' ');
+  let lines = [];
+  let currentLine = '';
+  for (const word of words) {
+    const test = currentLine ? currentLine + ' ' + word : word;
+    if (ctx.measureText(test).width > maxLineW && currentLine) {
+      lines.push(currentLine);
+      currentLine = word;
+    } else {
+      currentLine = test;
+    }
+  }
+  lines.push(currentLine);
+
+  for (let i = 0; i < lines.length && i < 4; i++) {
+    ctx.fillText(lines[i], areaX + 10, areaY + 18 + i * lineSpacing);
+  }
+
+  // Blinking cursor
+  const cursorLine = Math.min(lines.length - 1, 3);
+  const cursorText = lines[cursorLine] || '';
+  const cursorX = areaX + 10 + ctx.measureText(cursorText).width + 2;
+  const cursorY = areaY + 6 + cursorLine * lineSpacing;
+  if (Math.floor(gameTime / 400) % 2 === 0) {
+    ctx.fillStyle = '#1e1b4b';
+    ctx.fillRect(cursorX, cursorY, 2, 16);
+  }
+
+  // Character count
+  ctx.textAlign = 'right'; ctx.font = '11px system-ui';
+  ctx.fillStyle = artDescText.length >= 90 ? '#dc2626' : '#94a3b8';
+  ctx.fillText(artDescText.length + '/100', areaX + areaW - 5, areaY + areaH + 14);
+
+  // Submit / cancel hints
+  ctx.textAlign = 'center'; ctx.font = '13px system-ui';
+  ctx.fillStyle = '#78716c';
+  ctx.fillText('Enter: Submit | Esc: Cancel', cx, cardY + cardH - 10);
+
+  // Show previously saved description count for this painting
+  const key = 'painting_' + artDescPaintingIdx;
+  const saved = artDescriptions[key] || [];
+  if (saved.length > 0) {
+    ctx.fillStyle = '#a78bfa'; ctx.font = 'italic 11px system-ui';
+    ctx.fillText('You\'ve written ' + saved.length + ' description' + (saved.length > 1 ? 's' : '') + ' for this painting', cx, cardY + cardH + 8);
+  }
+
+  ctx.textAlign = 'left';
+}
+
 function drawMetPaintingScene(type, fx, fy, fw, fh) {
   const cx = fx + fw / 2;
   const t = gameTime;
