@@ -386,6 +386,12 @@
       border-radius: 14px;
     }
 
+    #learningDashboardBtn {
+      font-size: 0.95rem;
+      padding: 10px 28px;
+      min-height: 44px;
+    }
+
     /* Difficulty selector */
     #difficultySelector {
       gap: 6px !important;
@@ -544,6 +550,14 @@
   <input type="text" id="nameInput" aria-label="Name your kitty" placeholder="Sparkle" maxlength="16" autofocus>
   <button id="startBtn" aria-label="Start game">Play!</button>
   <button id="levelSelectBtn" aria-label="Open level select" style="margin-top:12px;font-size:1rem;padding:10px 32px;background:linear-gradient(135deg,#38bdf8,#818cf8);color:#fff;border:none;border-radius:12px;cursor:pointer;font-weight:600;letter-spacing:1px;transition:transform 0.15s,box-shadow 0.15s;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">Level Select</button>
+  <button id="learningDashboardBtn" aria-label="Open learning progress" style="margin-top:8px;font-size:1rem;padding:10px 32px;background:linear-gradient(135deg,#f472b6,#c084fc);color:#fff;border:none;border-radius:12px;cursor:pointer;font-weight:600;letter-spacing:1px;transition:transform 0.15s,box-shadow 0.15s;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">Learning Progress</button>
+</div>
+
+<div id="learningDashboard" style="display:none;position:fixed;inset:0;background:linear-gradient(135deg,#4c1d95 0%,#7c3aed 50%,#a78bfa 100%);flex-direction:column;align-items:center;z-index:100;overflow-y:auto;padding:20px;">
+  <h2 style="font-size:2rem;color:#fff;text-shadow:2px 2px 0 #3b0764;margin-bottom:0.5rem;">Learning Progress</h2>
+  <p style="color:rgba(255,255,255,0.8);margin-bottom:1.5rem;font-size:0.95rem;">Track your educational adventure!</p>
+  <div id="dashboardContent" style="width:100%;max-width:500px;display:flex;flex-direction:column;gap:16px;"></div>
+  <button id="dashboardBack" aria-label="Back to start screen" style="margin-top:1.5rem;margin-bottom:1.5rem;font-size:1rem;padding:10px 32px;background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.3);border-radius:12px;cursor:pointer;font-weight:600;touch-action:manipulation;">Back</button>
 </div>
 
 <div id="levelSelectScreen" style="display:none;position:fixed;inset:0;background:linear-gradient(135deg,#a78bfa 0%,#818cf8 50%,#38bdf8 100%);flex-direction:column;justify-content:center;align-items:center;z-index:100;">
