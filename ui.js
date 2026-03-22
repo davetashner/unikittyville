@@ -709,6 +709,117 @@ document.getElementById('levelSelectBack').addEventListener('click', () => {
   document.getElementById('startScreen').style.display = 'flex';
 });
 
+// ── Learning Dashboard ──
+document.getElementById('learningDashboardBtn').addEventListener('click', () => {
+  document.getElementById('startScreen').style.display = 'none';
+  document.getElementById('learningDashboard').style.display = 'flex';
+  buildLearningDashboard();
+});
+
+document.getElementById('dashboardBack').addEventListener('click', () => {
+  document.getElementById('learningDashboard').style.display = 'none';
+  document.getElementById('startScreen').style.display = 'flex';
+});
+
+function buildLearningDashboard() {
+  const container = document.getElementById('dashboardContent');
+  container.innerHTML = '';
+
+  // Helper: read JSON from localStorage safely
+  function loadJSON(key, fallback) {
+    try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback)); }
+    catch (e) { return fallback; }
+  }
+
+  // Helper: create a styled card section
+  function makeCard(title, icon, content) {
+    const card = document.createElement('div');
+    card.style.cssText = 'background:rgba(255,255,255,0.12);backdrop-filter:blur(8px);border-radius:16px;padding:16px 20px;border:1px solid rgba(255,255,255,0.15);';
+    card.innerHTML = '<div style="font-size:1.1rem;font-weight:700;color:#fff;margin-bottom:10px;">' + icon + ' ' + title + '</div>' + content;
+    return card;
+  }
+
+  // Helper: create a bar chart row
+  function makeBar(label, value, max, color) {
+    const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
+    return '<div style="margin-bottom:8px;">' +
+      '<div style="display:flex;justify-content:space-between;color:rgba(255,255,255,0.9);font-size:0.85rem;margin-bottom:3px;">' +
+        '<span>' + label + '</span><span>' + value + '/' + max + '</span>' +
+      '</div>' +
+      '<div style="background:rgba(255,255,255,0.15);border-radius:8px;height:14px;overflow:hidden;">' +
+        '<div style="width:' + pct + '%;height:100%;background:' + color + ';border-radius:8px;transition:width 0.5s;min-width:' + (pct > 0 ? '4px' : '0') + ';"></div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  // ── 1. Subjects Progress (fact categories) ──
+  const facts = loadJSON('factNotebook', []);
+  const categories = { Geography: 0, History: 0, Science: 0, Culture: 0, Language: 0 };
+  for (const f of facts) {
+    if (f.category && categories.hasOwnProperty(f.category)) {
+      categories[f.category]++;
+    }
+  }
+  // Estimate max per category (roughly 20 facts per category is a good target)
+  const catMax = 20;
+  const catColors = { Geography: '#38bdf8', History: '#f59e0b', Science: '#22c55e', Culture: '#f472b6', Language: '#a78bfa' };
+  const catIcons = { Geography: '\uD83C\uDF0D', History: '\uD83C\uDFDB\uFE0F', Science: '\uD83D\uDD2C', Culture: '\uD83C\uDFAD', Language: '\uD83D\uDCAC' };
+  let subjectBars = '';
+  for (const [cat, count] of Object.entries(categories)) {
+    subjectBars += makeBar(catIcons[cat] + ' ' + cat, count, catMax, catColors[cat]);
+  }
+  container.appendChild(makeCard('Subjects Progress', '\uD83D\uDCDA', subjectBars));
+
+  // ── 2. Facts Discovered ──
+  const totalFacts = facts.length;
+  const factsHTML = '<div style="display:flex;align-items:center;gap:12px;">' +
+    '<div style="font-size:2.5rem;color:#fde68a;">' + totalFacts + '</div>' +
+    '<div style="color:rgba(255,255,255,0.8);font-size:0.9rem;">facts discovered across all levels</div>' +
+  '</div>';
+  container.appendChild(makeCard('Facts Discovered', '\uD83D\uDCD6', factsHTML));
+
+  // ── 3. Achievements Earned ──
+  const savedAch = loadJSON('unikittyville_achievements', {});
+  const earnedCount = Object.keys(savedAch).length;
+  const totalAch = 8; // matches achievements array length
+  const achHTML = '<div style="display:flex;align-items:center;gap:12px;">' +
+    '<div style="font-size:2.5rem;color:#fbbf24;">' + earnedCount + '/' + totalAch + '</div>' +
+    '<div style="color:rgba(255,255,255,0.8);font-size:0.9rem;">achievements earned</div>' +
+  '</div>' + makeBar('Progress', earnedCount, totalAch, '#fbbf24');
+  container.appendChild(makeCard('Achievements Earned', '\uD83C\uDFC6', achHTML));
+
+  // ── 4. Levels Visited ──
+  const savedLevels = loadJSON('unikittyville_levels_visited', []);
+  const visitedCount = new Set(savedLevels).size;
+  const totalLvl = typeof TOTAL_LEVELS !== 'undefined' ? TOTAL_LEVELS : 13;
+  let levelDots = '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">';
+  for (let i = 1; i <= totalLvl; i++) {
+    const visited = savedLevels.includes(i);
+    const name = (typeof levelRegistry !== 'undefined' && levelRegistry[i]) ? levelRegistry[i].name : ('Level ' + i);
+    const bg = visited ? 'rgba(74,222,128,0.8)' : 'rgba(255,255,255,0.15)';
+    const check = visited ? '\u2713' : '';
+    levelDots += '<div title="' + name + '" style="width:36px;height:36px;border-radius:8px;background:' + bg + ';display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:#fff;font-weight:700;flex-direction:column;line-height:1.1;">' +
+      '<span>' + i + '</span>' + (check ? '<span style="font-size:0.6rem;">' + check + '</span>' : '') +
+    '</div>';
+  }
+  levelDots += '</div>';
+  const levelsHTML = '<div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">' +
+    '<div style="font-size:2.5rem;color:#4ade80;">' + visitedCount + '/' + totalLvl + '</div>' +
+    '<div style="color:rgba(255,255,255,0.8);font-size:0.9rem;">levels explored</div>' +
+  '</div>' + levelDots;
+  container.appendChild(makeCard('Levels Visited', '\uD83D\uDDFA\uFE0F', levelsHTML));
+
+  // ── 5. Postcards Sent (bonus stat) ──
+  const postcards = loadJSON('unikittyville_postcards', []);
+  if (postcards.length > 0) {
+    const pcHTML = '<div style="display:flex;align-items:center;gap:12px;">' +
+      '<div style="font-size:2.5rem;color:#fb923c;">' + postcards.length + '</div>' +
+      '<div style="color:rgba(255,255,255,0.8);font-size:0.9rem;">postcards sent home</div>' +
+    '</div>';
+    container.appendChild(makeCard('Postcards Sent', '\uD83D\uDCEE', pcHTML));
+  }
+}
+
 function startGameAtLevel(lvl) {
   const name = document.getElementById('nameInput').value.trim();
   playerName = name || 'Sparkle';
