@@ -56,6 +56,8 @@ function draw() {
       [Scene.FOUNTAIN_WISHES]: () => drawFountainWishesInterior(cam, W, H),
       [Scene.CUPCAKE_BAKERY]: () => drawCupcakeBakeryInterior(cam, W, H),
       [Scene.DANCE_PARTY]: () => drawDancePartyInterior(cam, W, H),
+      [Scene.WATER_GUN_RACE]: () => drawWaterGunRaceScene(cam, W, H),
+      [Scene.PARK_DANCE_SHOW]: () => drawParkDanceShowScene(cam, W, H),
     };
     if (sceneDrawMap[currentScene]) sceneDrawMap[currentScene]();
   } else {
@@ -10755,6 +10757,16 @@ const tourGuideFacts = {
     "You\u2019ve landed on the Moon! Only 12 humans have ever walked here.",
     "The Moon has no atmosphere, so footprints last millions of years!",
     "Moon dust smells like spent gunpowder, according to astronauts."
+  ],
+  14: [
+    "Welcome to the Candy Kingdom -- where everything is deliciously sweet!",
+    "The first American candy factory opened in 1847.",
+    "Lollipops were invented by George Smith in 1908!"
+  ],
+  15: [
+    "Welcome to the Amusement Park -- the first one opened in 1583 in Denmark!",
+    "The loop-de-loop rollercoaster was invented in 1846 in Paris.",
+    "The golden age of hand-carved carousel horses ran from 1880 to 1930."
   ]
 };
 
@@ -11931,6 +11943,31 @@ function drawCandyKingdomWorld(W, H, cam, cycle, isNight) {
     ctx.textAlign = 'left';
   }
 
+  // Portal to Amusement Park
+  const parkPortalX = CANDY_PARK_PORTAL.x;
+  if (parkPortalX > cam - 60 && parkPortalX < cam + W + 60) {
+    const pulse2 = Math.sin(t / 280) * 0.3 + 0.7;
+    ctx.fillStyle = 'rgba(251, 146, 60, ' + (pulse2 * 0.2) + ')';
+    ctx.beginPath();
+    ctx.arc(parkPortalX, GROUND_Y - 25, 35, 0, Math.PI * 2);
+    ctx.fill();
+    const grad2 = ctx.createRadialGradient(parkPortalX, GROUND_Y - 25, 5, parkPortalX, GROUND_Y - 25, 22);
+    grad2.addColorStop(0, '#fef3c7');
+    grad2.addColorStop(0.5, '#f97316');
+    grad2.addColorStop(1, '#ea580c');
+    ctx.fillStyle = grad2;
+    ctx.beginPath();
+    ctx.arc(parkPortalX, GROUND_Y - 25, 22, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#f97316';
+    ctx.font = 'bold 12px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('Amusement Park', parkPortalX, GROUND_Y - 55);
+    ctx.font = '10px system-ui';
+    ctx.fillText('Press Enter', parkPortalX, GROUND_Y - 42);
+    ctx.textAlign = 'left';
+  }
+
   // Platforms — candy decorated
   for (const p of level14Candy.platforms) {
     if (p.x + p.w < cam - 20 || p.x > cam + W + 20) continue;
@@ -11982,6 +12019,816 @@ function drawCandyKingdomWorld(W, H, cam, cycle, isNight) {
   }
 
   drawPlayerAndUI();
+}
+
+// ── Amusement Park (Level 15) ──
+function drawAmusementParkSky(W, H, cycle, isNight, cam) {
+  // Warm golden-hour amber gradient
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#fbbf24');
+  grad.addColorStop(0.5, '#fde68a');
+  grad.addColorStop(1, '#fef3c7');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Floating balloon clusters
+  const balloonColors = ['#f43f5e', '#3b82f6', '#22c55e', '#a855f7', '#f59e0b', '#ec4899'];
+  for (let i = 0; i < 12; i++) {
+    const bx = ((i * 180 + 90 - cam * 0.2) % (W + 300) + W + 300) % (W + 300) - 150;
+    const by = 40 + (i % 4) * 30 + Math.sin(gameTime / 800 + i) * 8;
+    ctx.fillStyle = balloonColors[i % balloonColors.length];
+    ctx.globalAlpha = 0.7;
+    ctx.beginPath();
+    ctx.ellipse(bx, by, 8, 11, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // String
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(bx, by + 11);
+    ctx.lineTo(bx + Math.sin(gameTime / 600 + i) * 3, by + 30);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  // Strings of colored lights across sky
+  for (let row = 0; row < 2; row++) {
+    const ly = 25 + row * 50;
+    ctx.strokeStyle = '#d4d4d8';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, ly);
+    ctx.lineTo(W, ly);
+    ctx.stroke();
+    for (let i = 0; i < 20; i++) {
+      const lx = i * (W / 20) + 10;
+      const bulbColor = balloonColors[(i + row * 3) % balloonColors.length];
+      const glow = Math.sin(gameTime / 300 + i * 0.7 + row) * 0.3 + 0.7;
+      ctx.fillStyle = bulbColor;
+      ctx.globalAlpha = glow;
+      ctx.beginPath();
+      ctx.arc(lx, ly + 5, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+
+function drawAmusementParkWorld(W, H, cam, cycle, isNight) {
+  const ww = level15Park.worldW;
+  const t = gameTime;
+
+  // Sawdust tan ground
+  ctx.fillStyle = '#c8a96e';
+  ctx.fillRect(0, GROUND_Y, ww + 200, H - GROUND_Y + 10);
+  // Ground texture dots
+  ctx.fillStyle = '#b8956a';
+  for (let gx = Math.max(0, Math.floor((cam - 20) / 30) * 30); gx < Math.min(ww + 200, cam + W + 20); gx += 30) {
+    for (let gy = GROUND_Y + 5; gy < H; gy += 20) {
+      ctx.fillRect(gx + ((gy * 7) % 13), gy, 2, 1);
+    }
+  }
+
+  // ── Carousel at x=500 ──
+  const carouselX = 500;
+  if (carouselX > cam - 120 && carouselX < cam + W + 120) {
+    // Platform base
+    ctx.fillStyle = '#f59e0b';
+    ctx.beginPath();
+    ctx.ellipse(carouselX, GROUND_Y - 5, 60, 12, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Center pole
+    ctx.fillStyle = '#dc2626';
+    ctx.fillRect(carouselX - 3, GROUND_Y - 80, 6, 75);
+    // Scalloped canopy
+    ctx.fillStyle = '#dc2626';
+    ctx.beginPath();
+    ctx.ellipse(carouselX, GROUND_Y - 78, 55, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fde68a';
+    for (let s = 0; s < 12; s++) {
+      const sa = s * Math.PI * 2 / 12;
+      const sx = carouselX + Math.cos(sa) * 55;
+      const sy = GROUND_Y - 78 + Math.sin(sa) * 10;
+      ctx.beginPath();
+      ctx.arc(sx, sy, 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Carousel horses (4, orbiting)
+    const carAngle = t / 2000;
+    const horseColors = ['#f472b6', '#38bdf8', '#4ade80', '#fbbf24'];
+    for (let h = 0; h < 4; h++) {
+      const ha = carAngle + h * Math.PI / 2;
+      const hx = carouselX + Math.cos(ha) * 35;
+      const depth = Math.sin(ha);
+      const hy = GROUND_Y - 30 + Math.sin(t / 400 + h) * 8;
+      // Pole
+      ctx.strokeStyle = '#d4d4d8';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(hx, GROUND_Y - 78 + depth * 10);
+      ctx.lineTo(hx, hy + 5);
+      ctx.stroke();
+      // Horse body
+      ctx.fillStyle = horseColors[h];
+      ctx.fillRect(hx - 8, hy - 5, 16, 10);
+      // Head
+      ctx.fillRect(hx + 8, hy - 10, 6, 8);
+      // Legs
+      ctx.fillRect(hx - 6, hy + 5, 3, 6);
+      ctx.fillRect(hx + 3, hy + 5, 3, 6);
+    }
+  }
+
+  // ── Rollercoaster Track (x: 300-1300) ──
+  // Support struts
+  ctx.strokeStyle = '#6b7280';
+  ctx.lineWidth = 2;
+  for (let sx = 350; sx <= 1200; sx += 100) {
+    if (sx < cam - 20 || sx > cam + W + 20) continue;
+    ctx.beginPath();
+    ctx.moveTo(sx, GROUND_Y);
+    ctx.lineTo(sx, GROUND_Y - 100);
+    ctx.stroke();
+  }
+  // Track rails
+  ctx.strokeStyle = '#374151';
+  ctx.lineWidth = 3;
+  // Climbing section
+  ctx.beginPath();
+  ctx.moveTo(380, GROUND_Y);
+  ctx.lineTo(600, GROUND_Y - 220);
+  ctx.stroke();
+  // Loop
+  ctx.beginPath();
+  ctx.arc(800, 260, 160, 0, Math.PI * 2);
+  ctx.stroke();
+  // Descent
+  ctx.beginPath();
+  ctx.moveTo(960, 260);
+  ctx.lineTo(1200, GROUND_Y);
+  ctx.stroke();
+  // Ties
+  ctx.strokeStyle = '#9ca3af';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 10; i++) {
+    const tx = 380 + i * 22;
+    const ty = GROUND_Y - i * 22;
+    if (tx < cam - 10 || tx > cam + W + 10) continue;
+    ctx.beginPath();
+    ctx.moveTo(tx - 5, ty + 3);
+    ctx.lineTo(tx + 5, ty - 3);
+    ctx.stroke();
+  }
+
+  // Boarding gate arch with blinking lights
+  const gateX = 380;
+  if (gateX > cam - 60 && gateX < cam + W + 60) {
+    // Arch
+    ctx.strokeStyle = '#dc2626';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(gateX, GROUND_Y - 10, 30, Math.PI, 0);
+    ctx.stroke();
+    // Blinking lights on arch
+    for (let li = 0; li < 8; li++) {
+      const la = Math.PI + li * Math.PI / 7;
+      const lx = gateX + Math.cos(la) * 30;
+      const ly = GROUND_Y - 10 + Math.sin(la) * 30;
+      ctx.fillStyle = (Math.floor(t / 300 + li) % 2 === 0) ? '#fbbf24' : '#ef4444';
+      ctx.beginPath();
+      ctx.arc(lx, ly, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Sign
+    ctx.fillStyle = '#1e293b';
+    ctx.font = 'bold 11px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('COASTER LOOP', gateX, GROUND_Y - 45);
+    ctx.textAlign = 'left';
+  }
+
+  // Draw coaster cart if riding
+  if (coasterRide.active) {
+    const cr = coasterRide;
+    // Cart body
+    ctx.fillStyle = '#dc2626';
+    ctx.save();
+    ctx.translate(cr.x, cr.y);
+    ctx.rotate(cr.angle);
+    // Rounded rect cart
+    ctx.beginPath();
+    ctx.roundRect(-15, -10, 30, 16, 4);
+    ctx.fill();
+    // Wheels
+    ctx.fillStyle = '#374151';
+    ctx.beginPath();
+    ctx.arc(-8, 8, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(8, 8, 4, 0, Math.PI * 2);
+    ctx.fill();
+    // Player inside cart
+    ctx.save();
+    if (cr.phase === 'loop' && cr.angle > Math.PI) {
+      ctx.scale(1, -1); // upside down
+    }
+    drawKitty(0, -15, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
+    ctx.restore();
+    ctx.restore();
+  }
+
+  // ── Carnival booth signs ──
+  const boothSigns = [
+    { x: 700, text: 'RING TOSS' },
+    { x: 800, text: 'BALLOON DARTS' },
+  ];
+  for (const bs of boothSigns) {
+    if (bs.x < cam - 60 || bs.x > cam + W + 60) continue;
+    // Booth facade
+    ctx.fillStyle = '#dc2626';
+    ctx.fillRect(bs.x - 30, GROUND_Y - 50, 60, 50);
+    // Awning
+    ctx.fillStyle = '#fde68a';
+    ctx.fillRect(bs.x - 35, GROUND_Y - 55, 70, 8);
+    // Stripes on awning
+    ctx.fillStyle = '#dc2626';
+    for (let si = 0; si < 5; si++) {
+      ctx.fillRect(bs.x - 35 + si * 14, GROUND_Y - 55, 7, 8);
+    }
+    // Text
+    ctx.fillStyle = '#fde68a';
+    ctx.font = 'bold 8px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText(bs.text, bs.x, GROUND_Y - 30);
+    ctx.textAlign = 'left';
+  }
+
+  // ── Water gun booth (x: 1550-1850) ──
+  const wgbX = WATER_GUN_BOOTH_POS.x;
+  if (wgbX > cam - 100 && wgbX < cam + W + 100) {
+    // Red booth
+    ctx.fillStyle = '#dc2626';
+    ctx.fillRect(wgbX - 75, GROUND_Y - 70, 150, 70);
+    // Striped awning
+    ctx.fillStyle = '#fde68a';
+    ctx.fillRect(wgbX - 80, GROUND_Y - 75, 160, 10);
+    for (let si = 0; si < 11; si++) {
+      ctx.fillStyle = si % 2 === 0 ? '#dc2626' : '#fff';
+      ctx.fillRect(wgbX - 80 + si * 15, GROUND_Y - 75, 15, 10);
+    }
+    // Plush animals hanging from top
+    const plushColors = ['#94a3b8', '#f59e0b', '#d97706'];
+    for (let pi = 0; pi < 3; pi++) {
+      ctx.fillStyle = plushColors[pi];
+      ctx.beginPath();
+      ctx.arc(wgbX - 40 + pi * 40, GROUND_Y - 60, 8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Sign
+    ctx.fillStyle = '#fde68a';
+    ctx.font = 'bold 10px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('WATER GUN RACE', wgbX, GROUND_Y - 35);
+    ctx.font = '8px system-ui';
+    ctx.fillText('Press Enter to Play!', wgbX, GROUND_Y - 22);
+    ctx.textAlign = 'left';
+  }
+
+  // ── Red Baron Bi-Plane Ride (x: 2300) ──
+  const bpX = BIPLANE_HUB_POS.x;
+  if (bpX > cam - 180 && bpX < cam + W + 180) {
+    // Center hub (red cylinder)
+    ctx.fillStyle = '#dc2626';
+    ctx.fillRect(bpX - 8, GROUND_Y - 120, 16, 120);
+    ctx.beginPath();
+    ctx.ellipse(bpX, GROUND_Y - 120, 15, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 4 arms with bi-planes
+    const rideAngle = biplaneRide.active ? biplaneRide.rideAngle : t / 4000;
+    const planeColors = ['#f97316', '#fb923c', '#fbbf24', '#f59e0b'];
+    for (let arm = 0; arm < 4; arm++) {
+      const aa = rideAngle + arm * Math.PI / 2;
+      const tilt = Math.sin(aa * 2 + arm * Math.PI / 2) * 25 * Math.PI / 180;
+      const px = bpX + Math.cos(aa) * 130;
+      const py = GROUND_Y - 120 + Math.sin(aa) * 30;
+      // Arm
+      ctx.strokeStyle = '#6b7280';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(bpX, GROUND_Y - 120);
+      ctx.lineTo(px, py);
+      ctx.stroke();
+      // Bi-plane
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.rotate(tilt);
+      // Body
+      ctx.fillStyle = planeColors[arm];
+      ctx.fillRect(-12, -4, 24, 8);
+      // Double wings
+      ctx.fillStyle = '#fef3c7';
+      ctx.fillRect(-14, -10, 28, 4);
+      ctx.fillRect(-14, 4, 28, 4);
+      // Propeller
+      const propAngle = t / 50;
+      ctx.strokeStyle = '#374151';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(12 + Math.cos(propAngle) * 6, Math.sin(propAngle) * 6);
+      ctx.lineTo(12 - Math.cos(propAngle) * 6, -Math.sin(propAngle) * 6);
+      ctx.stroke();
+      // Tiny pilot kitty
+      ctx.fillStyle = '#f472b6';
+      ctx.beginPath();
+      ctx.arc(0, -2, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    // Sign
+    ctx.fillStyle = '#1e293b';
+    ctx.font = 'bold 10px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('RED BARON RIDE', bpX, GROUND_Y + 15);
+    ctx.font = '8px system-ui';
+    ctx.fillText('Press Enter to Fly!', bpX, GROUND_Y + 27);
+    ctx.textAlign = 'left';
+  }
+
+  // ── Dance show stage (x: 3080-3320) ──
+  const dsX = PARK_DANCE_STAGE_POS.x;
+  if (dsX > cam - 150 && dsX < cam + W + 150) {
+    // Stage platform
+    ctx.fillStyle = '#7c3aed';
+    ctx.fillRect(dsX - 60, GROUND_Y - 5, 120, 10);
+    // Curtain towers
+    ctx.fillStyle = '#6d28d9';
+    ctx.fillRect(dsX - 65, GROUND_Y - 60, 12, 55);
+    ctx.fillRect(dsX + 53, GROUND_Y - 60, 12, 55);
+    // Curtain drape
+    ctx.fillStyle = '#8b5cf6';
+    ctx.fillRect(dsX - 53, GROUND_Y - 60, 106, 8);
+    // Spotlight cones
+    ctx.fillStyle = 'rgba(253, 224, 71, 0.15)';
+    ctx.beginPath();
+    ctx.moveTo(dsX - 50, GROUND_Y - 60);
+    ctx.lineTo(dsX - 30, GROUND_Y);
+    ctx.lineTo(dsX - 70, GROUND_Y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(dsX + 50, GROUND_Y - 60);
+    ctx.lineTo(dsX + 30, GROUND_Y);
+    ctx.lineTo(dsX + 70, GROUND_Y);
+    ctx.closePath();
+    ctx.fill();
+    // Sign
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 10px system-ui';
+    ctx.textAlign = 'center';
+    if (parkDanceShow.complete) {
+      ctx.fillText('COMPLETE', dsX, GROUND_Y - 65);
+    } else {
+      ctx.fillText('STAR PERFORMER', dsX, GROUND_Y - 65);
+      ctx.font = '8px system-ui';
+      ctx.fillText('Press Enter to Perform!', dsX, GROUND_Y + 15);
+    }
+    ctx.textAlign = 'left';
+
+    // 3 audience kitties on benches
+    const audColors = ['#f472b6', '#4ade80', '#38bdf8'];
+    for (let a = 0; a < 3; a++) {
+      const ax = dsX - 30 + a * 30;
+      const ay = GROUND_Y + 5;
+      // Bench
+      ctx.fillStyle = '#92400e';
+      ctx.fillRect(ax - 8, ay + 5, 16, 4);
+      // Kitty
+      drawKitty(ax, ay, audColors[a], 1, 0, 'bow');
+      // Clapping (if show complete)
+      if (parkDanceShow.complete && Math.floor(t / 300 + a) % 2 === 0) {
+        ctx.fillStyle = audColors[a];
+        ctx.beginPath();
+        ctx.arc(ax + 5, ay - 15, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(ax + 9, ay - 15, 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Draw performer during show
+    if (currentScene === Scene.PARK_DANCE_SHOW && parkDanceShow.active) {
+      const ds = parkDanceShow;
+      ctx.save();
+      ctx.translate(ds.kittyX, ds.kittyY);
+      if (ds.kittyAngle) ctx.rotate(ds.kittyAngle);
+      // Horn rainbow glow on step 5
+      if (ds.step === 5) {
+        const grad = ctx.createRadialGradient(0, -35, 2, 0, -35, 20);
+        grad.addColorStop(0, 'rgba(251, 191, 36, 0.8)');
+        grad.addColorStop(0.5, 'rgba(168, 85, 247, 0.4)');
+        grad.addColorStop(1, 'rgba(168, 85, 247, 0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(0, -35, 20, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      drawKitty(0, 0, player.color, 1, ds.step % 2, 'horn', playerEyeColor, playerHornColors);
+      ctx.restore();
+    }
+  }
+
+  // ── Ferris Wheel at x=4400 ──
+  const fwX = 4400;
+  if (fwX > cam - 150 && fwX < cam + W + 150) {
+    // Support legs
+    ctx.strokeStyle = '#6b7280';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(fwX - 30, GROUND_Y);
+    ctx.lineTo(fwX, GROUND_Y - 120);
+    ctx.lineTo(fwX + 30, GROUND_Y);
+    ctx.stroke();
+    // Wheel
+    ctx.strokeStyle = '#374151';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(fwX, GROUND_Y - 120, 100, 0, Math.PI * 2);
+    ctx.stroke();
+    // 6 spokes with gondolas
+    const fwAngle = t / 5000;
+    const gondolaColors = ['#f43f5e', '#3b82f6', '#22c55e', '#fbbf24', '#a855f7', '#f97316'];
+    for (let s = 0; s < 6; s++) {
+      const sa = fwAngle + s * Math.PI / 3;
+      const sx = fwX + Math.cos(sa) * 100;
+      const sy = GROUND_Y - 120 + Math.sin(sa) * 100;
+      // Spoke
+      ctx.strokeStyle = '#6b7280';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(fwX, GROUND_Y - 120);
+      ctx.lineTo(sx, sy);
+      ctx.stroke();
+      // Gondola
+      ctx.fillStyle = gondolaColors[s];
+      ctx.fillRect(sx - 6, sy, 12, 10);
+      // Tiny NPC silhouette
+      ctx.fillStyle = '#374151';
+      ctx.beginPath();
+      ctx.arc(sx, sy - 2, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // ── Food Stand at x=4200 ──
+  const fsX = 4200;
+  if (fsX > cam - 60 && fsX < cam + W + 60) {
+    // Cart body
+    ctx.fillStyle = '#fef3c7';
+    ctx.fillRect(fsX - 25, GROUND_Y - 35, 50, 35);
+    // Wheels
+    ctx.fillStyle = '#374151';
+    ctx.beginPath(); ctx.arc(fsX - 15, GROUND_Y + 2, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(fsX + 15, GROUND_Y + 2, 5, 0, Math.PI * 2); ctx.fill();
+    // Large cone on top (2x scale)
+    ctx.fillStyle = '#d4a574';
+    ctx.beginPath();
+    ctx.moveTo(fsX - 10, GROUND_Y - 35);
+    ctx.lineTo(fsX, GROUND_Y - 65);
+    ctx.lineTo(fsX + 10, GROUND_Y - 35);
+    ctx.closePath();
+    ctx.fill();
+    // Crosshatch on cone
+    ctx.strokeStyle = '#92400e';
+    ctx.lineWidth = 0.5;
+    for (let ci = 0; ci < 4; ci++) {
+      ctx.beginPath();
+      ctx.moveTo(fsX - 8 + ci * 5, GROUND_Y - 35);
+      ctx.lineTo(fsX - 2 + ci * 3, GROUND_Y - 55);
+      ctx.stroke();
+    }
+    // Scoop
+    ctx.fillStyle = '#fda4af';
+    ctx.beginPath();
+    ctx.arc(fsX, GROUND_Y - 65, 12, 0, Math.PI * 2);
+    ctx.fill();
+    // Sign
+    ctx.fillStyle = '#1e293b';
+    ctx.font = 'bold 8px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('ICE CREAM', fsX, GROUND_Y - 80);
+    ctx.textAlign = 'left';
+  }
+
+  // ── Portal back to Candy Kingdom ──
+  const backPortalX = PARK_CANDY_PORTAL.x;
+  if (backPortalX > cam - 60 && backPortalX < cam + W + 60) {
+    const pulse = Math.sin(t / 300) * 0.3 + 0.7;
+    ctx.fillStyle = 'rgba(249, 168, 212, ' + (pulse * 0.2) + ')';
+    ctx.beginPath();
+    ctx.arc(backPortalX, GROUND_Y - 25, 35, 0, Math.PI * 2);
+    ctx.fill();
+    const grad = ctx.createRadialGradient(backPortalX, GROUND_Y - 25, 5, backPortalX, GROUND_Y - 25, 22);
+    grad.addColorStop(0, '#fde68a');
+    grad.addColorStop(0.5, '#f9a8d4');
+    grad.addColorStop(1, '#ec4899');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(backPortalX, GROUND_Y - 25, 22, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#f9a8d4';
+    ctx.font = 'bold 12px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('Candy Kingdom', backPortalX, GROUND_Y - 55);
+    ctx.font = '10px system-ui';
+    ctx.fillText('Press Enter', backPortalX, GROUND_Y - 42);
+    ctx.textAlign = 'left';
+  }
+
+  // ── Exit portal at x=5400 ──
+  const exitPortalX = PARK_EXIT_PORTAL_POS.x;
+  if (exitPortalX > cam - 60 && exitPortalX < cam + W + 60) {
+    const pulse = Math.sin(t / 250) * 0.3 + 0.7;
+    // Sparkly arch
+    ctx.strokeStyle = '#fbbf24';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(exitPortalX, GROUND_Y - 5, 35, Math.PI, 0);
+    ctx.stroke();
+    // Sparkles on arch
+    for (let si = 0; si < 8; si++) {
+      const sa = Math.PI + si * Math.PI / 7;
+      const sx = exitPortalX + Math.cos(sa) * 35;
+      const sy = GROUND_Y - 5 + Math.sin(sa) * 35;
+      ctx.fillStyle = 'rgba(251, 191, 36, ' + (pulse * 0.8) + ')';
+      ctx.beginPath();
+      ctx.arc(sx, sy, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 11px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('Next Level', exitPortalX, GROUND_Y - 45);
+    ctx.font = '9px system-ui';
+    ctx.fillText('Press Enter', exitPortalX, GROUND_Y - 33);
+    ctx.textAlign = 'left';
+  }
+
+  // ── Portal from Candy Kingdom (draw near world start) ──
+  // (Portal from candy already handled by back portal above)
+
+  // ── Candy-striped carnival platforms ──
+  for (const p of level15Park.platforms) {
+    if (p.x + p.w < cam - 20 || p.x > cam + W + 20) continue;
+    // Red/white striped awning top
+    const stripeW = 8;
+    for (let si = 0; si < Math.ceil(p.w / stripeW); si++) {
+      ctx.fillStyle = si % 2 === 0 ? '#dc2626' : '#fff';
+      const sw = Math.min(stripeW, p.w - si * stripeW);
+      ctx.fillRect(p.x + si * stripeW, p.y, sw, 6);
+    }
+    // Platform body
+    ctx.fillStyle = '#f5f5f4';
+    ctx.fillRect(p.x, p.y + 6, p.w, 6);
+  }
+
+  // ── Ice cream cone collectibles ──
+  for (const yb of level15Park.yarnBalls) {
+    if (yb.collected) continue;
+    if (yb.x < cam - 15 || yb.x > cam + W + 15) continue;
+    const bob = Math.sin(t / 300 + yb.bobPhase) * 4;
+    const icy = yb.y + bob - 20;
+    // Waffle cone triangle
+    ctx.fillStyle = '#d4a574';
+    ctx.beginPath();
+    ctx.moveTo(yb.x - 5, icy);
+    ctx.lineTo(yb.x, icy + 14);
+    ctx.lineTo(yb.x + 5, icy);
+    ctx.closePath();
+    ctx.fill();
+    // Crosshatch on cone
+    ctx.strokeStyle = '#92400e';
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(yb.x - 3, icy + 2);
+    ctx.lineTo(yb.x + 3, icy + 10);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(yb.x + 3, icy + 2);
+    ctx.lineTo(yb.x - 3, icy + 10);
+    ctx.stroke();
+    // Scoop
+    ctx.fillStyle = yb.color;
+    ctx.beginPath();
+    ctx.arc(yb.x, icy - 3, 6, 0, Math.PI * 2);
+    ctx.fill();
+    // Sprinkles
+    ctx.fillStyle = '#fbbf24';
+    ctx.fillRect(yb.x - 2, icy - 5, 1, 2);
+    ctx.fillStyle = '#f43f5e';
+    ctx.fillRect(yb.x + 2, icy - 4, 1, 2);
+    ctx.fillStyle = '#22c55e';
+    ctx.fillRect(yb.x, icy - 6, 1, 2);
+    // Drip
+    ctx.fillStyle = yb.color;
+    ctx.beginPath();
+    ctx.ellipse(yb.x + 3, icy + 1, 1.5, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // ── NPCs ──
+  for (const npc of level15Park.npcs) {
+    if (npc.x < cam - 30 || npc.x > cam + W + 30) continue;
+    drawKitty(npc.x, npc.y, npc.color, npc.facing, npc.walkFrame, npc.accessory);
+  }
+
+  // ── Proximity prompts ──
+  if (currentScene === null && !coasterRide.active && !biplaneRide.active) {
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 10px system-ui';
+    ctx.textAlign = 'center';
+    if (Math.abs(player.x - COASTER_GATE_POS.x) < 60) {
+      ctx.fillText('Press Enter to Ride!', COASTER_GATE_POS.x, GROUND_Y - 60);
+    }
+    if (Math.abs(player.x - BIPLANE_HUB_POS.x) < 60) {
+      ctx.fillText('Press Enter to Fly!', BIPLANE_HUB_POS.x, GROUND_Y - 140);
+    }
+    ctx.textAlign = 'left';
+  }
+
+  drawPlayerAndUI();
+}
+
+// ── Water Gun Race Scene ──
+function drawWaterGunRaceScene(cam, W, H) {
+  const cx = cam + W / 2;
+  const cy = H / 2;
+  const wg = waterGunRace;
+
+  // Background
+  ctx.fillStyle = '#1e293b';
+  ctx.fillRect(cx - 310, cy - 200, 620, 420);
+  ctx.strokeStyle = '#dc2626';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(cx - 310, cy - 200, 620, 420);
+
+  // Title
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#fbbf24';
+  ctx.font = 'bold 18px system-ui';
+  ctx.fillText('WATER GUN HORSE RACE - Round ' + (wg.round + 1) + '/3', cx, cy - 175);
+
+  // 3 horse tracks
+  const trackY = cy - 100;
+  const trackW = 500;
+  const trackH = 30;
+  const names = ['You', 'Rosie', 'Thunder'];
+  const colors = ['#f472b6', '#ef4444', '#3b82f6'];
+  const positions = [wg.playerHorse, wg.aiHorse1, wg.aiHorse2];
+
+  for (let i = 0; i < 3; i++) {
+    const ty = trackY + i * 50;
+    // Track
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(cx - 250, ty, trackW, trackH);
+    // Finish line
+    ctx.fillStyle = '#fbbf24';
+    ctx.fillRect(cx + 245, ty, 5, trackH);
+    // Horse
+    const hx = cx - 240 + (positions[i] / 100) * (trackW - 20);
+    ctx.fillStyle = colors[i];
+    ctx.fillRect(hx, ty + 5, 20, 20);
+    // Name
+    ctx.fillStyle = '#d1d5db';
+    ctx.font = '11px system-ui';
+    ctx.textAlign = 'right';
+    ctx.fillText(names[i], cx - 255, ty + 20);
+  }
+
+  // Power meter
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#d1d5db';
+  ctx.font = '12px system-ui';
+  ctx.fillText('Hold Space to charge, release to fire!', cx, cy + 80);
+  // Power bar
+  ctx.fillStyle = '#374151';
+  ctx.fillRect(cx - 100, cy + 90, 200, 15);
+  ctx.fillStyle = wg.chargePower > 60 && wg.chargePower < 80 ? '#22c55e' : '#fbbf24';
+  ctx.fillRect(cx - 100, cy + 90, wg.chargePower * 2, 15);
+  // Sweet spot marker
+  ctx.fillStyle = '#22c55e';
+  ctx.fillRect(cx - 100 + 60 * 2, cy + 88, 20 * 2, 19);
+  ctx.globalAlpha = 0.3;
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Round score
+  ctx.fillStyle = '#fbbf24';
+  ctx.font = 'bold 14px system-ui';
+  ctx.fillText('Rounds Won: ' + wg.roundsWon, cx, cy + 130);
+
+  // Instructions
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '10px system-ui';
+  ctx.fillText('Esc to exit', cx, cy + 200);
+  ctx.textAlign = 'left';
+}
+
+// ── Park Dance Show Scene ──
+function drawParkDanceShowScene(cam, W, H) {
+  const cx = cam + W / 2;
+  const cy = H / 2;
+  const ds = parkDanceShow;
+
+  // Stage background
+  ctx.fillStyle = '#2d1b69';
+  ctx.fillRect(cx - 250, cy - 180, 500, 380);
+  ctx.strokeStyle = '#c084fc';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(cx - 250, cy - 180, 500, 380);
+
+  // Curtains
+  ctx.fillStyle = '#7c3aed';
+  ctx.fillRect(cx - 245, cy - 175, 30, 350);
+  ctx.fillRect(cx + 215, cy - 175, 30, 350);
+
+  // Spotlights
+  ctx.fillStyle = 'rgba(253, 224, 71, 0.1)';
+  ctx.beginPath();
+  ctx.moveTo(cx - 100, cy - 170);
+  ctx.lineTo(cx - 50, cy + 100);
+  ctx.lineTo(cx - 150, cy + 100);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(cx + 100, cy - 170);
+  ctx.lineTo(cx + 50, cy + 100);
+  ctx.lineTo(cx + 150, cy + 100);
+  ctx.closePath();
+  ctx.fill();
+
+  // Title
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#fbbf24';
+  ctx.font = 'bold 16px system-ui';
+  ctx.fillText('STAR PERFORMER', cx, cy - 155);
+
+  // Step names
+  const stepNames = ['Walk to Center', 'Spin Left', 'Jump!', 'Slide Right', 'Spin Right', 'Horn Flash!', 'Jump-Spin!', 'Bow'];
+  if (ds.step < 8) {
+    ctx.fillStyle = '#e9d5ff';
+    ctx.font = 'bold 14px system-ui';
+    ctx.fillText(stepNames[ds.step], cx, cy - 130);
+  } else if (ds.complete) {
+    ctx.fillStyle = '#4ade80';
+    ctx.font = 'bold 14px system-ui';
+    ctx.fillText('Show Complete!', cx, cy - 130);
+  }
+
+  // Performer kitty
+  const kx = cx + (ds.kittyX - PARK_DANCE_STAGE_POS.x);
+  const ky = cy + 20 + (ds.kittyY - GROUND_Y + 30);
+  ctx.save();
+  ctx.translate(kx, ky);
+  if (ds.kittyAngle) ctx.rotate(ds.kittyAngle);
+  // Horn glow on step 5
+  if (ds.step === 5) {
+    const hGrad = ctx.createRadialGradient(0, -35, 2, 0, -35, 25);
+    hGrad.addColorStop(0, 'rgba(251, 191, 36, 0.9)');
+    hGrad.addColorStop(0.5, 'rgba(196, 181, 253, 0.5)');
+    hGrad.addColorStop(1, 'rgba(168, 85, 247, 0)');
+    ctx.fillStyle = hGrad;
+    ctx.beginPath();
+    ctx.arc(0, -35, 25, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  drawKitty(0, 0, player.color, 1, ds.step % 2, 'horn', playerEyeColor, playerHornColors);
+  ctx.restore();
+
+  // Cheers counter
+  ctx.fillStyle = '#fbbf24';
+  ctx.font = 'bold 12px system-ui';
+  ctx.fillText('Cheers: ' + ds.cheers + '/5 (Press Space)', cx, cy + 140);
+
+  // Audience
+  const audColors = ['#f472b6', '#4ade80', '#38bdf8'];
+  for (let a = 0; a < 3; a++) {
+    const ax = cx - 40 + a * 40;
+    const ay = cy + 100;
+    drawKitty(ax, ay, audColors[a], 1, 0, 'bow');
+    if (ds.complete && Math.floor(gameTime / 300 + a) % 2 === 0) {
+      ctx.fillStyle = '#fbbf24';
+      ctx.font = '8px system-ui';
+      ctx.fillText('*clap*', ax, ay - 20);
+    }
+  }
+
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '10px system-ui';
+  ctx.fillText('Esc to exit', cx, cy + 180);
+  ctx.textAlign = 'left';
 }
 
 const levelRegistry = {
@@ -12124,6 +12971,16 @@ const levelRegistry = {
     musicId: 'musicCandyKingdom',
     drawSky: drawCandyKingdomSky,
     drawWorld: drawCandyKingdomWorld,
+  },
+  15: {
+    name: 'Amusement Park',
+    worldW: level15Park.worldW,
+    platforms: level15Park.platforms,
+    yarnBalls: level15Park.yarnBalls,
+    npcs: parkNpcs,
+    musicId: 'musicAmusementPark',
+    drawSky: drawAmusementParkSky,
+    drawWorld: drawAmusementParkWorld,
   },
 };
 

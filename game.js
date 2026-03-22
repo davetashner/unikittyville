@@ -54,6 +54,11 @@ const POINTS = {
   WISH_OUTER: 10, WISH_MIDDLE: 25, WISH_CENTER: 50,
   WISH_LUCKY_BONUS: 30, WISH_MASTER_BONUS: 100,
   BIGFOOT_PHOTO: 30,
+  ICE_CREAM: 12, ICE_CREAM_ALL: 75,
+  COASTER_RIDE: 40, COASTER_FIRST_BONUS: 20, COASTER_SCREAM: 5,
+  WATER_GUN_FIRST: 50, WATER_GUN_SECOND: 25, WATER_GUN_THIRD: 10,
+  BIPLANE_RIDE: 35, BIPLANE_WAVE: 3,
+  DANCE_SHOW: 60, DANCE_SHOW_CHEER: 8, DANCE_SHOW_PERFECT_AUDIENCE: 20,
 };
 
 // ── Timing durations (ms) ──
@@ -118,6 +123,8 @@ const Scene = {
   FOUNTAIN_WISHES: 'fountainWishes',
   CUPCAKE_BAKERY: 'cupcakeBakery',
   DANCE_PARTY: 'danceParty',
+  WATER_GUN_RACE: 'waterGunRace',
+  PARK_DANCE_SHOW: 'parkDanceShow',
 };
 let currentScene = null;
 
@@ -137,6 +144,7 @@ const POSTCARD_THEMES = {
   12: { color: '#1e3a5f', greeting: 'Greetings from Outer Space!' },
   13: { color: '#c0c0c0', greeting: 'Greetings from the Moon!' },
   14: { color: '#f9a8d4', greeting: 'Sweetest wishes from Candy Kingdom!' },
+  15: { color: '#f97316', greeting: 'Greetings from Unikittyville Amusement Park!' },
 };
 const POSTCARD_POINTS = 25;
 let postcardOpen = false;
@@ -842,6 +850,40 @@ let danceParty = {
   complete: false, celebrateTimer: 0,
 };
 
+// ── Amusement Park State (Level 15) ──
+let iceCreamCount = 0;
+
+// Rollercoaster ride
+let coasterRide = {
+  active: false, phase: 'idle', // idle, boarding, climbing, loop, descent, exit, celebrate
+  timer: 0, x: 380, y: GROUND_Y, angle: 0,
+  screams: 0, firstRide: true,
+};
+
+// Water gun horse race
+let waterGunRace = {
+  active: false, round: 0, roundsWon: 0,
+  charging: false, chargePower: 0,
+  playerHorse: 0, aiHorse1: 0, aiHorse2: 0,
+  raceTimer: 0, raceOver: false,
+  targetJiggle: 0, hitRing: 0,
+  prize: '', prizeAnimal: '',
+  complete: false,
+};
+
+// Bi-plane ride
+let biplaneRide = {
+  active: false, timer: 0, waves: 0,
+  rideAngle: 0, complete: false,
+};
+
+// Dance show
+let parkDanceShow = {
+  active: false, step: 0, stepTimer: 0,
+  cheers: 0, complete: false, celebrateTimer: 0,
+  kittyX: 0, kittyY: 0, kittyAngle: 0,
+};
+
 // Initialize cotton candy puffs
 function initCottonCandyPuffs() {
   cottonCandyPuffs = [];
@@ -862,7 +904,7 @@ const achievements = [
   { id: 'chefs_kiss', name: "Chef's Kiss", description: 'Make 3 pizzas, 3 s\'mores, and 3 smoothies', icon: '\u{1F468}\u200D\u{1F373}', earned: false, hint: 'Cook in NYC, Campground & Moon' },
   { id: 'shutterfly', name: 'Shutterfly', description: 'Take 5 safari photos', icon: '\u{1F4F8}', earned: false, hint: 'Photograph animals on safari' },
   { id: 'astronaut', name: 'Astronaut', description: 'Reach the Moon', icon: '\u{1F680}', earned: false, hint: 'Blast off from Cape Canaveral' },
-  { id: 'world_traveler', name: 'World Traveler', description: 'Visit all 14 levels', icon: '\u2708\uFE0F', earned: false, hint: 'See every destination' },
+  { id: 'world_traveler', name: 'World Traveler', description: 'Visit all 15 levels', icon: '\u2708\uFE0F', earned: false, hint: 'See every destination' },
   { id: 'kits_best_friend', name: "Kit's Best Friend", description: 'Complete the hospital delivery and picnic', icon: '\u{1F37C}', earned: false, hint: 'Deliver Kit and visit the park' },
   { id: 'high_scorer', name: 'High Scorer', description: 'Reach 10,000 points', icon: '\u2B50', earned: false, hint: 'Keep collecting and exploring!' },
   { id: 'master_baker', name: 'Master Baker', description: 'Bake 3 perfect cupcakes', icon: '\u{1F9C1}', earned: false, hint: 'Visit the Cupcake Bakery' },
@@ -1574,6 +1616,34 @@ function completeTransition() {
     for (const yb of level14Candy.yarnBalls) yb.collected = false;
   }
 
+  // Reset Amusement Park state
+  if (levelTransition.toLevel === 15) {
+    iceCreamCount = 0;
+    coasterRide = {
+      active: false, phase: 'idle', timer: 0, x: 380, y: GROUND_Y, angle: 0,
+      screams: 0, firstRide: true,
+    };
+    waterGunRace = {
+      active: false, round: 0, roundsWon: 0,
+      charging: false, chargePower: 0,
+      playerHorse: 0, aiHorse1: 0, aiHorse2: 0,
+      raceTimer: 0, raceOver: false,
+      targetJiggle: 0, hitRing: 0,
+      prize: '', prizeAnimal: '',
+      complete: false,
+    };
+    biplaneRide = {
+      active: false, timer: 0, waves: 0,
+      rideAngle: 0, complete: false,
+    };
+    parkDanceShow = {
+      active: false, step: 0, stepTimer: 0,
+      cheers: 0, complete: false, celebrateTimer: 0,
+      kittyX: 0, kittyY: 0, kittyAngle: 0,
+    };
+    for (const yb of level15Park.yarnBalls) yb.collected = false;
+  }
+
   // Reset bug catcher (keep hasBugNet and bugCatcherFinished across level switches)
   bugCatcherActive = false;
   bugCatcherRound = 0;
@@ -1857,6 +1927,7 @@ const hud = {
   cheetahYarn: document.getElementById('hudCheetahYarn'),
   gem: document.getElementById('hudGem'),
   cotton: document.getElementById('hudCotton'),
+  iceCream: document.getElementById('hudIceCream'),
   controls: document.getElementById('controls'),
 };
 const hudItems = document.querySelectorAll('.hud-item');
@@ -3041,8 +3112,8 @@ function update(dt) {
     }
   }
 
-  // Yarn ball collection (level 14 uses its own candy gem loop)
-  if (currentLevel !== 14) {
+  // Yarn ball collection (level 14 and 15 use their own collection loops)
+  if (currentLevel !== 14 && currentLevel !== 15) {
     for (const yb of getCurrentYarnBalls()) {
       if (yb.collected) continue;
       const dx = player.x - yb.x;
@@ -4878,6 +4949,328 @@ function update(dt) {
       keys['Enter'] = false;
       switchToLevel(13);
     }
+
+    // Portal to Amusement Park (Level 15)
+    const dxPark = player.x - CANDY_PARK_PORTAL.x;
+    const dyPark = player.y - GROUND_Y;
+    if (dxPark * dxPark + dyPark * dyPark < CANDY_PARK_PORTAL.radius * CANDY_PARK_PORTAL.radius && keys['Enter']) {
+      keys['Enter'] = false;
+      switchToLevel(15);
+    }
+  }
+
+  // ── Amusement Park interactions (level 15) ──
+  if (currentLevel === 15) {
+    // Collect ice cream cones
+    for (const yb of level15Park.yarnBalls) {
+      if (yb.collected) continue;
+      const dx = player.x - yb.x;
+      const dy = player.y - yb.y;
+      if (dx * dx + dy * dy < COLLECT_RADIUS_SQ) {
+        yb.collected = true;
+        iceCreamCount++;
+        score += POINTS.ICE_CREAM;
+        addPopup(yb.x, yb.y - 20, '+' + POINTS.ICE_CREAM + ' Ice Cream!', yb.color);
+        playChaChing();
+        if (iceCreamCount === 10) {
+          score += POINTS.ICE_CREAM_ALL;
+          addPopup(player.x, player.y - 50, '+' + POINTS.ICE_CREAM_ALL + ' All Ice Cream Bonus!', '#fbbf24');
+          playChaChing();
+        }
+      }
+    }
+
+    // Rollercoaster ride
+    if (currentScene === null && !coasterRide.active) {
+      if (Math.abs(player.x - COASTER_GATE_POS.x) < BUILDING_RANGE && keys['Enter']) {
+        keys['Enter'] = false;
+        coasterRide.active = true;
+        coasterRide.phase = 'boarding';
+        coasterRide.timer = 0;
+        coasterRide.screams = 0;
+        coasterRide.x = 380;
+        coasterRide.y = GROUND_Y;
+        coasterRide.angle = 0;
+      }
+    }
+
+    if (coasterRide.active) {
+      coasterRide.timer += dt;
+      const cr = coasterRide;
+      if (cr.phase === 'boarding' && cr.timer > 800) {
+        cr.phase = 'climbing'; cr.timer = 0;
+      } else if (cr.phase === 'climbing') {
+        const t = Math.min(cr.timer / 2000, 1);
+        cr.x = 380 + t * 220;
+        cr.y = GROUND_Y - t * 220;
+        if (cr.timer > 2000) { cr.phase = 'loop'; cr.timer = 0; }
+      } else if (cr.phase === 'loop') {
+        const t = Math.min(cr.timer / 3000, 1);
+        cr.angle = t * Math.PI * 2;
+        cr.x = 800 + Math.cos(cr.angle - Math.PI / 2) * 160;
+        cr.y = 260 + Math.sin(cr.angle - Math.PI / 2) * 160;
+        // Space to scream
+        if (keys['Space'] && cr.screams < 5) {
+          keys['Space'] = false;
+          cr.screams++;
+          score += POINTS.COASTER_SCREAM;
+          addPopup(cr.x, cr.y - 30, 'WHEEE! +' + POINTS.COASTER_SCREAM, '#f472b6');
+        }
+        if (cr.timer > 3000) { cr.phase = 'descent'; cr.timer = 0; }
+      } else if (cr.phase === 'descent') {
+        const t = Math.min(cr.timer / 1500, 1);
+        cr.x = 1000 + t * 200;
+        cr.y = 200 + t * 220;
+        cr.angle = 0;
+        if (cr.timer > 1500) { cr.phase = 'exit'; cr.timer = 0; }
+      } else if (cr.phase === 'exit' && cr.timer > 600) {
+        cr.phase = 'celebrate'; cr.timer = 0;
+        score += POINTS.COASTER_RIDE;
+        addPopup(player.x, player.y - 40, '+' + POINTS.COASTER_RIDE + ' Coaster Complete!', '#fbbf24');
+        playChaChing();
+        if (cr.firstRide) {
+          cr.firstRide = false;
+          score += POINTS.COASTER_FIRST_BONUS;
+          addPopup(player.x, player.y - 60, '+' + POINTS.COASTER_FIRST_BONUS + ' First Ride Bonus!', '#f472b6');
+        }
+      } else if (cr.phase === 'celebrate' && cr.timer > 2000) {
+        cr.active = false;
+        cr.phase = 'idle';
+        player.x = 1200;
+        player.y = GROUND_Y;
+        player.onGround = true;
+      }
+      // Disable normal movement during ride
+      if (cr.active) {
+        player.x = cr.x;
+        player.y = cr.y;
+        player.vy = 0;
+      }
+    }
+
+    // Water gun horse race booth entry
+    if (Math.abs(player.x - WATER_GUN_BOOTH_POS.x) < BUILDING_RANGE && keys['Enter'] && currentScene === null && !waterGunRace.complete) {
+      keys['Enter'] = false;
+      currentScene = Scene.WATER_GUN_RACE;
+      waterGunRace = {
+        active: true, round: 0, roundsWon: 0,
+        charging: false, chargePower: 0,
+        playerHorse: 0, aiHorse1: 0, aiHorse2: 0,
+        raceTimer: 0, raceOver: false,
+        targetJiggle: 0, hitRing: 0,
+        prize: '', prizeAnimal: '',
+        complete: false,
+      };
+    }
+
+    // Bi-plane ride entry
+    if (Math.abs(player.x - BIPLANE_HUB_POS.x) < BUILDING_RANGE && keys['Enter'] && currentScene === null && !biplaneRide.active) {
+      keys['Enter'] = false;
+      biplaneRide.active = true;
+      biplaneRide.timer = 0;
+      biplaneRide.waves = 0;
+    }
+
+    if (biplaneRide.active) {
+      biplaneRide.timer += dt;
+      biplaneRide.rideAngle += 0.008 * (dt / 16);
+      // Space to wave
+      if (keys['Space'] && biplaneRide.waves < 3) {
+        keys['Space'] = false;
+        biplaneRide.waves++;
+        score += POINTS.BIPLANE_WAVE;
+        addPopup(player.x, player.y - 40, '+' + POINTS.BIPLANE_WAVE + ' Wave!', '#fbbf24');
+      }
+      // Ride lasts 6 seconds
+      if (biplaneRide.timer > 6000) {
+        biplaneRide.active = false;
+        biplaneRide.complete = true;
+        score += POINTS.BIPLANE_RIDE;
+        addPopup(player.x, player.y - 50, '+' + POINTS.BIPLANE_RIDE + ' Bi-Plane Ride!', '#fbbf24');
+        playChaChing();
+        player.y = GROUND_Y;
+        player.onGround = true;
+      }
+      // Disable normal movement during ride
+      if (biplaneRide.active) {
+        const armAngle = biplaneRide.rideAngle;
+        player.x = BIPLANE_HUB_POS.x + Math.cos(armAngle) * 130;
+        player.y = GROUND_Y - 120 + Math.sin(armAngle) * 30;
+        player.vy = 0;
+      }
+    }
+
+    // Dance show entry
+    if (Math.abs(player.x - PARK_DANCE_STAGE_POS.x) < BUILDING_RANGE && keys['Enter'] && currentScene === null && !parkDanceShow.complete) {
+      keys['Enter'] = false;
+      currentScene = Scene.PARK_DANCE_SHOW;
+      parkDanceShow = {
+        active: true, step: 0, stepTimer: 0,
+        cheers: 0, complete: false, celebrateTimer: 0,
+        kittyX: PARK_DANCE_STAGE_POS.x, kittyY: GROUND_Y - 30, kittyAngle: 0,
+      };
+    }
+
+    // Portal back to Candy Kingdom
+    const dxCandyBack = player.x - PARK_CANDY_PORTAL.x;
+    const dyCandyBack = player.y - GROUND_Y;
+    if (dxCandyBack * dxCandyBack + dyCandyBack * dyCandyBack < PARK_CANDY_PORTAL.radius * PARK_CANDY_PORTAL.radius && keys['Enter']) {
+      keys['Enter'] = false;
+      switchToLevel(14);
+    }
+
+    // Exit portal (placeholder for Level 16)
+    if (Math.abs(player.x - PARK_EXIT_PORTAL_POS.x) < BUILDING_RANGE && keys['Enter']) {
+      keys['Enter'] = false;
+      addPopup(player.x, player.y - 40, 'Coming Soon!', '#fbbf24');
+    }
+  }
+
+  // Water Gun Race minigame scene
+  if (currentScene === Scene.WATER_GUN_RACE) {
+    const wg = waterGunRace;
+    wg.raceTimer += dt;
+    wg.targetJiggle = Math.sin(gameTime / 200) * 5;
+
+    // AI horses advance
+    wg.aiHorse1 += (0.8 + Math.random() * 0.4) * (dt / 16);
+    wg.aiHorse2 += (0.6 + Math.random() * 0.5) * (dt / 16);
+
+    // Space bar: hold to charge, release to fire
+    if (keys['Space'] && !wg.raceOver) {
+      wg.charging = true;
+      wg.chargePower = Math.min(100, wg.chargePower + 2 * (dt / 16));
+    } else if (wg.charging && !wg.raceOver) {
+      wg.charging = false;
+      // Fire! Check accuracy
+      const accuracy = Math.abs(wg.chargePower - 70); // 70 is center sweet spot
+      if (accuracy < 10) {
+        wg.hitRing = 2; // center
+        wg.playerHorse += 3;
+      } else if (accuracy < 25) {
+        wg.hitRing = 1; // middle
+        wg.playerHorse += 2;
+      } else {
+        wg.hitRing = 0; // outer
+        wg.playerHorse += 1;
+      }
+      wg.chargePower = 0;
+    }
+
+    // Check race end
+    const finishLine = 100;
+    if (!wg.raceOver && (wg.playerHorse >= finishLine || wg.aiHorse1 >= finishLine || wg.aiHorse2 >= finishLine || wg.raceTimer > 30000)) {
+      wg.raceOver = true;
+      // Determine placement
+      const horses = [
+        { name: 'player', pos: wg.playerHorse },
+        { name: 'Rosie', pos: wg.aiHorse1 },
+        { name: 'Thunder', pos: wg.aiHorse2 },
+      ].sort((a, b) => b.pos - a.pos);
+      const place = horses.findIndex(h => h.name === 'player');
+      if (place === 0) {
+        wg.roundsWon++;
+        score += POINTS.WATER_GUN_FIRST;
+        addPopup(player.x, player.y - 40, '+' + POINTS.WATER_GUN_FIRST + ' 1st Place!', '#fbbf24');
+      } else if (place === 1) {
+        score += POINTS.WATER_GUN_SECOND;
+        addPopup(player.x, player.y - 40, '+' + POINTS.WATER_GUN_SECOND + ' 2nd Place!', '#c0c0c0');
+      } else {
+        score += POINTS.WATER_GUN_THIRD;
+        addPopup(player.x, player.y - 40, '+' + POINTS.WATER_GUN_THIRD + ' 3rd Place!', '#cd7f32');
+      }
+      playChaChing();
+
+      // After brief pause, next round or prize
+      setTimeout(() => {
+        if (wg.round < 2) {
+          wg.round++;
+          wg.playerHorse = 0; wg.aiHorse1 = 0; wg.aiHorse2 = 0;
+          wg.raceTimer = 0; wg.raceOver = false;
+          wg.chargePower = 0; wg.charging = false;
+        } else {
+          // Award prize
+          const animals = ['elephant', 'rhino', 'giraffe'];
+          if (wg.roundsWon >= 2) {
+            wg.prize = 'large';
+            wg.prizeAnimal = animals[Math.floor(Math.random() * 3)];
+            addPopup(player.x, player.y - 60, 'Won a stuffed ' + wg.prizeAnimal + '!', '#fbbf24');
+          } else if (wg.roundsWon === 1) {
+            wg.prize = 'small';
+            wg.prizeAnimal = animals[Math.floor(Math.random() * 3)];
+            addPopup(player.x, player.y - 60, 'Won a small stuffy!', '#c0c0c0');
+          } else {
+            wg.prize = 'balloon';
+            addPopup(player.x, player.y - 60, 'Won a consolation balloon!', '#38bdf8');
+          }
+          wg.complete = true;
+          currentScene = null;
+        }
+      }, 2000);
+    }
+
+    if (keys['Escape']) {
+      keys['Escape'] = false;
+      currentScene = null;
+    }
+  }
+
+  // Park Dance Show scene
+  if (currentScene === Scene.PARK_DANCE_SHOW) {
+    const ds = parkDanceShow;
+    ds.stepTimer += dt;
+
+    // 8 automated choreography steps at ~500ms each
+    const stepDuration = 500;
+    if (ds.step < 8) {
+      if (ds.stepTimer > stepDuration) {
+        ds.step++;
+        ds.stepTimer = 0;
+      }
+      // Animate kitty position based on step
+      const cx = PARK_DANCE_STAGE_POS.x;
+      switch (ds.step) {
+        case 0: ds.kittyX = cx - 40 + (ds.stepTimer / stepDuration) * 40; break; // walk to center
+        case 1: ds.kittyAngle = (ds.stepTimer / stepDuration) * -Math.PI * 2; break; // spin left
+        case 2: ds.kittyY = GROUND_Y - 30 - Math.sin(ds.stepTimer / stepDuration * Math.PI) * 40; break; // jump
+        case 3: ds.kittyX = cx + (ds.stepTimer / stepDuration) * 30; break; // slide right
+        case 4: ds.kittyAngle = (ds.stepTimer / stepDuration) * Math.PI * 2; break; // spin right
+        case 5: break; // flash horn (visual only)
+        case 6: // jump-spin combo
+          ds.kittyY = GROUND_Y - 30 - Math.sin(ds.stepTimer / stepDuration * Math.PI) * 50;
+          ds.kittyAngle = (ds.stepTimer / stepDuration) * Math.PI * 4;
+          break;
+        case 7: break; // bow
+      }
+
+      // Space to cheer
+      if (keys['Space'] && ds.cheers < 5) {
+        keys['Space'] = false;
+        ds.cheers++;
+        score += POINTS.DANCE_SHOW_CHEER;
+        addPopup(player.x, player.y - 40, '+' + POINTS.DANCE_SHOW_CHEER + ' Cheer!', '#c084fc');
+      }
+    } else if (!ds.complete) {
+      ds.complete = true;
+      ds.celebrateTimer = 0;
+      score += POINTS.DANCE_SHOW;
+      addPopup(player.x, player.y - 50, '+' + POINTS.DANCE_SHOW + ' Dance Show!', '#fbbf24');
+      playChaChing();
+      if (ds.cheers >= 5) {
+        score += POINTS.DANCE_SHOW_PERFECT_AUDIENCE;
+        addPopup(player.x, player.y - 70, '+' + POINTS.DANCE_SHOW_PERFECT_AUDIENCE + ' Perfect Audience!', '#f472b6');
+      }
+    } else {
+      ds.celebrateTimer += dt;
+      if (ds.celebrateTimer > 3000) {
+        currentScene = null;
+      }
+    }
+
+    if (keys['Escape']) {
+      keys['Escape'] = false;
+      currentScene = null;
+    }
   }
 
   // Cupcake Bakery minigame
@@ -6004,6 +6397,7 @@ function update(dt) {
   hud.shell.textContent = shellCount;
   if (hud.gem) hud.gem.textContent = candyGemCount;
   if (hud.cotton) hud.cotton.textContent = cottonCandyCount + '/8';
+  if (hud.iceCream) hud.iceCream.textContent = iceCreamCount + '/10';
 
   // Show/hide HUD items and control hints based on current level
   for (const el of hudItems) {
