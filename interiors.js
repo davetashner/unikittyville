@@ -2193,32 +2193,147 @@ function drawFaoSchwarzInterior(cam, W, H) {
 function drawEmpireStateInterior(cam, W, H) {
   const cx = cam + W / 2;
   if (!empireAtTop) {
-    ctx.fillStyle = '#78716c'; ctx.fillRect(cam, 0, W, H);
-    ctx.fillStyle = '#fbbf24'; ctx.fillRect(cx - 60, H * 0.3, 120, 160);
-    ctx.strokeStyle = '#92400e'; ctx.lineWidth = 3; ctx.strokeRect(cx - 60, H * 0.3, 120, 160);
-    ctx.fillStyle = '#1e1b4b'; ctx.fillRect(cx - 30, H * 0.2, 60, 30);
-    ctx.fillStyle = '#ef4444'; ctx.font = 'bold 20px system-ui'; ctx.textAlign = 'center';
-    ctx.fillText(Math.round(empireElevator), cx, H * 0.2 + 22);
-    ctx.fillStyle = '#374151'; ctx.fillRect(cam + 30, H * 0.4, 20, H * 0.4);
-    ctx.fillStyle = '#fbbf24'; ctx.fillRect(cam + 30, H * 0.4 + H * 0.4 * (1 - empireElevator / 100), 20, H * 0.4 * (empireElevator / 100));
-    drawKitty(cx, H * 0.58, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
-  } else {
-    ctx.fillStyle = '#60a5fa'; ctx.fillRect(cam, 0, W, H);
-    for (let i = 0; i < 30; i++) {
-      const bx = cam + (i * 137 + 20) % W;
-      const bh = 40 + (i * 89) % 80;
-      ctx.fillStyle = ['#64748b','#475569','#94a3b8','#334155'][i % 4];
-      ctx.fillRect(bx, H - bh, 25, bh);
-      ctx.fillStyle = '#fef08a';
-      for (let wy = H - bh + 5; wy < H - 5; wy += 12) {
-        ctx.fillRect(bx + 5, wy, 5, 5); ctx.fillRect(bx + 15, wy, 5, 5);
+    // Elevator shaft — dark walls with moving floor indicator lights
+    ctx.fillStyle = '#52525b';
+    ctx.fillRect(cam, 0, W, H);
+    // Shaft wall panels
+    ctx.fillStyle = '#3f3f46';
+    ctx.fillRect(cam, 0, 30, H);
+    ctx.fillRect(cam + W - 30, 0, 30, H);
+    // Moving floor lights (scroll up as elevator rises)
+    ctx.fillStyle = '#fbbf2440';
+    for (let i = 0; i < 20; i++) {
+      const ly = ((i * H / 10) - empireElevator * 5) % H;
+      if (ly > 0) {
+        ctx.fillRect(cam + 8, ly, 14, 3);
+        ctx.fillRect(cam + W - 22, ly, 14, 3);
       }
     }
+    // Elevator car — brass and mahogany style
+    ctx.fillStyle = '#92400e';
+    ctx.fillRect(cx - 80, H * 0.25, 160, 200);
+    ctx.fillStyle = '#b45309';
+    ctx.fillRect(cx - 75, H * 0.27, 150, 190);
+    // Wood paneling
+    ctx.fillStyle = '#a0845a';
+    ctx.fillRect(cx - 70, H * 0.3, 140, 10);
+    ctx.fillRect(cx - 70, H * 0.55, 140, 10);
+    // Mirror on back wall
+    ctx.fillStyle = '#bfdbfe';
+    ctx.fillRect(cx - 40, H * 0.32, 80, 60);
+    ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 2;
+    ctx.strokeRect(cx - 40, H * 0.32, 80, 60);
+    // Floor indicator display
+    ctx.fillStyle = '#1e1b4b';
+    ctx.fillRect(cx - 25, H * 0.22, 50, 25);
+    ctx.fillStyle = '#ef4444';
+    ctx.font = 'bold 18px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('F' + Math.round(empireElevator), cx, H * 0.22 + 18);
+    // Progress bar on side
+    ctx.fillStyle = '#374151';
+    ctx.fillRect(cam + 45, H * 0.3, 15, H * 0.45);
+    ctx.fillStyle = '#fbbf24';
+    const barFill = H * 0.45 * (empireElevator / 100);
+    ctx.fillRect(cam + 45, H * 0.3 + H * 0.45 - barFill, 15, barFill);
+    // Elevator floor
+    ctx.fillStyle = '#78716c';
+    ctx.fillRect(cx - 75, H * 0.68, 150, 8);
+    // Player standing in elevator
+    drawKitty(cx, H * 0.65, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
+    // Elevator doors (top)
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillRect(cx - 80, H * 0.25, 8, 200);
+    ctx.fillRect(cx + 72, H * 0.25, 8, 200);
+  } else {
+    // Observation deck — sky above, city far below
+    // Sky gradient
+    const skyGrad = ctx.createLinearGradient(cam, 0, cam, H * 0.55);
+    skyGrad.addColorStop(0, '#3b82f6');
+    skyGrad.addColorStop(1, '#93c5fd');
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(cam, 0, W, H * 0.55);
+    // Clouds (we're above some of them!)
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    for (let i = 0; i < 6; i++) {
+      const cloudX = cam + (i * 170 + 30 + Math.sin(gameTime / 3000 + i) * 20) % W;
+      const cloudY = H * 0.35 + i * 15;
+      ctx.beginPath();
+      ctx.ellipse(cloudX, cloudY, 40, 10, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(cloudX - 20, cloudY + 5, 25, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // City skyline far below — tiny buildings
+    for (let i = 0; i < 50; i++) {
+      const bx = cam + (i * 97 + 10) % W;
+      const bh = 15 + (i * 53) % 40;
+      ctx.fillStyle = ['#64748b','#475569','#94a3b8','#334155','#6b7280'][i % 5];
+      ctx.fillRect(bx, H * 0.55 + 50 - bh, 12, bh);
+      // Tiny windows
+      ctx.fillStyle = '#fef08a';
+      for (let wy = H * 0.55 + 50 - bh + 3; wy < H * 0.55 + 48; wy += 6) {
+        ctx.fillRect(bx + 2, wy, 3, 2);
+        ctx.fillRect(bx + 7, wy, 3, 2);
+      }
+    }
+    // Central Park (green rectangle in the distance)
+    ctx.fillStyle = '#4ade80';
+    ctx.fillRect(cam + W * 0.35, H * 0.52, W * 0.15, 8);
+    // Rivers on sides
+    ctx.fillStyle = '#60a5fa';
+    ctx.fillRect(cam, H * 0.54, W * 0.08, 6);
+    ctx.fillRect(cam + W * 0.92, H * 0.54, W * 0.08, 6);
+
+    // Observation deck floor and walls
+    ctx.fillStyle = '#78716c';
+    ctx.fillRect(cam, H * 0.6, W, H * 0.4);
+    // Deck surface
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillRect(cam, H * 0.6, W, 6);
+    // Tile pattern on floor
+    ctx.strokeStyle = '#6b7280'; ctx.lineWidth = 0.5;
+    for (let tx = cam; tx < cam + W; tx += 25) {
+      ctx.beginPath(); ctx.moveTo(tx, H * 0.65); ctx.lineTo(tx, H); ctx.stroke();
+    }
+    for (let ty = H * 0.65; ty < H; ty += 25) {
+      ctx.beginPath(); ctx.moveTo(cam, ty); ctx.lineTo(cam + W, ty); ctx.stroke();
+    }
+
+    // Safety fence/railing with mesh
     ctx.strokeStyle = '#6b7280'; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.moveTo(cam, H * 0.7); ctx.lineTo(cam + W, H * 0.7); ctx.stroke();
-    drawKitty(cx, H * 0.67, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 20px system-ui'; ctx.textAlign = 'center';
-    ctx.fillText('102nd Floor — Top of New York!', cx, 40);
+    ctx.beginPath(); ctx.moveTo(cam, H * 0.55); ctx.lineTo(cam + W, H * 0.55); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cam, H * 0.6); ctx.lineTo(cam + W, H * 0.6); ctx.stroke();
+    // Vertical fence bars
+    ctx.lineWidth = 1.5;
+    for (let fx = cam; fx < cam + W; fx += 20) {
+      ctx.beginPath(); ctx.moveTo(fx, H * 0.55); ctx.lineTo(fx, H * 0.6); ctx.stroke();
+    }
+    // Mesh pattern
+    ctx.strokeStyle = '#9ca3af'; ctx.lineWidth = 0.5;
+    for (let fx = cam; fx < cam + W; fx += 8) {
+      ctx.beginPath(); ctx.moveTo(fx, H * 0.55); ctx.lineTo(fx + 4, H * 0.6); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(fx + 4, H * 0.55); ctx.lineTo(fx, H * 0.6); ctx.stroke();
+    }
+
+    // Coin-operated telescope
+    const telX = cam + W * 0.8;
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillRect(telX - 2, H * 0.62, 4, 20);
+    ctx.fillStyle = '#6b7280';
+    ctx.beginPath(); ctx.ellipse(telX, H * 0.62, 8, 5, -0.3, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#475569';
+    ctx.fillRect(telX - 1, H * 0.82, 6, 6);
+
+    // Player on the deck
+    drawKitty(cx, H * 0.78, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
+
+    // Title
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 18px system-ui'; ctx.textAlign = 'center';
+    ctx.fillText('102nd Floor — Top of the Empire State Building!', cx, 35);
+    ctx.fillStyle = '#bfdbfe'; ctx.font = '12px system-ui';
+    ctx.fillText('1,454 feet above the streets of Manhattan', cx, 52);
   }
   ctx.textAlign = 'left';
 }
