@@ -2773,7 +2773,7 @@ function drawTelegramOffice(cam, W, H) {
 
     // Completion overlay
     if (telegramComplete) {
-      const elapsed = (performance.now() - telegramStartTime) / 1000;
+      const elapsed = (telegramEndTime - telegramStartTime) / 1000;
       const words = telegramText.split(' ').length;
       const wpm = Math.round((words / elapsed) * 60);
       const accuracy = Math.round(((telegramText.length - telegramErrors) / telegramText.length) * 100);
