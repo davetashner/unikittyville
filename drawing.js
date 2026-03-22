@@ -53,6 +53,7 @@ function draw() {
 
       [Scene.GELATO_SHOP]: () => drawGelatoShopInterior(cam, W, H),
       [Scene.MARKET]: () => drawMarketInterior(cam, W, H),
+      [Scene.FOUNTAIN_WISHES]: () => drawFountainWishesInterior(cam, W, H),
     };
     if (sceneDrawMap[currentScene]) sceneDrawMap[currentScene]();
   } else {

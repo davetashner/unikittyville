@@ -3682,3 +3682,286 @@ function drawMissionControlInterior(cam, W, H) {
 
   ctx.textAlign = 'left';
 }
+
+function drawFountainWishesInterior(cam, W, H) {
+  const cx = cam + W / 2;
+  const cy = H / 2;
+
+  // Warm sunset background gradient
+  const grad = ctx.createLinearGradient(cx - 250, cy - 150, cx - 250, cy + 170);
+  grad.addColorStop(0, '#f97316');
+  grad.addColorStop(0.3, '#fb923c');
+  grad.addColorStop(0.6, '#fbbf24');
+  grad.addColorStop(1, '#92400e');
+  ctx.fillStyle = grad;
+  ctx.fillRect(cx - 250, cy - 150, 500, 320);
+
+  // Distant buildings silhouette
+  ctx.fillStyle = '#78350f';
+  ctx.fillRect(cx + 80, cy - 100, 30, 130);
+  ctx.fillRect(cx + 120, cy - 80, 25, 110);
+  ctx.fillRect(cx + 155, cy - 110, 20, 140);
+  ctx.fillRect(cx - 230, cy - 70, 35, 100);
+
+  // Stone ground / piazza
+  ctx.fillStyle = '#d6d3d1';
+  ctx.fillRect(cx - 250, cy + 60, 500, 110);
+
+  // Draw ornate fountain (centered at fx)
+  const fx = cx + 60;
+  const fy = cy + 30; // water level
+
+  // Outer basin (stone)
+  ctx.fillStyle = '#a8a29e';
+  ctx.beginPath();
+  ctx.ellipse(fx, fy + 10, 55, 16, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Water in outer basin
+  ctx.fillStyle = '#38bdf8';
+  ctx.globalAlpha = 0.7;
+  ctx.beginPath();
+  ctx.ellipse(fx, fy + 8, 50, 13, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Middle tier
+  ctx.fillStyle = '#d6d3d1';
+  ctx.fillRect(fx - 5, fy - 25, 10, 30);
+  ctx.beginPath();
+  ctx.ellipse(fx, fy - 25, 28, 10, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Water in middle tier
+  ctx.fillStyle = '#38bdf8';
+  ctx.globalAlpha = 0.6;
+  ctx.beginPath();
+  ctx.ellipse(fx, fy - 27, 23, 7, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Center spout column
+  ctx.fillStyle = '#d6d3d1';
+  ctx.fillRect(fx - 3, fy - 55, 6, 30);
+  // Spout decoration
+  ctx.fillStyle = '#a8a29e';
+  ctx.beginPath();
+  ctx.arc(fx, fy - 55, 6, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Water jets from spout
+  const jt = Math.sin(gameTime / 200) * 3;
+  ctx.strokeStyle = '#38bdf8';
+  ctx.lineWidth = 1.5;
+  ctx.globalAlpha = 0.8;
+  for (let i = -1; i <= 1; i++) {
+    ctx.beginPath();
+    ctx.moveTo(fx + i * 5, fy - 55);
+    ctx.quadraticCurveTo(fx + i * 12, fy - 70 + jt, fx + i * 18, fy - 25);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  // Water sparkles
+  ctx.fillStyle = '#fff';
+  for (let i = 0; i < 5; i++) {
+    ctx.globalAlpha = Math.sin(gameTime / 200 + i) * 0.3 + 0.4;
+    const sx = fx - 30 + Math.cos(gameTime / 300 + i * 1.3) * 35;
+    const sy = fy - 5 + Math.sin(gameTime / 250 + i * 1.7) * 10;
+    ctx.beginPath();
+    ctx.arc(sx, sy, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Target zone indicators (subtle rings)
+  ctx.strokeStyle = 'rgba(251,191,36,0.3)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath(); ctx.ellipse(fx, fy + 5, 12, 4, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(fx, fy + 5, 30, 9, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(fx, fy + 8, 55, 15, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Point labels on zones
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.font = '8px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText('50', fx, fy - 2);
+  ctx.fillText('25', fx + 22, fy + 2);
+  ctx.fillText('10', fx + 42, fy + 8);
+
+  // Stone railing where Sparkle stands (bottom-left)
+  ctx.fillStyle = '#a8a29e';
+  ctx.fillRect(cx - 200, cy + 45, 80, 18);
+  ctx.fillStyle = '#78716c';
+  ctx.fillRect(cx - 195, cy + 30, 6, 15);
+  ctx.fillRect(cx - 175, cy + 30, 6, 15);
+  ctx.fillRect(cx - 155, cy + 30, 6, 15);
+  ctx.fillRect(cx - 135, cy + 30, 6, 15);
+
+  // Draw Sparkle (unikitty) on the railing
+  const kittyX = cx - 160;
+  const kittyY = cy + 45;
+  drawKitty(kittyX, kittyY, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
+
+  // Gold coin in paw (when not thrown)
+  if (!wishCoin.active && wishTossesLeft > 0 && !wishSummary) {
+    ctx.fillStyle = '#fbbf24';
+    ctx.strokeStyle = '#d97706';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(kittyX + 10, kittyY - 8, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  // Aim line (dotted parabolic arc preview)
+  if (!wishCoin.active && wishTossesLeft > 0 && !wishSummary) {
+    ctx.strokeStyle = '#fbbf24';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    const startX = kittyX;
+    const startY = kittyY;
+    const previewSpeed = 3 + wishPower * 6;
+    let pvx = Math.cos(wishAngle) * previewSpeed;
+    let pvy = -Math.sin(wishAngle) * previewSpeed;
+    let px = startX;
+    let py = startY;
+    ctx.moveTo(px, py);
+    for (let step = 0; step < 40; step++) {
+      px += pvx;
+      py += pvy;
+      pvy += 0.12;
+      ctx.lineTo(px, py);
+      if (py > cy + 100) break;
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Power meter (vertical bar on left)
+  if (wishCharging && !wishSummary) {
+    const barX = cx - 220;
+    const barY = cy - 60;
+    const barH = 100;
+    ctx.fillStyle = '#1f2937';
+    ctx.fillRect(barX, barY, 12, barH);
+    ctx.fillStyle = '#fbbf24';
+    const fillH = barH * wishPower;
+    ctx.fillRect(barX, barY + barH - fillH, 12, fillH);
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(barX, barY, 12, barH);
+    ctx.fillStyle = '#fff';
+    ctx.font = '9px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('PWR', barX + 6, barY - 5);
+  }
+
+  // Coin in flight (gold circle with spin animation)
+  if (wishCoin.active) {
+    ctx.save();
+    ctx.translate(wishCoin.x, wishCoin.y);
+    const spinW = 5 * Math.abs(Math.cos(wishCoin.spin));
+    ctx.fillStyle = '#fbbf24';
+    ctx.strokeStyle = '#d97706';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, Math.max(1, spinW), 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.beginPath();
+    ctx.arc(-1, -1, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // Trail
+    ctx.fillStyle = 'rgba(251,191,36,0.3)';
+    ctx.beginPath();
+    ctx.arc(wishCoin.x - wishCoin.vx * 2, wishCoin.y - wishCoin.vy * 2, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Splash particles
+  for (const p of wishSplashParticles) {
+    ctx.fillStyle = 'rgba(56,189,248,' + Math.min(1, p.life / 300) + ')';
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // UI: Coin counter (top-right)
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 13px system-ui';
+  ctx.textAlign = 'right';
+  ctx.fillText('Coins: ' + (3 - wishTossesLeft) + '/3', cx + 230, cy - 130);
+
+  // UI: Score
+  ctx.fillStyle = '#fbbf24';
+  ctx.font = 'bold 13px system-ui';
+  ctx.fillText('Score: ' + wishScore, cx + 230, cy - 112);
+  ctx.textAlign = 'left';
+
+  // Title
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 14px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText('Trevi Fountain Coin Toss', cx, cy - 135);
+
+  // Instructions
+  if (!wishSummary) {
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '11px system-ui';
+    ctx.fillText('Up/Down = Aim | Hold Space = Charge & Release to Throw | Enter = Exit', cx, cy + 145);
+  }
+
+  // Summary screen
+  if (wishSummary) {
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(cx - 150, cy - 80, 300, 180);
+    ctx.strokeStyle = '#fbbf24';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(cx - 150, cy - 80, 300, 180);
+
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 16px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('Fountain Wishes Complete!', cx, cy - 55);
+
+    ctx.fillStyle = '#fff';
+    ctx.font = '13px system-ui';
+    let sy = cy - 30;
+    for (let i = 0; i < wishHits.length; i++) {
+      const h = wishHits[i];
+      let txt = '';
+      if (h === 'center') txt = 'Toss ' + (i + 1) + ': Center spout \u2014 50 pts';
+      else if (h === 'middle') txt = 'Toss ' + (i + 1) + ': Middle tier \u2014 25 pts';
+      else if (h === 'outer') txt = 'Toss ' + (i + 1) + ': Outer basin \u2014 10 pts';
+      else txt = 'Toss ' + (i + 1) + ': Missed! \u2014 0 pts';
+      ctx.fillText(txt, cx, sy);
+      sy += 20;
+    }
+
+    const waterHits = wishHits.filter(h => h !== 'miss');
+    if (waterHits.length === 3 && wishHits.every(h => h === 'center')) {
+      ctx.fillStyle = '#fbbf24';
+      ctx.fillText('Master Wisher! +' + POINTS.WISH_MASTER_BONUS, cx, sy);
+      sy += 20;
+    } else if (waterHits.length === 3) {
+      ctx.fillStyle = '#22c55e';
+      ctx.fillText('Lucky Kitty Bonus! +' + POINTS.WISH_LUCKY_BONUS, cx, sy);
+      sy += 20;
+    }
+
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 15px system-ui';
+    ctx.fillText('Total: ' + wishScore + ' pts', cx, sy + 5);
+
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '11px system-ui';
+    ctx.fillText('Press Enter to continue', cx, cy + 85);
+  }
+
+  ctx.textAlign = 'left';
+}
