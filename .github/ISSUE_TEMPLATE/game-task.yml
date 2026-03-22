@@ -1,0 +1,28 @@
+name: Game Task
+description: Bug fix, feature, or improvement for Unikittyville
+labels: []
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: What needs to happen?
+      description: Describe the bug, feature, or change. Be specific — Claude will read this literally.
+      placeholder: "e.g., The surfing minigame doesn't show the wave height indicator"
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context (optional)
+      description: Screenshots, level name, file hints, or design details that help.
+      placeholder: "e.g., Hawaii level, drawing.js around line 4200"
+  - type: checkboxes
+    id: autopilot
+    attributes:
+      label: Autopilot
+      description: >
+        Adding the `claude-ready` label will cause Claude to **automatically pick this up,
+        implement it, and deploy it to the live site within ~1 hour**. Only add the label
+        when the description above is clear enough to ship without your review.
+      options:
+        - label: I understand this will be built and deployed automatically
