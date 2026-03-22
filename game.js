@@ -115,6 +115,8 @@ const Scene = {
   GELATO_SHOP: 'gelatoShop',
   MARKET: 'market',
   FOUNTAIN_WISHES: 'fountainWishes',
+  CUPCAKE_BAKERY: 'cupcakeBakery',
+  DANCE_PARTY: 'danceParty',
 };
 let currentScene = null;
 
@@ -133,6 +135,7 @@ const POSTCARD_THEMES = {
   11: { color: '#6b7280', greeting: 'Greetings from NASA!' },
   12: { color: '#1e3a5f', greeting: 'Greetings from Outer Space!' },
   13: { color: '#c0c0c0', greeting: 'Greetings from the Moon!' },
+  14: { color: '#f9a8d4', greeting: 'Sweetest wishes from Candy Kingdom!' },
 };
 const POSTCARD_POINTS = 25;
 let postcardOpen = false;
@@ -801,6 +804,55 @@ const TRAIN_PUZZLES = [
 
 // ── Achievement Badges ──
 const ACHIEVEMENT_BONUS = 200;
+// ── Candy Kingdom State ──
+let candyGemCount = 0;
+let cottonCandyCount = 0;
+let cupcakesBaked = 0;
+let cupcakeBakery = {
+  phase: 0, // 0=flavor, 1=mix, 2=decorate, 3=oven, 4=done
+  flavor: '',
+  mixProgress: 0,
+  decorations: [],
+  ovenTimer: 0,
+  ovenPulled: false,
+  score: 0,
+};
+let lemonBoss = {
+  active: false, hp: 5, x: 2800, y: GROUND_Y,
+  state: 'idle', // idle, patrol, charge, sourShower, defeated
+  vx: 0, stateTimer: 0, dir: 1,
+  projectiles: [], defeatTimer: 0,
+  defeated: false, entranceSaid: false,
+};
+let sugarBalls = [];
+let sugarThrowCooldown = 0;
+let ridingDragon = false;
+let dragonX = 0, dragonY = 0;
+let cottonCandyPuffs = [];
+let cottonCandyStormParticles = [];
+let danceParty = {
+  active: false, round: 0, step: 0,
+  pattern: [], playerInput: [],
+  showingPattern: true, showTimer: 0, showIndex: 0,
+  score: 0, feedback: '', feedbackTimer: 0,
+  roundScore: 0, misses: 0,
+  complete: false, celebrateTimer: 0,
+};
+
+// Initialize cotton candy puffs
+function initCottonCandyPuffs() {
+  cottonCandyPuffs = [];
+  for (let i = 0; i < 8; i++) {
+    cottonCandyPuffs.push({
+      x: 4000 + i * 125,
+      y: 200 + Math.sin(i * 1.2) * 80,
+      collected: false,
+      bobPhase: Math.random() * Math.PI * 2,
+    });
+  }
+}
+initCottonCandyPuffs();
+
 const achievements = [
   { id: 'junior_geographer', name: 'Junior Geographer', description: 'Visit 5 different levels', icon: '\u{1F30D}', earned: false, hint: 'Explore more levels!' },
   { id: 'marine_biologist', name: 'Marine Biologist', description: 'Complete the scuba diving level', icon: '\u{1F420}', earned: false, hint: 'Dive deep in the Oriental level' },
@@ -810,6 +862,11 @@ const achievements = [
   { id: 'world_traveler', name: 'World Traveler', description: 'Visit all 13 levels', icon: '\u2708\uFE0F', earned: false, hint: 'See every destination' },
   { id: 'kits_best_friend', name: "Kit's Best Friend", description: 'Complete the hospital delivery and picnic', icon: '\u{1F37C}', earned: false, hint: 'Deliver Kit and visit the park' },
   { id: 'high_scorer', name: 'High Scorer', description: 'Reach 10,000 points', icon: '\u2B50', earned: false, hint: 'Keep collecting and exploring!' },
+  { id: 'master_baker', name: 'Master Baker', description: 'Bake 3 perfect cupcakes', icon: '\u{1F9C1}', earned: false, hint: 'Visit the Cupcake Bakery' },
+  { id: 'sugar_rush', name: 'Sugar Rush', description: 'Defeat King Lemon Drop', icon: '\u{1F4A5}', earned: false, hint: 'Throw sugar to sweeten the boss' },
+  { id: 'dragon_rider', name: 'Dragon Rider', description: 'Ride Fluffernutter through the storm', icon: '\u{1F409}', earned: false, hint: 'Find the dragon landing pad' },
+  { id: 'dance_star', name: 'Dance Star', description: 'Complete the dance party', icon: '\u{1F483}', earned: false, hint: 'Join the dance floor' },
+  { id: 'sweet_kingdom', name: 'Sweet Kingdom', description: 'Complete ALL Candy Kingdom activities', icon: '\u{1F36D}', earned: false, hint: 'Bake, battle, ride, and dance!' },
 ];
 let levelsVisited = new Set();
 let achievementScreenOpen = false;
@@ -856,8 +913,8 @@ function checkAchievements() {
   // Junior Geographer — visit 5 different levels
   if (levelsVisited.size >= 5) awardAchievement('junior_geographer');
 
-  // World Traveler — visit all 13 levels
-  if (levelsVisited.size >= 13) awardAchievement('world_traveler');
+  // World Traveler — visit all levels
+  if (levelsVisited.size >= Object.keys(levelRegistry).length) awardAchievement('world_traveler');
 
   // Astronaut — reach the Moon (level 13)
   if (currentLevel === 13) awardAchievement('astronaut');
@@ -1403,7 +1460,7 @@ function completeTransition() {
   cheetahSpeech = { text: '', timer: 0 };
   dustParticles = [];
   missionControl = { active: false, round: 0, typed: '', errors: 0, startTime: 0, complete: false, timeLeft: 60000, failed: false, rocketY: 0, showResult: 0 };
-  // Keep space suit on for levels 11-13 (Cape → Space → Moon)
+  // Keep space suit on for levels 11-13 (Cape -> Space -> Moon), remove for others
   if (!(levelTransition.toLevel >= 11 && levelTransition.toLevel <= 13 && capeSpaceSuit)) {
     capeSpaceSuit = false;
   }
@@ -1481,6 +1538,34 @@ function completeTransition() {
     samples: [], walls: [], feedback: '', feedbackTimer: 0,
     complete: false, challengesDone: 0,
   };
+
+  // Reset Candy Kingdom state
+  if (levelTransition.toLevel === 14) {
+    candyGemCount = 0;
+    cottonCandyCount = 0;
+    cupcakesBaked = 0;
+    cupcakeBakery = { phase: 0, flavor: '', mixProgress: 0, decorations: [], ovenTimer: 0, ovenPulled: false, score: 0 };
+    lemonBoss = {
+      active: false, hp: 5, x: 2800, y: GROUND_Y,
+      state: 'idle', vx: 0, stateTimer: 0, dir: 1,
+      projectiles: [], defeatTimer: 0,
+      defeated: false, entranceSaid: false,
+    };
+    sugarBalls = [];
+    sugarThrowCooldown = 0;
+    ridingDragon = false;
+    cottonCandyStormParticles = [];
+    danceParty = {
+      active: false, round: 0, step: 0,
+      pattern: [], playerInput: [],
+      showingPattern: true, showTimer: 0, showIndex: 0,
+      score: 0, feedback: '', feedbackTimer: 0,
+      roundScore: 0, misses: 0,
+      complete: false, celebrateTimer: 0,
+    };
+    initCottonCandyPuffs();
+    for (const yb of level14Candy.yarnBalls) yb.collected = false;
+  }
 
   // Reset bug catcher (keep hasBugNet and bugCatcherFinished across level switches)
   bugCatcherActive = false;
@@ -1760,6 +1845,8 @@ const hud = {
   fruit: document.getElementById('hudFruit'),
   photo: document.getElementById('hudPhoto'),
   cheetahYarn: document.getElementById('hudCheetahYarn'),
+  gem: document.getElementById('hudGem'),
+  cotton: document.getElementById('hudCotton'),
   controls: document.getElementById('controls'),
 };
 const hudItems = document.querySelectorAll('.hud-item');
@@ -2899,6 +2986,13 @@ function update(dt) {
     if (keys['ArrowDown']) player.y = Math.min(canvas.height - 40, player.y + 3.5);
     if (keys['ArrowLeft']) player.vx = Math.max(SPACE_SPEED - 1.5, player.vx - 0.5);
     if (keys['ArrowRight']) player.vx = Math.min(SPACE_SPEED + 2, player.vx + 0.3);
+    player.vy = 0;
+    player.onGround = false;
+  }
+
+  // Dragon ride: skip normal physics (dragon controls in level 14 section)
+  if (ridingDragon) {
+    player.vx = 0;
     player.vy = 0;
     player.onGround = false;
   }
@@ -4467,11 +4561,421 @@ function update(dt) {
       apolloMission.rockPlayerX = 0;
     }
 
-    // Game completion at end of level
-    if (player.x > level13Moon.worldW - 200 && keys['Enter']) {
+    // Portal to Candy Kingdom
+    const dxCandy = player.x - MOON_CANDY_PORTAL.x;
+    const dyCandy = player.y - GROUND_Y;
+    if (dxCandy * dxCandy + dyCandy * dyCandy < MOON_CANDY_PORTAL.radius * MOON_CANDY_PORTAL.radius && keys['Enter']) {
+      keys['Enter'] = false;
+      switchToLevel(14);
+    }
+
+    // Game completion at end of level (before portal area)
+    if (player.x > level13Moon.worldW - 200 && player.x < MOON_CANDY_PORTAL.x - 50 && keys['Enter']) {
       keys['Enter'] = false;
       addPopup(player.x, player.y - 40, 'ADVENTURE COMPLETE! +500', '#fbbf24');
       score += 500;
+    }
+  }
+
+  // ── Candy Kingdom interactions (level 14) ──
+  if (currentLevel === 14) {
+    // Collect sprinkle gems (yarn balls)
+    for (const yb of level14Candy.yarnBalls) {
+      if (yb.collected) continue;
+      const dx = player.x - yb.x;
+      const dy = player.y - yb.y;
+      if (dx * dx + dy * dy < COLLECT_RADIUS_SQ) {
+        yb.collected = true;
+        candyGemCount++;
+        score += 20;
+        addPopup(yb.x, yb.y - 20, '+20 Sprinkle Gem!', yb.color);
+        playChaChing();
+      }
+    }
+
+    // Cupcake Bakery entry
+    if (Math.abs(player.x - CUPCAKE_BAKERY_POS.x) < BUILDING_RANGE && keys['Enter'] && currentScene === null) {
+      keys['Enter'] = false;
+      currentScene = Scene.CUPCAKE_BAKERY;
+      cupcakeBakery = { phase: 0, flavor: '', mixProgress: 0, decorations: [], ovenTimer: 0, ovenPulled: false, score: 0 };
+    }
+
+    // Lemon Drop Boss activation
+    if (!lemonBoss.defeated && !lemonBoss.active && player.x > LEMON_BOSS_ZONE.xMin && player.x < LEMON_BOSS_ZONE.xMax && currentScene === null) {
+      lemonBoss.active = true;
+      lemonBoss.hp = 5;
+      lemonBoss.state = 'patrol';
+      lemonBoss.stateTimer = 0;
+      lemonBoss.x = LEMON_BOSS_POS.x;
+      lemonBoss.y = GROUND_Y;
+      lemonBoss.projectiles = [];
+      lemonBoss.dir = 1;
+      lemonBoss.defeatTimer = 0;
+      if (!lemonBoss.entranceSaid) {
+        lemonBoss.entranceSaid = true;
+        addPopup(lemonBoss.x, lemonBoss.y - 60, 'I am King Lemon Drop! Taste my sourness!', '#fbbf24');
+      }
+    }
+
+    // Sugar ball throw (S key)
+    if (sugarThrowCooldown > 0) sugarThrowCooldown -= dt;
+    if (keys['KeyS'] && currentScene === null && sugarThrowCooldown <= 0 && lemonBoss.active && !lemonBoss.defeated) {
+      keys['KeyS'] = false;
+      sugarThrowCooldown = 400;
+      sugarBalls.push({
+        x: player.x + player.facing * 15,
+        y: player.y - 20,
+        vx: player.facing * 6,
+        vy: -2,
+        life: 2000,
+      });
+    }
+
+    // Update sugar balls
+    for (let i = sugarBalls.length - 1; i >= 0; i--) {
+      const sb = sugarBalls[i];
+      sb.x += sb.vx;
+      sb.y += sb.vy;
+      sb.vy += 0.15; // light gravity
+      sb.life -= dt;
+      if (sb.life <= 0 || sb.y > GROUND_Y + 20) {
+        sugarBalls.splice(i, 1);
+        continue;
+      }
+      // Hit boss
+      if (lemonBoss.active && !lemonBoss.defeated) {
+        const dx = sb.x - lemonBoss.x;
+        const dy = sb.y - (lemonBoss.y - 20);
+        if (dx * dx + dy * dy < 900) { // 30px radius
+          sugarBalls.splice(i, 1);
+          lemonBoss.hp--;
+          addPopup(lemonBoss.x, lemonBoss.y - 40, 'Hit! HP: ' + lemonBoss.hp, '#fbbf24');
+          if (lemonBoss.hp <= 0) {
+            lemonBoss.state = 'defeated';
+            lemonBoss.defeated = true;
+            lemonBoss.defeatTimer = 2000;
+            score += 150;
+            addPopup(lemonBoss.x, lemonBoss.y - 60, '+150 Boss Defeated!', '#fbbf24');
+            playChaChing();
+            awardAchievement('sugar_rush');
+          } else if (lemonBoss.hp <= 2) {
+            lemonBoss.state = 'charge';
+            lemonBoss.stateTimer = 0;
+          }
+        }
+      }
+    }
+
+    // Lemon Boss AI
+    if (lemonBoss.active && !lemonBoss.defeated) {
+      lemonBoss.stateTimer += dt;
+      lemonBoss.dir = player.x > lemonBoss.x ? 1 : -1;
+
+      if (lemonBoss.state === 'patrol') {
+        lemonBoss.x += Math.sin(gameTime / 500) * 1.5;
+        if (lemonBoss.stateTimer > 3000) {
+          lemonBoss.state = 'sourShower';
+          lemonBoss.stateTimer = 0;
+        }
+      } else if (lemonBoss.state === 'sourShower') {
+        // Fire 5 projectiles
+        if (lemonBoss.stateTimer < 100) {
+          for (let i = 0; i < 5; i++) {
+            lemonBoss.projectiles.push({
+              x: lemonBoss.x,
+              y: lemonBoss.y - 30,
+              vx: (Math.random() - 0.5) * 4,
+              vy: -4 - Math.random() * 3,
+              life: 3000,
+            });
+          }
+        }
+        if (lemonBoss.stateTimer > 2000) {
+          lemonBoss.state = lemonBoss.hp <= 2 ? 'charge' : 'patrol';
+          lemonBoss.stateTimer = 0;
+        }
+      } else if (lemonBoss.state === 'charge') {
+        lemonBoss.x += lemonBoss.dir * 3;
+        if (lemonBoss.stateTimer > 2000) {
+          lemonBoss.state = 'sourShower';
+          lemonBoss.stateTimer = 0;
+        }
+      }
+    }
+
+    // Update boss projectiles
+    for (let i = lemonBoss.projectiles.length - 1; i >= 0; i--) {
+      const p = lemonBoss.projectiles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.2;
+      p.life -= dt;
+      if (p.life <= 0 || p.y > GROUND_Y + 20) {
+        lemonBoss.projectiles.splice(i, 1);
+        continue;
+      }
+      // Hit player
+      const dx = p.x - player.x;
+      const dy = p.y - player.y;
+      if (dx * dx + dy * dy < 400) {
+        lemonBoss.projectiles.splice(i, 1);
+        addPopup(player.x, player.y - 30, 'Sour hit! Ouch!', '#fbbf24');
+      }
+    }
+
+    // Boss defeat animation
+    if (lemonBoss.defeated && lemonBoss.defeatTimer > 0) {
+      lemonBoss.defeatTimer -= dt;
+    }
+
+    // Dragon ride entry
+    if (Math.abs(player.x - DRAGON_LANDING_POS.x) < BUILDING_RANGE && keys['Enter'] && currentScene === null && !ridingDragon) {
+      keys['Enter'] = false;
+      ridingDragon = true;
+      dragonX = player.x;
+      dragonY = player.y - 30;
+      addPopup(player.x, player.y - 60, 'Mount Fluffernutter!', '#f472b6');
+    }
+
+    // Dragon ride controls
+    if (ridingDragon) {
+      if (keys['ArrowLeft']) dragonX -= 3;
+      if (keys['ArrowRight']) dragonX += 3;
+      if (keys['ArrowUp']) dragonY -= 2;
+      if (keys['ArrowDown']) dragonY += 2;
+      if (keys['Space']) { dragonY -= 3; keys['Space'] = false; }
+      // Clamp dragon position
+      dragonX = Math.max(50, Math.min(CANDY_WORLD_W - 50, dragonX));
+      dragonY = Math.max(50, Math.min(GROUND_Y - 30, dragonY));
+      player.x = dragonX;
+      player.y = dragonY + 30;
+
+      // Collect cotton candy puffs
+      for (const puff of cottonCandyPuffs) {
+        if (puff.collected) continue;
+        const dx = dragonX - puff.x;
+        const dy = dragonY - puff.y;
+        if (dx * dx + dy * dy < 900) {
+          puff.collected = true;
+          cottonCandyCount++;
+          score += 20;
+          addPopup(puff.x, puff.y - 20, '+20 Cotton Candy!', '#f9a8d4');
+          playChaChing();
+        }
+      }
+
+      // Cotton candy storm zone damage (visual only — pink pellets)
+      if (dragonX > 4300 && dragonX < 4600) {
+        if (Math.random() < 0.1) {
+          cottonCandyStormParticles.push({
+            x: 4300 + Math.random() * 300,
+            y: Math.random() * 300,
+            vy: 2 + Math.random() * 2,
+            life: 1500,
+          });
+        }
+      }
+
+      // All puffs collected bonus
+      if (cottonCandyPuffs.every(p => p.collected) && cottonCandyCount === 8) {
+        cottonCandyCount = 9; // prevent re-trigger
+        score += 30;
+        addPopup(dragonX, dragonY - 40, '+30 All Cotton Candy!', '#f9a8d4');
+        playChaChing();
+        awardAchievement('dragon_rider');
+      }
+
+      // Dismount with G
+      if (keys['KeyG']) {
+        keys['KeyG'] = false;
+        ridingDragon = false;
+        player.y = GROUND_Y;
+        player.onGround = true;
+      }
+    }
+
+    // Update storm particles
+    for (let i = cottonCandyStormParticles.length - 1; i >= 0; i--) {
+      const p = cottonCandyStormParticles[i];
+      p.y += p.vy;
+      p.life -= dt;
+      if (p.life <= 0 || p.y > GROUND_Y) cottonCandyStormParticles.splice(i, 1);
+    }
+
+    // Dance Party entry
+    if (Math.abs(player.x - DANCE_STAGE_POS.x) < BUILDING_RANGE && keys['Enter'] && currentScene === null && !danceParty.complete) {
+      keys['Enter'] = false;
+      currentScene = Scene.DANCE_PARTY;
+      danceParty = {
+        active: true, round: 0, step: 0,
+        pattern: [], playerInput: [],
+        showingPattern: true, showTimer: 0, showIndex: 0,
+        score: 0, feedback: '', feedbackTimer: 0,
+        roundScore: 0, misses: 0,
+        complete: false, celebrateTimer: 0,
+      };
+      startDanceRound(0);
+    }
+
+    // Portal back to Moon
+    const dxMoon = player.x - CANDY_MOON_PORTAL.x;
+    const dyMoon = player.y - GROUND_Y;
+    if (dxMoon * dxMoon + dyMoon * dyMoon < CANDY_MOON_PORTAL.radius * CANDY_MOON_PORTAL.radius && keys['Enter']) {
+      keys['Enter'] = false;
+      switchToLevel(13);
+    }
+  }
+
+  // Cupcake Bakery minigame
+  if (currentScene === Scene.CUPCAKE_BAKERY) {
+    const cb = cupcakeBakery;
+    if (cb.phase === 0) {
+      // Pick flavor
+      if (keys['Digit1']) { keys['Digit1'] = false; cb.flavor = 'chocolate'; cb.phase = 1; }
+      if (keys['Digit2']) { keys['Digit2'] = false; cb.flavor = 'vanilla'; cb.phase = 1; }
+      if (keys['Digit3']) { keys['Digit3'] = false; cb.flavor = 'strawberry'; cb.phase = 1; }
+    } else if (cb.phase === 1) {
+      // Mix batter — press Space repeatedly
+      if (keys['Space']) {
+        keys['Space'] = false;
+        cb.mixProgress += 10;
+      }
+      if (cb.mixProgress >= 100) {
+        cb.phase = 2;
+        cb.mixProgress = 100;
+      }
+    } else if (cb.phase === 2) {
+      // Decorate — place up to 3 decorations
+      if (keys['Digit1'] && cb.decorations.length < 3) { keys['Digit1'] = false; cb.decorations.push('sprinkles'); }
+      if (keys['Digit2'] && cb.decorations.length < 3) { keys['Digit2'] = false; cb.decorations.push('star'); }
+      if (keys['Digit3'] && cb.decorations.length < 3) { keys['Digit3'] = false; cb.decorations.push('cherry'); }
+      if (keys['Digit4'] && cb.decorations.length < 3) { keys['Digit4'] = false; cb.decorations.push('heart'); }
+      if (keys['Enter'] && cb.decorations.length > 0) {
+        keys['Enter'] = false;
+        cb.phase = 3;
+        cb.ovenTimer = 0;
+        cb.ovenPulled = false;
+      }
+    } else if (cb.phase === 3) {
+      // Oven — pull out at right time
+      cb.ovenTimer += dt;
+      if (keys['Space'] && !cb.ovenPulled) {
+        keys['Space'] = false;
+        cb.ovenPulled = true;
+        cb.phase = 4;
+        // Score based on timing and decorations
+        const ovenPerfect = cb.ovenTimer > 2000 && cb.ovenTimer < 3500;
+        const decoScore = cb.decorations.length * 30; // 30/60/90
+        cb.score = decoScore + (ovenPerfect ? 20 : 0);
+        score += cb.score;
+        cupcakesBaked++;
+        addPopup(player.x, player.y - 40, '+' + cb.score + ' Cupcake!', '#f472b6');
+        playChaChing();
+        if (cupcakesBaked >= 3) {
+          score += 50;
+          addPopup(player.x, player.y - 60, '+50 Master Baker!', '#fbbf24');
+          awardAchievement('master_baker');
+        }
+      }
+      // Burnt if too long
+      if (cb.ovenTimer > 5000 && !cb.ovenPulled) {
+        cb.ovenPulled = true;
+        cb.phase = 4;
+        cb.score = 10;
+        score += 10;
+        cupcakesBaked++;
+        addPopup(player.x, player.y - 40, '+10 Burnt cupcake!', '#78350f');
+      }
+    } else if (cb.phase === 4) {
+      // Done — Enter to bake another or exit
+      if (keys['Enter']) {
+        keys['Enter'] = false;
+        currentScene = null;
+      }
+      if (keys['Space']) {
+        keys['Space'] = false;
+        cupcakeBakery = { phase: 0, flavor: '', mixProgress: 0, decorations: [], ovenTimer: 0, ovenPulled: false, score: 0 };
+      }
+    }
+    // Escape to exit anytime
+    if (keys['Escape']) {
+      keys['Escape'] = false;
+      currentScene = null;
+    }
+  }
+
+  // Dance Party minigame
+  if (currentScene === Scene.DANCE_PARTY) {
+    const dp = danceParty;
+    if (dp.complete) {
+      dp.celebrateTimer += dt;
+      if (dp.celebrateTimer > 3000 && keys['Enter']) {
+        keys['Enter'] = false;
+        currentScene = null;
+      }
+    } else if (dp.feedbackTimer > 0) {
+      dp.feedbackTimer -= dt;
+      if (dp.feedbackTimer <= 0 && dp.step >= dp.pattern.length) {
+        // Round complete
+        if (dp.misses === 0) {
+          dp.score += 25;
+          addPopup(player.x, player.y - 40, '+25 Perfect Round!', '#fbbf24');
+        }
+        if (dp.round < 2) {
+          startDanceRound(dp.round + 1);
+        } else {
+          // All rounds done
+          dp.complete = true;
+          dp.celebrateTimer = 0;
+          // Check if all perfect
+          if (dp.score >= (4 + 6 + 8) * 15 + 3 * 25) {
+            score += 100;
+            addPopup(player.x, player.y - 60, '+100 All Perfect!', '#fbbf24');
+          }
+          score += dp.score;
+          addPopup(player.x, player.y - 40, '+' + dp.score + ' Dance Party!', '#e879f9');
+          playChaChing();
+          awardAchievement('dance_star');
+          // Check sweet kingdom
+          checkSweetKingdom();
+        }
+      }
+    } else if (dp.showingPattern) {
+      dp.showTimer += dt;
+      if (dp.showTimer > 600) {
+        dp.showTimer = 0;
+        dp.showIndex++;
+        if (dp.showIndex >= dp.pattern.length) {
+          dp.showingPattern = false;
+          dp.step = 0;
+          dp.playerInput = [];
+        }
+      }
+    } else {
+      // Player input phase
+      const arrows = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
+      for (const arrow of arrows) {
+        if (keys[arrow]) {
+          keys[arrow] = false;
+          dp.playerInput.push(arrow);
+          const expected = dp.pattern[dp.step];
+          if (arrow === expected) {
+            dp.roundScore += 15;
+            dp.score += 15;
+            dp.feedback = 'Perfect!';
+          } else {
+            dp.misses++;
+            dp.feedback = 'Miss!';
+          }
+          dp.feedbackTimer = 400;
+          dp.step++;
+          break;
+        }
+      }
+    }
+    if (keys['Escape']) {
+      keys['Escape'] = false;
+      currentScene = null;
     }
   }
 
@@ -5442,6 +5946,8 @@ function update(dt) {
   hud.stick.textContent = stickCount;
   hud.smore.textContent = smoreCount;
   hud.shell.textContent = shellCount;
+  if (hud.gem) hud.gem.textContent = candyGemCount;
+  if (hud.cotton) hud.cotton.textContent = cottonCandyCount + '/8';
 
   // Show/hide HUD items and control hints based on current level
   for (const el of hudItems) {
@@ -5876,4 +6382,33 @@ function checkLightShowAllComplete() {
     playChaChing();
   }
   hud.score.textContent = score;
+}
+
+// ── Candy Kingdom helpers ──
+function startDanceRound(round) {
+  const steps = [4, 6, 8][round];
+  const arrows = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
+  const pattern = [];
+  for (let i = 0; i < steps; i++) {
+    pattern.push(arrows[Math.floor(Math.random() * 4)]);
+  }
+  danceParty.round = round;
+  danceParty.pattern = pattern;
+  danceParty.playerInput = [];
+  danceParty.step = 0;
+  danceParty.showingPattern = true;
+  danceParty.showTimer = 0;
+  danceParty.showIndex = 0;
+  danceParty.roundScore = 0;
+  danceParty.misses = 0;
+  danceParty.feedback = '';
+  danceParty.feedbackTimer = 0;
+}
+
+function checkSweetKingdom() {
+  // master_baker, sugar_rush, dragon_rider, dance_star
+  const ids = ['master_baker', 'sugar_rush', 'dragon_rider', 'dance_star'];
+  if (ids.every(id => achievements.find(a => a.id === id && a.earned))) {
+    awardAchievement('sweet_kingdom');
+  }
 }
