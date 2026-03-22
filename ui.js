@@ -1475,7 +1475,11 @@ function updatePrompt(near) {
     }
     el.textContent = prompt;
     el.style.display = 'block';
-    setAction('KeyM', 'Drink');
+    if (!bigfootPhotoTaken && leprechaunGold >= 1) {
+      setAction('KeyM', 'Drink', 'KeyP', 'Photo');
+    } else {
+      setAction('KeyM', 'Drink');
+    }
   } else if (near.nearDigSite && !campPool.dug) {
     el.textContent = 'Press D to dig a pool!';
     el.style.display = 'block';

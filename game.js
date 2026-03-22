@@ -1414,6 +1414,8 @@ function completeTransition() {
   bigfootDrinkTimer = 0;
   bigfootPhotoTaken = false;
   bigfootPhotoFlash = 0;
+  leprechaunGold = 0;
+  bigfootHintShown = false;
   roasting = { active: false, progress: 0, done: false };
   activeSpeechBubbles = [];
   quizActive = false;
@@ -1667,6 +1669,7 @@ let leprechaunGold = 0;
 let leprechaunSpeech = { text: '', timer: 0 };
 let bigfootPhotoTaken = false;
 let bigfootPhotoFlash = 0; // countdown timer for camera flash effect
+let bigfootHintShown = false; // one-time breadcrumb hint per level visit
 // Campfire Light Show minigame
 let lightShowActive = false;
 let lightShowProgram = '';     // string of color codes: R, B, G, Y, W
@@ -3767,6 +3770,18 @@ function update(dt) {
         playChaChing();
       }
     }
+    // Bigfoot breadcrumb hint — show once when player is nearby but not yet in range
+    if (!bigfootHintShown && !bigfootPhotoTaken) {
+      const bigfootDist = Math.abs(player.x - BIGFOOT_POS.x);
+      if (bigfootDist < 200 && bigfootDist >= 60) {
+        bigfootHintShown = true;
+        activeSpeechBubbles.push({
+          npc: { x: BIGFOOT_POS.x, y: GROUND_Y },
+          text: "Hey! Bring me a gold coin and I'll take a photo with ya!",
+          life: TIMING.SPEECH_BUBBLE_LIFE
+        });
+      }
+    }
     // Bigfoot — chocolate milk
     if (Math.abs(player.x - BIGFOOT_POS.x) < 60) {
       nearBigfoot = true;
@@ -3796,6 +3811,7 @@ function update(dt) {
         score += POINTS.BIGFOOT_PHOTO;
         addPopup(BIGFOOT_POS.x, player.y - 40, '+' + POINTS.BIGFOOT_PHOTO + ' Photo with Bigfoot!', '#92400e');
         playSfx('sfxCameraShutter');
+        playChaChing();
       }
     }
     // Camera flash countdown

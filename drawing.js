@@ -144,7 +144,7 @@ function draw() {
 
   // Bigfoot photo camera flash
   if (bigfootPhotoFlash > 0) {
-    ctx.fillStyle = 'rgba(255, 255, 255, ' + Math.min(1, bigfootPhotoFlash / 100) + ')';
+    ctx.fillStyle = 'rgba(255, 255, 255, ' + Math.min(1, bigfootPhotoFlash / 200) + ')';
     ctx.fillRect(0, 0, W, H);
   }
 
@@ -2094,7 +2094,7 @@ function drawPostcardWrite(W, H) {
 
   if (currentLevel === 8 && bigfootPhotoTaken) {
     // Polaroid-style photo with Bigfoot
-    drawBigfootPolaroid(illusX, illusY, illusW, illusH);
+    drawBigfootPolaroid(illusX, illusY, illusW, illusH * 0.85);
   } else {
     ctx.fillStyle = theme.color;
     ctx.globalAlpha = 0.3;
