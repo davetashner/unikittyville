@@ -1,3 +1,21 @@
+// ── Difficulty Tiers ──
+// 'easy' (ages 5-7), 'medium' (ages 8-10), 'hard' (ages 11-13)
+let gameDifficulty = localStorage.getItem('unikittyville_difficulty') || 'medium';
+
+function setGameDifficulty(diff) {
+  gameDifficulty = diff;
+  try { localStorage.setItem('unikittyville_difficulty', diff); } catch (e) { /* storage unavailable */ }
+}
+
+function getDifficultyMultiplier() {
+  switch (gameDifficulty) {
+    case 'easy':   return { timeLimit: 1.5, hintLevel: 2, pointBonus: 0.5 };
+    case 'hard':   return { timeLimit: 0.7, hintLevel: 0, pointBonus: 1.5 };
+    case 'medium':
+    default:       return { timeLimit: 1.0, hintLevel: 1, pointBonus: 1.0 };
+  }
+}
+
 // ── Constants ──
 const WORLD_W = 4800;
 const GROUND_Y = 420;

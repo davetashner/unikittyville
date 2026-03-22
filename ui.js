@@ -660,6 +660,39 @@ function startGameAtLevel(lvl) {
   requestAnimationFrame(loop);
 }
 
+// ── Difficulty Selector ──
+const DIFF_COLORS = { easy: '#22c55e', medium: '#3b82f6', hard: '#9333ea' };
+const DIFF_LABELS = { easy: 'E', medium: 'M', hard: 'H' };
+
+function updateDifficultyUI() {
+  const btns = document.querySelectorAll('.diff-btn');
+  btns.forEach(btn => {
+    const d = btn.getAttribute('data-diff');
+    if (d === gameDifficulty) {
+      btn.style.borderColor = '#fff';
+      btn.style.boxShadow = '0 0 12px rgba(255,255,255,0.4)';
+    } else {
+      btn.style.borderColor = 'transparent';
+      btn.style.boxShadow = 'none';
+    }
+  });
+  const badge = document.getElementById('hudDifficulty');
+  if (badge) {
+    badge.textContent = DIFF_LABELS[gameDifficulty] || 'M';
+    badge.style.background = DIFF_COLORS[gameDifficulty] || DIFF_COLORS.medium;
+  }
+}
+
+document.querySelectorAll('.diff-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    setGameDifficulty(btn.getAttribute('data-diff'));
+    updateDifficultyUI();
+  });
+});
+
+// Restore persisted difficulty on load
+updateDifficultyUI();
+
 // ── Start ──
 document.getElementById('startBtn').addEventListener('click', startGame);
 document.getElementById('nameInput').addEventListener('keydown', e => {
