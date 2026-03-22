@@ -859,7 +859,7 @@ const achievements = [
   { id: 'chefs_kiss', name: "Chef's Kiss", description: 'Make 3 pizzas, 3 s\'mores, and 3 smoothies', icon: '\u{1F468}\u200D\u{1F373}', earned: false, hint: 'Cook in NYC, Campground & Moon' },
   { id: 'shutterfly', name: 'Shutterfly', description: 'Take 5 safari photos', icon: '\u{1F4F8}', earned: false, hint: 'Photograph animals on safari' },
   { id: 'astronaut', name: 'Astronaut', description: 'Reach the Moon', icon: '\u{1F680}', earned: false, hint: 'Blast off from Cape Canaveral' },
-  { id: 'world_traveler', name: 'World Traveler', description: 'Visit all 13 levels', icon: '\u2708\uFE0F', earned: false, hint: 'See every destination' },
+  { id: 'world_traveler', name: 'World Traveler', description: 'Visit all 14 levels', icon: '\u2708\uFE0F', earned: false, hint: 'See every destination' },
   { id: 'kits_best_friend', name: "Kit's Best Friend", description: 'Complete the hospital delivery and picnic', icon: '\u{1F37C}', earned: false, hint: 'Deliver Kit and visit the park' },
   { id: 'high_scorer', name: 'High Scorer', description: 'Reach 10,000 points', icon: '\u2B50', earned: false, hint: 'Keep collecting and exploring!' },
   { id: 'master_baker', name: 'Master Baker', description: 'Bake 3 perfect cupcakes', icon: '\u{1F9C1}', earned: false, hint: 'Visit the Cupcake Bakery' },
@@ -2997,49 +2997,53 @@ function update(dt) {
     player.onGround = false;
   }
 
-  // Physics
-  const effectiveGravity = currentLevel === 13 ? MOON_GRAVITY : GRAVITY;
-  player.vy = applyGravity(player.vy, effectiveGravity);
-  player.x += player.vx;
-  player.y += player.vy;
+  // Physics (skip when riding dragon — dragon controls handle position)
+  if (!ridingDragon) {
+    const effectiveGravity = currentLevel === 13 ? MOON_GRAVITY : GRAVITY;
+    player.vy = applyGravity(player.vy, effectiveGravity);
+    player.x += player.vx;
+    player.y += player.vy;
 
-  // Moon: prevent jumping off the top of the screen
-  if (currentLevel === 13 && player.y < 40) {
-    player.y = 40;
-    player.vy = 0;
-  }
-
-  // Platform collision (only when falling)
-  let onPlatform = false;
-  const collision = checkPlatformCollision(player.x, player.y, player.vy, getCurrentPlatforms());
-  if (collision) {
-    player.y = collision.y;
-    player.vy = collision.vy;
-    player.onGround = collision.onGround;
-    onPlatform = true;
-  }
-
-  // Ground collision (only if not on a platform)
-  if (!onPlatform) {
-    const groundLevel = getGroundLevel(player.x);
-    if (player.y >= groundLevel) {
-      player.y = groundLevel;
+    // Moon: prevent jumping off the top of the screen
+    if (currentLevel === 13 && player.y < 40) {
+      player.y = 40;
       player.vy = 0;
-      player.onGround = true;
+    }
+
+    // Platform collision (only when falling)
+    let onPlatform = false;
+    const collision = checkPlatformCollision(player.x, player.y, player.vy, getCurrentPlatforms());
+    if (collision) {
+      player.y = collision.y;
+      player.vy = collision.vy;
+      player.onGround = collision.onGround;
+      onPlatform = true;
+    }
+
+    // Ground collision (only if not on a platform)
+    if (!onPlatform) {
+      const groundLevel = getGroundLevel(player.x);
+      if (player.y >= groundLevel) {
+        player.y = groundLevel;
+        player.vy = 0;
+        player.onGround = true;
+      }
     }
   }
 
-  // Yarn ball collection
-  for (const yb of getCurrentYarnBalls()) {
-    if (yb.collected) continue;
-    const dx = player.x - yb.x;
-    const dy = (player.y - 20) - yb.y;
-    if (dx * dx + dy * dy < COLLECT_RADIUS_SQ) { // ~25px radius
-      yb.collected = true;
-      yarnCount++;
-      score += POINTS.YARN;
-      addPopup(yb.x, yb.y - 20, '+' + POINTS.YARN + ' Yarn!', yb.color);
-      playChaChing();
+  // Yarn ball collection (level 14 uses its own candy gem loop)
+  if (currentLevel !== 14) {
+    for (const yb of getCurrentYarnBalls()) {
+      if (yb.collected) continue;
+      const dx = player.x - yb.x;
+      const dy = (player.y - 20) - yb.y;
+      if (dx * dx + dy * dy < COLLECT_RADIUS_SQ) { // ~25px radius
+        yb.collected = true;
+        yarnCount++;
+        score += POINTS.YARN;
+        addPopup(yb.x, yb.y - 20, '+' + POINTS.YARN + ' Yarn!', yb.color);
+        playChaChing();
+      }
     }
   }
 
@@ -4614,6 +4618,7 @@ function update(dt) {
       if (!lemonBoss.entranceSaid) {
         lemonBoss.entranceSaid = true;
         addPopup(lemonBoss.x, lemonBoss.y - 60, 'I am King Lemon Drop! Taste my sourness!', '#fbbf24');
+        addPopup(player.x, player.y - 60, 'Press S to throw sugar!', '#f472b6');
       }
     }
 
@@ -4673,6 +4678,7 @@ function update(dt) {
 
       if (lemonBoss.state === 'patrol') {
         lemonBoss.x += Math.sin(gameTime / 500) * 1.5;
+        lemonBoss.x = Math.max(LEMON_BOSS_ZONE.xMin, Math.min(LEMON_BOSS_ZONE.xMax, lemonBoss.x));
         if (lemonBoss.stateTimer > 3000) {
           lemonBoss.state = 'sourShower';
           lemonBoss.stateTimer = 0;
@@ -4696,6 +4702,7 @@ function update(dt) {
         }
       } else if (lemonBoss.state === 'charge') {
         lemonBoss.x += lemonBoss.dir * 3;
+        lemonBoss.x = Math.max(LEMON_BOSS_ZONE.xMin, Math.min(LEMON_BOSS_ZONE.xMax, lemonBoss.x));
         if (lemonBoss.stateTimer > 2000) {
           lemonBoss.state = 'sourShower';
           lemonBoss.stateTimer = 0;
@@ -4719,7 +4726,8 @@ function update(dt) {
       const dy = p.y - player.y;
       if (dx * dx + dy * dy < 400) {
         lemonBoss.projectiles.splice(i, 1);
-        addPopup(player.x, player.y - 30, 'Sour hit! Ouch!', '#fbbf24');
+        addPopup(player.x, player.y - 30, 'Sour hit! -10', '#fbbf24');
+        score = Math.max(0, score - 10);
       }
     }
 
@@ -4953,23 +4961,25 @@ function update(dt) {
       }
     } else {
       // Player input phase
-      const arrows = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
-      for (const arrow of arrows) {
-        if (keys[arrow]) {
-          keys[arrow] = false;
-          dp.playerInput.push(arrow);
-          const expected = dp.pattern[dp.step];
-          if (arrow === expected) {
-            dp.roundScore += 15;
-            dp.score += 15;
-            dp.feedback = 'Perfect!';
-          } else {
-            dp.misses++;
-            dp.feedback = 'Miss!';
+      if (dp.step < dp.pattern.length) {
+        const arrows = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
+        for (const arrow of arrows) {
+          if (keys[arrow]) {
+            keys[arrow] = false;
+            dp.playerInput.push(arrow);
+            const expected = dp.pattern[dp.step];
+            if (arrow === expected) {
+              dp.roundScore += 15;
+              dp.score += 15;
+              dp.feedback = 'Perfect!';
+            } else {
+              dp.misses++;
+              dp.feedback = 'Miss!';
+            }
+            dp.feedbackTimer = 400;
+            dp.step++;
+            break;
           }
-          dp.feedbackTimer = 400;
-          dp.step++;
-          break;
         }
       }
     }

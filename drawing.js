@@ -2993,8 +2993,11 @@ function drawPlayerAndUI() {
     drawRidingCheetah(player.x, player.y, player.facing);
   }
   // On sledding level, draw kitty sitting in sled (offset lower into sled)
+  // When riding dragon, kitty is drawn on the dragon's back in the dragon section
   const sledOffset = (currentLevel === 2 && sledding) ? 5 : 0;
-  drawKitty(player.x, player.y - (ridingCheetah ? 15 : sledOffset), player.color, player.facing, player.walkFrame, 'horn', playerEyeColor, playerHornColors);
+  if (!ridingDragon) {
+    drawKitty(player.x, player.y - (ridingCheetah ? 15 : sledOffset), player.color, player.facing, player.walkFrame, 'horn', playerEyeColor, playerHornColors);
+  }
 
   // Space suit overlay (Cape Canaveral through Moon levels)
   if (capeSpaceSuit && currentLevel >= 11 && currentLevel <= 13 && currentScene === null) {
@@ -11748,6 +11751,8 @@ function drawCandyKingdomWorld(W, H, cam, cycle, isNight) {
     ctx.moveTo(dragonX - 28, dragonY);
     ctx.quadraticCurveTo(dragonX - 50, dragonY + 15, dragonX - 40, dragonY - 5);
     ctx.stroke();
+    // Draw kitty riding on dragon's back
+    drawKitty(dragonX, dragonY - 18, player.color, player.facing, 0, 'horn', playerEyeColor, playerHornColors);
   }
 
   // Portal back to Moon
