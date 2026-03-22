@@ -2306,6 +2306,7 @@ const timeCapsules = {
   12: { x: 4000, name: 'Voyager Record',           year: '1977',   fact: 'The Voyager Golden Record carries sounds from Earth.' },
   13: { x: 2500, name: 'Moon Rock',                year: '1969',   fact: 'Apollo astronauts brought back 842 pounds of moon rocks.' },
   14: { x: 2200, name: 'Sugar Crystal Bottle',    year: '1847',   fact: 'The first US candy factory opened in 1847.' },
+  15: { x: 2800, name: 'Vintage Carousel Horse', year: '1895',   fact: 'The golden age of hand-carved wooden carousel horses ran from 1880 to 1930.' },
 };
 
 // ── Level 14: Candy Kingdom ──
@@ -2413,6 +2414,87 @@ npcDialogs[14] = [
   "Complete all the activities to become a Sweet Kingdom champion!",
 ];
 
+// ── Level 15: Amusement Park ──
+const PARK_WORLD_W = 5600;
+const CANDY_PARK_PORTAL = { x: 5100, radius: 30 }; // portal in candy kingdom to park
+const PARK_CANDY_PORTAL = { x: 100, radius: 30 }; // portal in park back to candy
+
+const COASTER_GATE_POS = { x: 380 };
+const WATER_GUN_BOOTH_POS = { x: 1700, w: 150 };
+const BIPLANE_HUB_POS = { x: 2300 };
+const PARK_DANCE_STAGE_POS = { x: 3200, w: 120 };
+const PARK_EXIT_PORTAL_POS = { x: 5400 };
+
+const level15Park = {
+  worldW: PARK_WORLD_W,
+  platforms: [
+    { x: 200,  y: 360, w: 90 }, { x: 450,  y: 300, w: 80 }, { x: 650,  y: 250, w: 90 },
+    { x: 900,  y: 330, w: 80 }, { x: 1100, y: 280, w: 90 }, { x: 1400, y: 350, w: 80 },
+    { x: 1650, y: 290, w: 90 }, { x: 1900, y: 360, w: 80 }, { x: 2150, y: 310, w: 90 },
+    { x: 2450, y: 270, w: 80 }, { x: 2700, y: 340, w: 90 }, { x: 3000, y: 280, w: 80 },
+    { x: 3300, y: 360, w: 90 }, { x: 3600, y: 300, w: 80 }, { x: 3850, y: 250, w: 90 },
+    { x: 4100, y: 330, w: 80 }, { x: 4400, y: 280, w: 90 }, { x: 4700, y: 350, w: 80 },
+    { x: 4950, y: 300, w: 90 }, { x: 5200, y: 370, w: 80 },
+  ],
+  yarnBalls: [], // ice cream cones
+  npcs: [],
+};
+
+// Ice cream cone collectibles
+const iceCreamColors = ['#fda4af', '#bae6fd', '#bbf7d0', '#fde68a', '#e9d5ff'];
+const iceCreamPositions = [300, 720, 980, 1280, 1520, 1900, 2300, 2800, 3400, 4600];
+for (let i = 0; i < iceCreamPositions.length; i++) {
+  level15Park.yarnBalls.push({
+    x: iceCreamPositions[i],
+    y: 390,
+    color: iceCreamColors[i % iceCreamColors.length],
+    collected: false,
+    bobPhase: Math.random() * Math.PI * 2,
+  });
+}
+
+// Amusement Park NPCs
+const parkNpcs = [];
+const parkNpcPositions = [320, 640, 1100, 1750, 2600, 3500, 4100, 4800];
+const parkNpcColors = ['#f472b6', '#38bdf8', '#4ade80', '#fbbf24', '#c084fc', '#f97316', '#fb7185', '#a78bfa'];
+const parkNpcAccessories = ['bow', 'glasses', 'flower', 'scarf', 'bow', 'glasses', 'flower', 'scarf'];
+for (let i = 0; i < 8; i++) {
+  parkNpcs.push({
+    x: parkNpcPositions[i],
+    y: GROUND_Y,
+    color: parkNpcColors[i],
+    accessory: parkNpcAccessories[i],
+    vx: (Math.random() - 0.5) * 0.8,
+    walkFrame: 0, walkTimer: 0,
+    facing: 1,
+    idleTimer: Math.random() * 200,
+  });
+}
+level15Park.npcs = parkNpcs;
+
+npcDialogs[15] = [
+  "The rollercoaster goes UPSIDE DOWN! My popcorn did NOT survive.",
+  "I won a stuffed elephant at the water gun game! Her name is Peanut!",
+  "The Red Baron bi-plane ride makes my ear fur go FWWWWP!",
+  "Did you know? The first amusement park opened in 1583 in Denmark! Very old fun!",
+  "Unikittyville has the only loop-de-loop coaster in the whole world! Probably!",
+  "I screamed so loud on the coaster they named a loop after me. The Sparkle Loop!",
+  "The water gun game is rigged! ...Just kidding. I won four times!",
+  "The bi-plane pilots wave to us while upside down! Very casual!",
+  "Pro tip: eat ice cream BEFORE the coaster, not after. Trust me on this.",
+  "The Ferris wheel at the top -- you can see the whole meadow from there!",
+  "Those stuffed animals look just like the ones in Africa! Small world!",
+  "I tried to ride everything in one day. I am still spinning. Send help.",
+  "The dance show happens every evening! Unikitty is a STAR performer!",
+  "I clapped so hard at the dance show my paws turned red! Worth it!",
+  "There are exactly 10 ice cream flavors here. I sampled all of them. For science.",
+  "The coaster supports are VERY old but VERY sturdy. Probably. Don't look down.",
+  "Fun fact: the loop-de-loop rollercoaster was invented in 1846 in Paris!",
+  "The carousel horses are hand-painted by local artisans! Very fancy for a fair!",
+  "The smell of funnel cake and popcorn makes my whiskers wiggle with joy!",
+  "I won a prize and now everywhere I go the stuffed rhino watches me. Comforting!",
+];
+
 // ── NPC Quiz Questions ──
 // Triggered randomly (~33%) after dismissing an NPC speech bubble.
 // Questions test comprehension of facts from npcDialogs above.
@@ -2465,5 +2547,12 @@ const npcQuizzes = {
     { question: "What is the dragon's name?", answers: ["Peppermint", "Fluffernutter", "Sugarplum"], correct: 1 },
     { question: "What was King Lemon Drop like before?", answers: ["Always sour", "Sweet as honey", "Very sleepy"], correct: 1 },
     { question: "What are the cookie grounds baked by?", answers: ["An oven", "The sun", "Magic"], correct: 1 },
+  ],
+  15: [ // Amusement Park
+    { question: "When was the first amusement park opened?", answers: ["1583", "1850", "1901"], correct: 0 },
+    { question: "When was the loop-de-loop coaster invented?", answers: ["1900", "1846", "1776"], correct: 1 },
+    { question: "How long did the golden age of carousel horse carving last?", answers: ["10 years", "50 years", "100 years"], correct: 1 },
+    { question: "What does the bi-plane ride do to the planes?", answers: ["They go very fast", "They tilt up and down while orbiting", "They do barrel rolls"], correct: 1 },
+    { question: "What prize can you win at the water gun game?", answers: ["A fish", "A stuffed safari animal", "A crown"], correct: 1 },
   ],
 };
