@@ -669,10 +669,11 @@ let wishPower = 0;
 let wishCharging = false;
 let wishScore = 0;
 let wishTossesLeft = 3;
-let wishComplete = false;
 let wishSplashParticles = [];
 let wishHits = [];  // track zone of each hit: 'outer', 'middle', 'center', or 'miss'
 let wishSummary = false;
+let wishPrevY = 0;  // previous frame Y for crossing detection
+let wishFirstTossShown = false;  // whether first-toss instructions have been shown
 
 // Apollo Mission minigame state
 let apolloMission = {
@@ -1462,10 +1463,11 @@ function completeTransition() {
   wishCharging = false;
   wishScore = 0;
   wishTossesLeft = 3;
-  wishComplete = false;
   wishSplashParticles = [];
   wishHits = [];
   wishSummary = false;
+  wishPrevY = 0;
+  wishFirstTossShown = false;
   apolloMission = {
     active: false, step: 0, progress: 0, rocksCollected: 0,
     rockPositions: [], rockPlayerX: 0, bootY: 0, complete: false,
@@ -3248,20 +3250,18 @@ function update(dt) {
       nearFountain = true;
       if (keys['KeyS']) {
         keys['KeyS'] = false;
-        if (!wishComplete) {
-          currentScene = Scene.FOUNTAIN_WISHES;
-          wishCoin = { active: false, x: 0, y: 0, vx: 0, vy: 0, spin: 0 };
-          wishAngle = Math.PI / 4;
-          wishPower = 0;
-          wishCharging = false;
-          wishScore = 0;
-          wishTossesLeft = 3;
-          wishSplashParticles = [];
-          wishHits = [];
-          wishSummary = false;
-        } else {
-          currentScene = Scene.SWIMMING;
-        }
+        currentScene = Scene.FOUNTAIN_WISHES;
+        wishCoin = { active: false, x: 0, y: 0, vx: 0, vy: 0, spin: 0 };
+        wishAngle = Math.PI / 4;
+        wishPower = 0;
+        wishCharging = false;
+        wishScore = 0;
+        wishTossesLeft = 3;
+        wishSplashParticles = [];
+        wishHits = [];
+        wishSummary = false;
+        wishPrevY = 0;
+        wishFirstTossShown = false;
       }
     }
     // Gelato
@@ -4727,11 +4727,10 @@ function update(dt) {
     }
 
     if (wishSummary) {
-      // Summary screen — Enter to exit
+      // Summary screen — Enter to exit (replayable, no wishComplete lock)
       if (keys['Enter']) {
         keys['Enter'] = false;
         currentScene = null;
-        wishComplete = true;
       }
     } else if (!wishCoin.active && wishTossesLeft > 0) {
       // Aiming
@@ -4747,7 +4746,7 @@ function update(dt) {
         wishCharging = false;
         wishCoin.active = true;
         wishCoin.x = fwCx - 160;
-        wishCoin.y = fwCy + 50;
+        wishCoin.y = fwCy + 45;
         wishCoin.spin = 0;
         const speed = 3 + wishPower * 6;
         wishCoin.vx = Math.cos(wishAngle) * speed;
@@ -4762,6 +4761,7 @@ function update(dt) {
       }
     } else if (wishCoin.active) {
       // Coin physics (parabolic arc)
+      wishPrevY = wishCoin.y;
       wishCoin.x += wishCoin.vx;
       wishCoin.y += wishCoin.vy;
       wishCoin.vy += 0.12;
@@ -4772,8 +4772,10 @@ function update(dt) {
       const waterY = fwCy + 30;
       const dx = wishCoin.x - fountainCenterX;
 
-      // Check if coin is at water level
-      if (wishCoin.y >= waterY - 5 && wishCoin.y <= waterY + 20) {
+      // Crossing detection: coin crossed waterY or is within expanded band
+      const crossedWater = (wishPrevY < waterY && wishCoin.y >= waterY) ||
+                           (wishCoin.y >= waterY - 10 && wishCoin.y <= fwCy + 80);
+      if (crossedWater) {
         const absDx = Math.abs(dx);
         let zone = 'miss';
         let pts = 0;
@@ -4806,16 +4808,29 @@ function update(dt) {
           score += pts;
           wishHits.push(zone);
           wishTossesLeft--;
+          wishFirstTossShown = true;
           addPopup(wishCoin.x, wishCoin.y - 20, '+' + pts + ' ' + msg, color);
           playChaChing();
           playSfx('sfxDiveSplash');
-          // Create splash particles
-          for (let i = 0; i < 8; i++) {
+          // Create splash particles (16 for bigger effect)
+          for (let i = 0; i < 16; i++) {
             wishSplashParticles.push({
-              x: wishCoin.x, y: waterY,
-              vx: (Math.random() - 0.5) * 3,
-              vy: -Math.random() * 3 - 1,
-              life: 500 + Math.random() * 300,
+              x: wishCoin.x + (Math.random() - 0.5) * 10, y: waterY,
+              vx: (Math.random() - 0.5) * 5,
+              vy: -Math.random() * 4 - 1.5,
+              life: 600 + Math.random() * 400,
+              size: 2 + Math.random() * 2,
+            });
+          }
+          // Brief white flash particles on water surface
+          for (let i = 0; i < 6; i++) {
+            wishSplashParticles.push({
+              x: wishCoin.x + (Math.random() - 0.5) * 20, y: waterY + Math.random() * 4,
+              vx: (Math.random() - 0.5) * 1,
+              vy: 0,
+              life: 200 + Math.random() * 100,
+              size: 3 + Math.random() * 2,
+              flash: true,
             });
           }
         }
@@ -4826,6 +4841,7 @@ function update(dt) {
         wishCoin.active = false;
         wishHits.push('miss');
         wishTossesLeft--;
+        wishFirstTossShown = true;
         addPopup(wishCoin.x, wishCoin.y, 'Missed! The pigeons got that one...', '#ef4444');
       }
 

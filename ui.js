@@ -1363,9 +1363,9 @@ function updatePrompt(near) {
     el.style.display = 'block';
     setAction('Enter', 'Taxi');
   } else if (near.nearFountain) {
-    el.textContent = wishComplete ? 'Press S to go swimming!' : 'Press S to toss a coin in the fountain!';
+    el.textContent = 'Press S to toss a coin in the fountain!';
     el.style.display = 'block';
-    setAction('KeyS', wishComplete ? 'Swim' : 'Wish');
+    setAction('KeyS', 'Wish');
   } else if (near.nearGelato) {
     el.textContent = 'Press G for gelato (+5 pts) | Enter for Gelato Shop';
     el.style.display = 'block';

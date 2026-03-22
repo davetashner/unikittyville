@@ -3781,13 +3781,13 @@ function drawFountainWishesInterior(cam, W, H) {
   ctx.beginPath(); ctx.ellipse(fx, fy + 8, 55, 15, 0, 0, Math.PI * 2); ctx.stroke();
   ctx.setLineDash([]);
 
-  // Point labels on zones
-  ctx.fillStyle = 'rgba(255,255,255,0.5)';
-  ctx.font = '8px system-ui';
+  // Point labels on zones (bold, more visible)
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.font = 'bold 10px system-ui';
   ctx.textAlign = 'center';
-  ctx.fillText('50', fx, fy - 2);
-  ctx.fillText('25', fx + 22, fy + 2);
-  ctx.fillText('10', fx + 42, fy + 8);
+  ctx.fillText('50', fx, fy - 5);
+  ctx.fillText('25', fx + 22, fy - 1);
+  ctx.fillText('10', fx + 44, fy + 4);
 
   // Stone railing where Sparkle stands (bottom-left)
   ctx.fillStyle = '#a8a29e';
@@ -3858,44 +3858,53 @@ function drawFountainWishesInterior(cam, W, H) {
     ctx.fillText('PWR', barX + 6, barY - 5);
   }
 
-  // Coin in flight (gold circle with spin animation)
+  // Coin in flight (gold circle with spin animation — 7px radius)
   if (wishCoin.active) {
+    // Bright gold trail (4 circles fading out)
+    for (let t = 4; t >= 1; t--) {
+      ctx.fillStyle = 'rgba(251,191,36,' + (0.15 + (4 - t) * 0.05) + ')';
+      ctx.beginPath();
+      ctx.arc(wishCoin.x - wishCoin.vx * t * 2, wishCoin.y - wishCoin.vy * t * 2, 2 + (4 - t), 0, Math.PI * 2);
+      ctx.fill();
+    }
+
     ctx.save();
     ctx.translate(wishCoin.x, wishCoin.y);
-    const spinW = 5 * Math.abs(Math.cos(wishCoin.spin));
+    const spinW = 7 * Math.abs(Math.cos(wishCoin.spin));
     ctx.fillStyle = '#fbbf24';
     ctx.strokeStyle = '#d97706';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.ellipse(0, 0, Math.max(1, spinW), 5, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 0, Math.max(1, spinW), 7, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
     ctx.fillStyle = 'rgba(255,255,255,0.6)';
     ctx.beginPath();
-    ctx.arc(-1, -1, 1.5, 0, Math.PI * 2);
+    ctx.arc(-1, -1, 2, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
-
-    // Trail
-    ctx.fillStyle = 'rgba(251,191,36,0.3)';
-    ctx.beginPath();
-    ctx.arc(wishCoin.x - wishCoin.vx * 2, wishCoin.y - wishCoin.vy * 2, 2, 0, Math.PI * 2);
-    ctx.fill();
   }
 
-  // Splash particles
+  // Splash particles (bigger, with white flash support)
   for (const p of wishSplashParticles) {
-    ctx.fillStyle = 'rgba(56,189,248,' + Math.min(1, p.life / 300) + ')';
+    const alpha = Math.min(1, p.life / 300);
+    const r = p.size || 2;
+    if (p.flash) {
+      ctx.fillStyle = 'rgba(255,255,255,' + alpha + ')';
+    } else {
+      ctx.fillStyle = 'rgba(56,189,248,' + alpha + ')';
+    }
     ctx.beginPath();
-    ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  // UI: Coin counter (top-right)
+  // UI: Toss counter (top-right)
   ctx.fillStyle = '#fff';
   ctx.font = 'bold 13px system-ui';
   ctx.textAlign = 'right';
-  ctx.fillText('Coins: ' + (3 - wishTossesLeft) + '/3', cx + 230, cy - 130);
+  const tossNum = Math.min(3, 3 - wishTossesLeft + 1);
+  ctx.fillText('Toss ' + tossNum + ' of 3', cx + 230, cy - 130);
 
   // UI: Score
   ctx.fillStyle = '#fbbf24';
@@ -3909,11 +3918,16 @@ function drawFountainWishesInterior(cam, W, H) {
   ctx.textAlign = 'center';
   ctx.fillText('Trevi Fountain Coin Toss', cx, cy - 135);
 
-  // Instructions
+  // Instructions — big and clear on first toss, minimal after that
   if (!wishSummary) {
-    ctx.fillStyle = '#e2e8f0';
-    ctx.font = '11px system-ui';
-    ctx.fillText('Up/Down = Aim | Hold Space = Charge & Release to Throw | Enter = Exit', cx, cy + 145);
+    if (!wishFirstTossShown) {
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 14px system-ui';
+      ctx.fillText('Hold SPACE to charge, release to throw!', cx, cy + 135);
+      ctx.fillStyle = '#e2e8f0';
+      ctx.font = '11px system-ui';
+      ctx.fillText('Up/Down = Aim | Enter = Exit', cx, cy + 152);
+    }
   }
 
   // Summary screen
