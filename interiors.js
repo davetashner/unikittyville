@@ -1346,8 +1346,11 @@ function drawChaletInterior(cam, W, H) {
     ctx.beginPath();
     ctx.moveTo(bx - 10, by - 4); ctx.lineTo(bx - 7, by - 10); ctx.lineTo(bx - 4, by - 4);
     ctx.fill();
-    // Inner ears
-    ctx.fillStyle = '#fda4af';
+    // Inner ears (lighter tint of kitFurColor)
+    const earR = parseInt(kitFurColor.slice(1, 3), 16);
+    const earG = parseInt(kitFurColor.slice(3, 5), 16);
+    const earB = parseInt(kitFurColor.slice(5, 7), 16);
+    ctx.fillStyle = `rgb(${Math.round((earR + 255) / 2)}, ${Math.round((earG + 255) / 2)}, ${Math.round((earB + 255) / 2)})`;
     ctx.beginPath();
     ctx.moveTo(bx - 15, by - 4); ctx.lineTo(bx - 13, by - 8); ctx.lineTo(bx - 11, by - 4);
     ctx.fill();
@@ -1372,6 +1375,13 @@ function drawChaletInterior(cam, W, H) {
     ctx.arc(bx - 10, by + 3, 2, 0.1 * Math.PI, 0.9 * Math.PI);
     ctx.stroke();
 
+    // Crib side rails (front posts) — drawn before blanket so blanket drapes over
+    ctx.fillStyle = '#b45309';
+    ctx.fillRect(cribX - 28, cribY - 20, 4, 42);
+    ctx.fillRect(cribX + 24, cribY - 20, 4, 42);
+    // Rail top bar
+    ctx.fillRect(cribX - 28, cribY - 22, 56, 4);
+
     // Blanket draped over crib edge and baby
     ctx.fillStyle = 'rgba(196, 181, 253, 0.7)'; // soft lavender
     ctx.beginPath();
@@ -1379,16 +1389,10 @@ function drawChaletInterior(cam, W, H) {
     ctx.quadraticCurveTo(cribX - 5, cribY + 2, cribX + 8, cribY - 2);
     ctx.lineTo(cribX + 8, cribY + 16);
     ctx.quadraticCurveTo(cribX - 5, cribY + 12, cribX - 24, cribY + 16);
+    ctx.closePath();
     ctx.fill();
 
-    // Crib side rails (front posts)
-    ctx.fillStyle = '#b45309';
-    ctx.fillRect(cribX - 28, cribY - 20, 4, 42);
-    ctx.fillRect(cribX + 24, cribY - 20, 4, 42);
-    // Rail top bar
-    ctx.fillRect(cribX - 28, cribY - 22, 56, 4);
-
-    // Floating "zzz" animation
+    // Floating "zzz" animation (note: font is reset by name label below)
     const zTime = gameTime / 600;
     for (let zi = 0; zi < 3; zi++) {
       const zPhase = (zTime + zi * 0.35) % 1.0;
@@ -1406,6 +1410,30 @@ function drawChaletInterior(cam, W, H) {
     // Name label below crib
     ctx.fillStyle = '#fde68a'; ctx.font = 'bold 11px system-ui'; ctx.textAlign = 'center';
     ctx.fillText(kitName, cribX, cribY + 46);
+
+    // Discovery heart effect — pulsing pink heart fades over first 2 seconds
+    if (chaletBabyDiscoverTimer > 0) {
+      const elapsed = gameTime - chaletBabyDiscoverTimer;
+      if (elapsed < 2000) {
+        const heartAlpha = 1 - elapsed / 2000;
+        const heartScale = 0.8 + Math.sin(gameTime / 150) * 0.2;
+        const heartY = cribY - 28 - elapsed * 0.015;
+        ctx.save();
+        ctx.globalAlpha = heartAlpha;
+        ctx.fillStyle = '#f9a8d4';
+        ctx.translate(cribX, heartY);
+        ctx.scale(heartScale, heartScale);
+        ctx.beginPath();
+        ctx.moveTo(0, -3);
+        ctx.bezierCurveTo(-5, -8, -10, -3, 0, 5);
+        ctx.moveTo(0, -3);
+        ctx.bezierCurveTo(5, -8, 10, -3, 0, 5);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    ctx.textAlign = 'left';
   }
 }
 
