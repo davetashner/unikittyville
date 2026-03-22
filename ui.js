@@ -389,6 +389,52 @@ window.addEventListener('keydown', e => {
     return;
   }
 
+  // Captain's Mission Log — capture typing when open
+  if (missionLogOpen && !e.repeat) {
+    e.preventDefault();
+    if (e.key === 'Escape') {
+      missionLogOpen = false;
+    } else if (e.key === 'Enter') {
+      // Save current entry and advance
+      const text = missionLogTexts[missionLogEntry];
+      if (text.length >= MISSION_LOG_MIN_CHARS && !missionLogScored[missionLogEntry]) {
+        missionLogScored[missionLogEntry] = true;
+        score += MISSION_LOG_ENTRY_POINTS;
+        addPopup(player.x, player.y - 40, '+' + MISSION_LOG_ENTRY_POINTS + ' Log entry saved!', '#60a5fa');
+        playChaChing();
+      }
+      saveMissionLog();
+      if (missionLogEntry < 4) {
+        missionLogEntry++;
+      } else {
+        // All 5 complete — check for bonus
+        const allDone = missionLogScored.every(s => s);
+        if (allDone && !missionLogBonusAwarded) {
+          missionLogBonusAwarded = true;
+          missionLogComplete = true;
+          score += MISSION_LOG_BONUS;
+          addPopup(player.x, player.y - 60, '+' + MISSION_LOG_BONUS + ' Mission Log Complete!', '#fbbf24');
+          playChaChing();
+          saveMissionLog();
+        }
+        missionLogOpen = false;
+      }
+    } else if (e.key === 'Backspace') {
+      missionLogTexts[missionLogEntry] = missionLogTexts[missionLogEntry].slice(0, -1);
+    } else if (e.key === 'Tab') {
+      e.preventDefault(); // prevent focus change
+      // Navigate between entries
+      if (e.shiftKey) {
+        missionLogEntry = Math.max(0, missionLogEntry - 1);
+      } else {
+        missionLogEntry = Math.min(4, missionLogEntry + 1);
+      }
+    } else if (e.key.length === 1 && missionLogTexts[missionLogEntry].length < MISSION_LOG_MAX_CHARS && /[a-zA-Z0-9 !?.,;:'"()\-_]/.test(e.key)) {
+      missionLogTexts[missionLogEntry] += e.key;
+    }
+    return;
+  }
+
   // Baby name typing in hospital name_pick stage
   if (hospitalStage === 'name_pick' && !e.repeat) {
     if (e.key === 'Backspace') {
@@ -686,6 +732,7 @@ function startGameAtLevel(lvl) {
   }
   startLevelMusic(lvl);
   loadPostcards();
+  loadMissionLog();
   requestAnimationFrame(loop);
 }
 
@@ -767,6 +814,7 @@ function startGame() {
   // Start music (requires user gesture, which the click/enter provides)
   startLevelMusic(1);
   loadPostcards();
+  loadMissionLog();
   requestAnimationFrame(loop);
 }
 
