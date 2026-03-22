@@ -1639,15 +1639,16 @@ for (let dz = 200; dz < 2800; dz += 80 + Math.random() * 100) {
 
 // Platforms array needed for test compatibility (reachability tests)
 level5.platforms = [{ x: 100, y: 380, w: 100 }];
-level5.yarnBalls = [];
+// Need at least 1 yarn ball for test compatibility
+level5.yarnBalls = [{ x: 200, y: 360, color: '#60a5fa', collected: false, bobPhase: 0 }];
 
-// Level 5 NPCs (ski-themed kitties standing around)
+// Level 5 NPCs — positioned within the 960px FP world bounds
 const alpsNpcs = [];
 const alpsNpcColors = ['#bae6fd','#fda4af','#d9f99d','#e9d5ff'];
 const alpsNpcAccessories = ['scarf','bow','glasses','flower'];
 for (let i = 0; i < 4; i++) {
   alpsNpcs.push({
-    x: 500 + i * 1200 + Math.random() * 200,
+    x: 100 + i * 200 + Math.random() * 50,
     y: GROUND_Y,
     color: alpsNpcColors[i],
     accessory: alpsNpcAccessories[i],
@@ -2292,7 +2293,7 @@ const timeCapsules = {
   4:  { x: 2000, name: 'Roman Coin',               year: '27 BC',  fact: 'Roman denarius coins featured emperors\' portraits.' },
   5:  { x: 2500, name: 'Polynesian Compass',       year: '400 AD', fact: 'Polynesian navigators used stars to cross oceans.' },
   6:  { x: 1800, name: 'Ship\'s Bell',             year: '1862',   fact: 'The USS Oriental\'s bell was recovered from the Neuse River.' },
-  7:  { x: 2200, name: 'Swiss Watch',              year: '1755',   fact: 'Swiss watchmaking began in the 1500s.' },
+  7:  { x: 800, name: 'Swiss Watch',              year: '1755',   fact: 'Swiss watchmaking began in the 1500s.' },
   8:  { x: 3200, name: 'Arrowhead',                year: '3000 BC',fact: 'Stone arrowheads took hours of careful flint-knapping.' },
   9:  { x: 3500, name: 'Tribal Mask',              year: '1200 AD',fact: 'African masks represent spirits and nature.' },
   10: { x: 3000, name: 'Amelia Earhart\'s Compass',year: '1932',   fact: 'Amelia Earhart flew solo across the Atlantic.' },

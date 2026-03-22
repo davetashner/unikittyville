@@ -1,0 +1,12 @@
+{
+  "name": "unikittyville-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "npx playwright test",
+    "smoke": "node smoke.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.52.0"
+  }
+}
