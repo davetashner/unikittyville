@@ -2377,30 +2377,245 @@ function drawThirtyRockInterior(cam, W, H) {
 // ── Grand Central Terminal ──
 function drawGrandCentralInterior(cam, W, H) {
   const cx = cam + W / 2;
-  ctx.fillStyle = '#fef3c7'; ctx.fillRect(cam, 0, W, H);
-  // Arched star ceiling
-  ctx.fillStyle = '#1e3a5f';
-  ctx.beginPath(); ctx.moveTo(cam, H * 0.5); ctx.quadraticCurveTo(cx, 0, cam + W, H * 0.5);
-  ctx.lineTo(cam + W, 0); ctx.lineTo(cam, 0); ctx.closePath(); ctx.fill();
+  const L = cam; // left edge
+  const R = cam + W; // right edge
+
+  // ── Limestone/marble wall background ──
+  const wallGrad = ctx.createLinearGradient(L, 0, L, H);
+  wallGrad.addColorStop(0, '#c9b896');
+  wallGrad.addColorStop(0.4, '#d4c4a0');
+  wallGrad.addColorStop(0.7, '#ddd0b4');
+  wallGrad.addColorStop(1, '#c4b48e');
+  ctx.fillStyle = wallGrad;
+  ctx.fillRect(L, 0, W, H);
+
+  // ── Grand vaulted teal ceiling with constellation mural ──
+  ctx.fillStyle = '#1a6b5a';
+  ctx.beginPath();
+  ctx.moveTo(L, H * 0.52);
+  ctx.quadraticCurveTo(cx, -H * 0.15, R, H * 0.52);
+  ctx.lineTo(R, 0); ctx.lineTo(L, 0);
+  ctx.closePath();
+  ctx.fill();
+  // Darker teal band at vault edge
+  ctx.strokeStyle = '#135a4a'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(L, H * 0.52);
+  ctx.quadraticCurveTo(cx, -H * 0.15, R, H * 0.52); ctx.stroke();
+
+  // Constellation stars (golden)
   ctx.fillStyle = '#fbbf24';
-  for (let i = 0; i < 30; i++) {
-    ctx.beginPath(); ctx.arc(cam + (i * 137 + 50) % W, 20 + (i * 89) % (H * 0.35), 1.5, 0, Math.PI * 2); ctx.fill();
+  for (let i = 0; i < 50; i++) {
+    const sx = L + (i * 137 + 50) % W;
+    const sy = 15 + (i * 89 + i * i * 7) % Math.round(H * 0.38);
+    // Only draw if within the vault arch
+    const archY = H * 0.52 - (H * 0.67) * Math.sin(((sx - L) / W) * Math.PI);
+    if (sy < archY) {
+      const size = (i % 3 === 0) ? 2 : 1.2;
+      ctx.globalAlpha = 0.6 + (i % 5) * 0.08;
+      ctx.beginPath(); ctx.arc(sx, sy, size, 0, Math.PI * 2); ctx.fill();
+    }
   }
-  ctx.fillStyle = '#e2e8f0'; ctx.fillRect(cam, H * 0.7, W, H * 0.3);
-  // Clock
-  ctx.fillStyle = '#fbbf24'; ctx.beginPath(); ctx.arc(cx, H * 0.55, 25, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = '#92400e'; ctx.lineWidth = 3; ctx.stroke();
-  // Whisper echo effect
+  // Constellation lines (subtle)
+  ctx.strokeStyle = 'rgba(251,191,36,0.15)'; ctx.lineWidth = 0.8;
+  const cLines = [[0.2,0.12,0.28,0.18],[0.28,0.18,0.35,0.14],[0.6,0.08,0.65,0.16],[0.65,0.16,0.72,0.12],[0.72,0.12,0.78,0.2],[0.4,0.22,0.48,0.18],[0.48,0.18,0.55,0.24]];
+  for (const [x1,y1,x2,y2] of cLines) {
+    ctx.beginPath(); ctx.moveTo(L + W * x1, H * y1); ctx.lineTo(L + W * x2, H * y2); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  // ── Ornate cornice molding at vault base ──
+  ctx.fillStyle = '#b8a47a';
+  const corY = H * 0.48;
+  ctx.fillRect(L, corY, W, 8);
+  ctx.fillStyle = '#a08e6a';
+  ctx.fillRect(L, corY + 8, W, 4);
+  // Dentil detail
+  ctx.fillStyle = '#c4b48e';
+  for (let dx = L; dx < R; dx += 12) {
+    ctx.fillRect(dx, corY - 3, 6, 3);
+  }
+
+  // ── Large arched windows (three across back wall) ──
+  const winY = H * 0.15;
+  const winH = H * 0.35;
+  const winW = W * 0.18;
+  const windows = [cx - W * 0.28, cx, cx + W * 0.28];
+  for (const wx of windows) {
+    // Window recess shadow
+    ctx.fillStyle = '#8a7a5e';
+    ctx.beginPath();
+    ctx.moveTo(wx - winW / 2 - 4, winY + winH);
+    ctx.lineTo(wx - winW / 2 - 4, winY + winH * 0.3);
+    ctx.quadraticCurveTo(wx, winY - winH * 0.1, wx + winW / 2 + 4, winY + winH * 0.3);
+    ctx.lineTo(wx + winW / 2 + 4, winY + winH);
+    ctx.closePath(); ctx.fill();
+
+    // Window glass — warm light coming through
+    const glassGrad = ctx.createLinearGradient(wx, winY, wx, winY + winH);
+    glassGrad.addColorStop(0, '#e8dcc0');
+    glassGrad.addColorStop(0.3, '#f5edd6');
+    glassGrad.addColorStop(0.6, '#ddd0b0');
+    glassGrad.addColorStop(1, '#1a1a2e');
+    ctx.fillStyle = glassGrad;
+    ctx.beginPath();
+    ctx.moveTo(wx - winW / 2, winY + winH);
+    ctx.lineTo(wx - winW / 2, winY + winH * 0.3);
+    ctx.quadraticCurveTo(wx, winY, wx + winW / 2, winY + winH * 0.3);
+    ctx.lineTo(wx + winW / 2, winY + winH);
+    ctx.closePath(); ctx.fill();
+
+    // Window mullions (vertical bars)
+    ctx.strokeStyle = '#6b5c42'; ctx.lineWidth = 2;
+    for (let m = -1; m <= 1; m += 2) {
+      const mx = wx + m * winW * 0.18;
+      ctx.beginPath(); ctx.moveTo(mx, winY + winH * 0.25); ctx.lineTo(mx, winY + winH); ctx.stroke();
+    }
+    // Horizontal mullion
+    ctx.beginPath(); ctx.moveTo(wx - winW / 2 + 4, winY + winH * 0.55);
+    ctx.lineTo(wx + winW / 2 - 4, winY + winH * 0.55); ctx.stroke();
+    // Arch frame
+    ctx.strokeStyle = '#8a7a5e'; ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(wx - winW / 2, winY + winH);
+    ctx.lineTo(wx - winW / 2, winY + winH * 0.3);
+    ctx.quadraticCurveTo(wx, winY - winH * 0.05, wx + winW / 2, winY + winH * 0.3);
+    ctx.lineTo(wx + winW / 2, winY + winH);
+    ctx.stroke();
+  }
+
+  // ── Stone columns flanking the windows ──
+  const colW = W * 0.04;
+  const colPositions = [L + W * 0.08, cx - W * 0.14, cx + W * 0.14, R - W * 0.08];
+  for (const colX of colPositions) {
+    // Column shaft
+    const colGrad = ctx.createLinearGradient(colX - colW / 2, 0, colX + colW / 2, 0);
+    colGrad.addColorStop(0, '#b8a47a');
+    colGrad.addColorStop(0.3, '#d4c4a0');
+    colGrad.addColorStop(0.7, '#d4c4a0');
+    colGrad.addColorStop(1, '#a08e6a');
+    ctx.fillStyle = colGrad;
+    ctx.fillRect(colX - colW / 2, H * 0.12, colW, H * 0.58);
+    // Capital (top)
+    ctx.fillStyle = '#c4b48e';
+    ctx.fillRect(colX - colW / 2 - 4, H * 0.12, colW + 8, 8);
+    ctx.fillRect(colX - colW / 2 - 2, H * 0.12 + 8, colW + 4, 5);
+    // Base
+    ctx.fillRect(colX - colW / 2 - 4, H * 0.68, colW + 8, 6);
+  }
+
+  // ── Marble floor ──
+  const floorGrad = ctx.createLinearGradient(L, H * 0.7, L, H);
+  floorGrad.addColorStop(0, '#ddd5c0');
+  floorGrad.addColorStop(0.3, '#e8e0cc');
+  floorGrad.addColorStop(1, '#ccc4ae');
+  ctx.fillStyle = floorGrad;
+  ctx.fillRect(L, H * 0.7, W, H * 0.3);
+  // Floor tile lines
+  ctx.strokeStyle = 'rgba(160,142,106,0.3)'; ctx.lineWidth = 1;
+  for (let fx = L; fx < R; fx += W * 0.08) {
+    ctx.beginPath(); ctx.moveTo(fx, H * 0.7); ctx.lineTo(fx, H); ctx.stroke();
+  }
+  for (let fy = H * 0.75; fy < H; fy += H * 0.06) {
+    ctx.beginPath(); ctx.moveTo(L, fy); ctx.lineTo(R, fy); ctx.stroke();
+  }
+
+  // ── Departure/arrival boards on side walls ──
+  const boardW = W * 0.12;
+  const boardH = H * 0.18;
+  for (const bx of [L + W * 0.06, R - W * 0.06 - boardW]) {
+    ctx.fillStyle = '#0a0a0a';
+    ctx.fillRect(bx, H * 0.46, boardW, boardH);
+    // Board frame
+    ctx.strokeStyle = '#78350f'; ctx.lineWidth = 2;
+    ctx.strokeRect(bx, H * 0.46, boardW, boardH);
+    // Flip-board text lines
+    ctx.fillStyle = '#fbbf24'; ctx.font = '7px monospace'; ctx.textAlign = 'left';
+    const lines = ['NEW HAVEN  10:45', 'STAMFORD   11:12', 'HARLEM     11:30', 'POUGHKEEP  12:05', 'BREWSTER   12:22'];
+    for (let li = 0; li < lines.length; li++) {
+      ctx.fillText(lines[li], bx + 4, H * 0.46 + 12 + li * 12);
+    }
+    // Header
+    ctx.fillStyle = '#22c55e'; ctx.font = 'bold 8px monospace';
+    ctx.fillText(bx < cx ? 'DEPARTURES' : 'ARRIVALS', bx + 4, H * 0.46 + 8);
+  }
+  ctx.textAlign = 'center';
+
+  // ── Central information booth ──
+  const boothW = W * 0.14;
+  const boothY = H * 0.62;
+  const boothH = H * 0.12;
+  // Booth base (marble oval)
+  ctx.fillStyle = '#ddd5c0';
+  ctx.beginPath(); ctx.ellipse(cx, boothY + boothH, boothW / 2, boothH * 0.3, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#a08e6a'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.ellipse(cx, boothY + boothH, boothW / 2, boothH * 0.3, 0, 0, Math.PI * 2); ctx.stroke();
+  // Booth body
+  const boothGrad = ctx.createLinearGradient(cx - boothW / 2, boothY, cx + boothW / 2, boothY);
+  boothGrad.addColorStop(0, '#c4b48e');
+  boothGrad.addColorStop(0.3, '#e0d4b8');
+  boothGrad.addColorStop(0.7, '#e0d4b8');
+  boothGrad.addColorStop(1, '#b0a07a');
+  ctx.fillStyle = boothGrad;
+  ctx.fillRect(cx - boothW / 2, boothY, boothW, boothH);
+  // Dark window band on booth
+  ctx.fillStyle = '#1a1a2e';
+  ctx.fillRect(cx - boothW / 2 + 4, boothY + 4, boothW - 8, boothH * 0.4);
+  // Booth roof ridge
+  ctx.fillStyle = '#a08e6a';
+  ctx.fillRect(cx - boothW / 2 - 3, boothY - 2, boothW + 6, 4);
+
+  // ── The famous four-faced opal clock ──
+  const clockY = boothY - 16;
+  const clockR = 14;
+  // Clock pedestal
+  ctx.fillStyle = '#92400e';
+  ctx.fillRect(cx - 4, clockY + clockR - 2, 8, 18);
+  // Brass clock body
+  ctx.fillStyle = '#fbbf24';
+  ctx.beginPath(); ctx.arc(cx, clockY, clockR, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#92400e'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(cx, clockY, clockR, 0, Math.PI * 2); ctx.stroke();
+  // Clock face — creamy white
+  ctx.fillStyle = '#fef9ee';
+  ctx.beginPath(); ctx.arc(cx, clockY, clockR - 3, 0, Math.PI * 2); ctx.fill();
+  // Hour markers
+  ctx.fillStyle = '#1e1b4b';
+  for (let h = 0; h < 12; h++) {
+    const angle = (h / 12) * Math.PI * 2 - Math.PI / 2;
+    const mx = cx + Math.cos(angle) * (clockR - 5);
+    const my = clockY + Math.sin(angle) * (clockR - 5);
+    ctx.beginPath(); ctx.arc(mx, my, 0.8, 0, Math.PI * 2); ctx.fill();
+  }
+  // Clock hands (show ~10:10, the classic display position)
+  ctx.strokeStyle = '#1e1b4b'; ctx.lineWidth = 1.5; ctx.lineCap = 'round';
+  // Hour hand (10 o'clock)
+  ctx.beginPath(); ctx.moveTo(cx, clockY);
+  ctx.lineTo(cx + Math.cos(-Math.PI * 5 / 6) * (clockR - 7), clockY + Math.sin(-Math.PI * 5 / 6) * (clockR - 7)); ctx.stroke();
+  // Minute hand (2 o'clock / 10 min)
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(cx, clockY);
+  ctx.lineTo(cx + Math.cos(-Math.PI / 6) * (clockR - 5), clockY + Math.sin(-Math.PI / 6) * (clockR - 5)); ctx.stroke();
+  // Center dot
+  ctx.fillStyle = '#fbbf24';
+  ctx.beginPath(); ctx.arc(cx, clockY, 1.5, 0, Math.PI * 2); ctx.fill();
+
+  // ── Warm lighting glow from windows ──
+  ctx.fillStyle = 'rgba(255,240,200,0.06)';
+  for (const wx of windows) {
+    ctx.beginPath(); ctx.arc(wx, winY + winH * 0.5, winH * 0.8, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // ── Whisper echo effect (whispering gallery) ──
   if (grandCentralWhisper) {
-    ctx.fillStyle = 'rgba(167,139,250,0.15)';
-    ctx.beginPath(); ctx.arc(cx, H * 0.55, 100 + Math.sin(gameTime / 300) * 20, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#7c3aed'; ctx.font = 'italic 16px system-ui'; ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(167,139,250,0.12)';
+    ctx.beginPath(); ctx.arc(cx, clockY, 100 + Math.sin(gameTime / 300) * 20, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#7c3aed'; ctx.font = 'italic 14px system-ui'; ctx.textAlign = 'center';
     ctx.globalAlpha = 0.5 + Math.sin(gameTime / 400) * 0.3;
-    ctx.fillText(grandCentralWhisper + '... ' + grandCentralWhisper + '...', cx, H * 0.45);
+    ctx.fillText(grandCentralWhisper + '... ' + grandCentralWhisper + '...', cx, boothY - 40);
     ctx.globalAlpha = 1;
   }
-  ctx.fillStyle = '#1e1b4b'; ctx.font = 'bold 20px system-ui'; ctx.textAlign = 'center';
-  ctx.fillText('Grand Central Terminal', cx, H * 0.65);
+
+  // ── Player ──
   drawKitty(cx, H * 0.82, player.color, 1, player.walkFrame, 'horn', playerEyeColor, playerHornColors);
   ctx.textAlign = 'left';
 }
