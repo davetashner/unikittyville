@@ -393,15 +393,14 @@ function drawPhotoGallery(W, H) {
 
   // Four polaroid-style frames
   const animals = [
-    { key: 'elephant', label: 'Elephant', emoji: '', color: '#94a3b8' },
-    { key: 'rhino', label: 'Rhino', emoji: '', color: '#6b7280' },
-    { key: 'giraffe', label: 'Giraffe', emoji: '', color: '#fbbf24' },
-    { key: 'antelope', label: 'Antelope', emoji: '', color: '#a78bfa' },
-    { key: 'cheetah', label: 'Cheetah', emoji: '', color: '#fbbf24' },
+    { key: 'elephant', label: 'Elephant', color: '#94a3b8' },
+    { key: 'rhino', label: 'Rhino', color: '#78716c' },
+    { key: 'giraffe', label: 'Giraffe', color: '#d4a574' },
+    { key: 'antelope', label: 'Antelope', color: '#d4a574' },
   ];
 
-  const frameW = Math.round(W * 0.14);
-  const frameH = Math.round(frameW * 1.2);
+  const frameW = Math.round(W * 0.19);
+  const frameH = Math.round(frameW * 1.3);
   const gap = Math.round(W * 0.03);
   const totalW = animals.length * frameW + (animals.length - 1) * gap;
   const startX = (W - totalW) / 2;
@@ -424,83 +423,58 @@ function drawPhotoGallery(W, H) {
     const photoH = frameW * 0.7;
 
     if (taken) {
-      // Draw a simple scene with the animal
       // Savanna background
       ctx.fillStyle = '#f59e0b';
       ctx.fillRect(photoX, photoY, photoW, photoH);
+      // Ground
       ctx.fillStyle = '#92400e';
-      ctx.fillRect(photoX, photoY + photoH * 0.7, photoW, photoH * 0.3);
-
+      ctx.fillRect(photoX, photoY + photoH * 0.72, photoW, photoH * 0.28);
       // Sun
+      const sunX = photoX + photoW * 0.8;
+      const sunY = photoY + photoH * 0.15;
       ctx.fillStyle = '#fef08a';
-      ctx.beginPath();
-      ctx.arc(photoX + photoW * 0.8, photoY + photoH * 0.2, photoH * 0.1, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Animal silhouette (simple shapes)
-      ctx.fillStyle = a.color;
-      const ax = photoX + photoW * 0.5;
-      const ay = photoY + photoH * 0.55;
-      if (a.key === 'elephant') {
-        ctx.fillRect(ax - 12, ay - 8, 24, 16);
-        ctx.fillRect(ax - 14, ay + 4, 6, 10);
-        ctx.fillRect(ax + 8, ay + 4, 6, 10);
-        ctx.fillRect(ax + 10, ay - 12, 8, 8);
-        ctx.fillRect(ax + 16, ay - 8, 3, 12);
-      } else if (a.key === 'rhino') {
-        ctx.fillRect(ax - 14, ay - 6, 28, 14);
-        ctx.fillRect(ax - 16, ay + 4, 6, 10);
-        ctx.fillRect(ax + 10, ay + 4, 6, 10);
-        ctx.fillRect(ax - 16, ay - 10, 6, 6);
-        // horn
-        ctx.fillStyle = '#d1d5db';
-        ctx.fillRect(ax - 18, ay - 14, 4, 6);
-      } else if (a.key === 'giraffe') {
-        ctx.fillRect(ax - 4, ay - 20, 8, 30);
-        ctx.fillRect(ax - 8, ay + 6, 6, 10);
-        ctx.fillRect(ax + 2, ay + 6, 6, 10);
-        ctx.fillRect(ax - 6, ay - 24, 12, 8);
-        // spots
-        ctx.fillStyle = '#92400e';
-        ctx.fillRect(ax - 2, ay - 14, 3, 3);
-        ctx.fillRect(ax + 1, ay - 6, 3, 3);
-        ctx.fillRect(ax - 3, ay, 3, 3);
-      } else if (a.key === 'antelope') {
-        ctx.fillRect(ax - 10, ay - 4, 20, 10);
-        ctx.fillRect(ax - 12, ay + 2, 4, 10);
-        ctx.fillRect(ax + 8, ay + 2, 4, 10);
-        ctx.fillRect(ax - 12, ay - 8, 8, 6);
-        // horns
-        ctx.fillStyle = '#78716c';
-        ctx.fillRect(ax - 12, ay - 16, 2, 10);
-        ctx.fillRect(ax - 6, ay - 16, 2, 10);
-      } else if (a.key === 'cheetah') {
-        ctx.fillRect(ax - 12, ay - 4, 24, 10);
-        ctx.fillRect(ax - 14, ay + 2, 4, 10);
-        ctx.fillRect(ax + 10, ay + 2, 4, 10);
-        ctx.fillRect(ax + 10, ay - 8, 8, 6);
-        // spots
-        ctx.fillStyle = '#1c1917';
-        ctx.fillRect(ax - 8, ay - 2, 2, 2);
-        ctx.fillRect(ax - 2, ay, 2, 2);
-        ctx.fillRect(ax + 4, ay - 2, 2, 2);
-        // tail
-        ctx.fillRect(ax - 16, ay - 6, 6, 3);
+      ctx.beginPath(); ctx.arc(sunX, sunY, photoH * 0.08, 0, Math.PI * 2); ctx.fill();
+      // Grass tufts
+      ctx.strokeStyle = '#a0845a'; ctx.lineWidth = 1;
+      for (let g = 0; g < 6; g++) {
+        const gx = photoX + photoW * (g + 0.5) / 6;
+        const gy2 = photoY + photoH * 0.72;
+        ctx.beginPath(); ctx.moveTo(gx, gy2); ctx.lineTo(gx - 3, gy2 - 5); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(gx, gy2); ctx.lineTo(gx + 3, gy2 - 4); ctx.stroke();
       }
-
+      // Clip to photo area and draw close-ups
+      ctx.save();
+      ctx.beginPath(); ctx.rect(photoX, photoY, photoW, photoH); ctx.clip();
+      const scale = photoW / 120;
+      const groundY = photoY + photoH * 0.72;
+      // Animal on the right
+      ctx.save();
+      ctx.translate(photoX + photoW * 0.62, groundY);
+      ctx.scale(scale, scale);
+      if (typeof drawPhotoAnimal === 'function') drawPhotoAnimal(a.key, 0, 0);
+      ctx.restore();
+      // Player kitty on the left
+      ctx.save();
+      ctx.translate(photoX + photoW * 0.25, groundY);
+      ctx.scale(scale * 0.8, scale * 0.8);
+      if (typeof drawPhotoKitty === 'function') drawPhotoKitty(0, 0);
+      ctx.restore();
+      ctx.restore();
       // Checkmark
       ctx.fillStyle = '#4ade80';
-      ctx.font = 'bold ' + Math.round(frameW * 0.15) + 'px sans-serif';
+      ctx.font = 'bold ' + Math.round(frameW * 0.12) + 'px sans-serif';
       ctx.textAlign = 'right';
-      ctx.fillText('\u2713', fx + frameW - 6, fy + 16);
+      ctx.fillText('\u2713', fx + frameW - 6, fy + 14);
     } else {
-      // Empty — question mark
+      // Camera icon placeholder
       ctx.fillStyle = '#1f2937';
       ctx.fillRect(photoX, photoY, photoW, photoH);
       ctx.fillStyle = '#4b5563';
-      ctx.font = 'bold ' + Math.round(photoH * 0.5) + 'px sans-serif';
+      ctx.font = Math.round(photoH * 0.3) + 'px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText('?', photoX + photoW / 2, photoY + photoH * 0.65);
+      ctx.fillText('\uD83D\uDCF7', photoX + photoW / 2, photoY + photoH * 0.55);
+      ctx.font = Math.round(photoH * 0.15) + 'px sans-serif';
+      ctx.fillText('Not yet', photoX + photoW / 2, photoY + photoH * 0.78);
     }
 
     // Label
@@ -515,7 +489,113 @@ function drawPhotoGallery(W, H) {
   ctx.fillStyle = count >= 5 ? '#4ade80' : '#e2e8f0';
   ctx.font = 'bold ' + Math.round(H * 0.04) + 'px "Segoe UI", system-ui, sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText(count + '/5 species photographed' + (count >= 5 ? ' — Collection complete!' : ''), W / 2, H * 0.88);
+  ctx.fillText(count + '/4 species photographed' + (count >= 4 ? ' \u2014 Collection complete!' : ''), W / 2, H * 0.88);
+}
+
+// Draw player's unikitty close-up for photo gallery
+function drawPhotoKitty(x, y) {
+  const color = player.color || '#f9a8d4';
+  const eyeCol = playerEyeColor || '#1e1b4b';
+  const hornCols = playerHornColors || ['#fbbf24', '#f472b6', '#a78bfa'];
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.ellipse(x, y - 12, 16, 14, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x, y - 30, 14, 0, Math.PI * 2); ctx.fill();
+  // Ears
+  ctx.beginPath(); ctx.moveTo(x - 10, y - 40); ctx.lineTo(x - 6, y - 50); ctx.lineTo(x - 2, y - 40); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x + 2, y - 40); ctx.lineTo(x + 6, y - 50); ctx.lineTo(x + 10, y - 40); ctx.fill();
+  ctx.fillStyle = '#fda4af';
+  ctx.beginPath(); ctx.moveTo(x - 8, y - 41); ctx.lineTo(x - 6, y - 47); ctx.lineTo(x - 4, y - 41); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x + 4, y - 41); ctx.lineTo(x + 6, y - 47); ctx.lineTo(x + 8, y - 41); ctx.fill();
+  // Eyes
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.ellipse(x - 5, y - 32, 5, 6, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(x + 5, y - 32, 5, 6, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = eyeCol;
+  ctx.beginPath(); ctx.arc(x - 4, y - 31, 2.5, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 6, y - 31, 2.5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(x - 3, y - 33, 1, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(x + 7, y - 33, 1, 0, Math.PI * 2); ctx.fill();
+  // Mouth & whiskers
+  ctx.strokeStyle = '#831843'; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.arc(x, y - 25, 3, 0, Math.PI); ctx.stroke();
+  ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 0.8;
+  for (let side = -1; side <= 1; side += 2) {
+    ctx.beginPath(); ctx.moveTo(x + side * 8, y - 28); ctx.lineTo(x + side * 20, y - 30); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x + side * 8, y - 26); ctx.lineTo(x + side * 20, y - 26); ctx.stroke();
+  }
+  // Legs & tail
+  ctx.fillStyle = color;
+  ctx.fillRect(x - 10, y - 2, 6, 6); ctx.fillRect(x + 4, y - 2, 6, 6);
+  ctx.strokeStyle = color; ctx.lineWidth = 4; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x - 14, y - 8); ctx.quadraticCurveTo(x - 24, y - 20, x - 18, y - 28); ctx.stroke();
+  // Horn
+  const hornGrad = ctx.createLinearGradient(x, y - 50, x, y - 58);
+  hornGrad.addColorStop(0, hornCols[0]); hornGrad.addColorStop(0.5, hornCols[1]); hornGrad.addColorStop(1, hornCols[2]);
+  ctx.fillStyle = hornGrad;
+  ctx.beginPath(); ctx.moveTo(x - 3, y - 43); ctx.lineTo(x, y - 58); ctx.lineTo(x + 3, y - 43); ctx.closePath(); ctx.fill();
+}
+
+// Draw animal close-ups for photo gallery
+function drawPhotoAnimal(key, x, y) {
+  if (key === 'elephant') {
+    ctx.fillStyle = '#94a3b8';
+    ctx.beginPath(); ctx.ellipse(x, y - 35, 35, 28, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(x + 28, y - 45, 18, 16, 0.2, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 8; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(x + 42, y - 40); ctx.quadraticCurveTo(x + 55, y - 25, x + 48, y - 10); ctx.stroke();
+    ctx.fillStyle = '#7c8ea0';
+    ctx.fillRect(x - 20, y - 12, 10, 12); ctx.fillRect(x - 5, y - 12, 10, 12);
+    ctx.fillRect(x + 10, y - 12, 10, 12); ctx.fillRect(x + 22, y - 12, 10, 12);
+    ctx.fillStyle = '#a0b0c0';
+    ctx.beginPath(); ctx.ellipse(x + 20, y - 48, 12, 10, -0.3, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#1e293b';
+    ctx.beginPath(); ctx.arc(x + 35, y - 48, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#fef3c7';
+    ctx.beginPath(); ctx.moveTo(x + 38, y - 38); ctx.quadraticCurveTo(x + 48, y - 32, x + 44, y - 22);
+    ctx.lineWidth = 3; ctx.strokeStyle = '#fef3c7'; ctx.stroke();
+  } else if (key === 'rhino') {
+    ctx.fillStyle = '#78716c';
+    ctx.beginPath(); ctx.ellipse(x, y - 22, 28, 18, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(x + 22, y - 25, 14, 12, 0.1, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#a8a29e';
+    ctx.beginPath(); ctx.moveTo(x + 34, y - 28); ctx.lineTo(x + 40, y - 42); ctx.lineTo(x + 36, y - 28); ctx.fill();
+    ctx.fillStyle = '#57534e';
+    ctx.fillRect(x - 16, y - 8, 8, 8); ctx.fillRect(x - 3, y - 8, 8, 8);
+    ctx.fillRect(x + 8, y - 8, 8, 8); ctx.fillRect(x + 18, y - 8, 8, 8);
+    ctx.fillStyle = '#1e293b';
+    ctx.beginPath(); ctx.arc(x + 28, y - 28, 2, 0, Math.PI * 2); ctx.fill();
+  } else if (key === 'giraffe') {
+    ctx.fillStyle = '#d4a574';
+    ctx.fillRect(x - 12, y - 50, 6, 50); ctx.fillRect(x - 2, y - 50, 6, 50);
+    ctx.fillRect(x + 8, y - 50, 6, 50); ctx.fillRect(x + 18, y - 50, 6, 50);
+    ctx.beginPath(); ctx.ellipse(x + 5, y - 55, 22, 14, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.save(); ctx.translate(x + 20, y - 60); ctx.rotate(-0.15);
+    ctx.fillRect(-5, -65, 10, 65); ctx.restore();
+    ctx.beginPath(); ctx.ellipse(x + 22, y - 125, 8, 6, 0.2, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#92400e';
+    for (const [sx, sy] of [[-5,-55],[10,-58],[0,-48],[15,-50],[18,-75],[16,-90],[20,-105]]) {
+      ctx.beginPath(); ctx.ellipse(x + sx, y + sy, 4, 3, 0, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.fillStyle = '#1e293b';
+    ctx.beginPath(); ctx.arc(x + 27, y - 126, 2, 0, Math.PI * 2); ctx.fill();
+  } else if (key === 'antelope') {
+    ctx.fillStyle = '#d4a574';
+    ctx.beginPath(); ctx.ellipse(x, y - 18, 18, 12, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(x + 15, y - 25, 8, 6, 0.3, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#b8956a'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(x - 10, y - 8); ctx.lineTo(x - 12, y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x - 3, y - 8); ctx.lineTo(x - 5, y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x + 5, y - 8); ctx.lineTo(x + 3, y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x + 12, y - 8); ctx.lineTo(x + 10, y); ctx.stroke();
+    ctx.strokeStyle = '#5c3a1e'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x + 17, y - 28); ctx.lineTo(x + 14, y - 40); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x + 19, y - 28); ctx.lineTo(x + 22, y - 40); ctx.stroke();
+    ctx.fillStyle = '#1e293b';
+    ctx.beginPath(); ctx.arc(x + 19, y - 27, 1.5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#fef3c7';
+    ctx.beginPath(); ctx.ellipse(x, y - 14, 14, 6, 0, 0.2, Math.PI - 0.2); ctx.fill();
+  }
 }
 
 function drawFieldJournal(W, H) {
@@ -7490,6 +7570,28 @@ function drawSafariPlatforms() {
     ctx.fillStyle = '#b89a6a';
     ctx.fillRect(p.x + 5, p.y + 2, 6, 3);
     ctx.fillRect(p.x + p.w - 15, p.y + 4, 8, 2);
+    // Boost-only platform glow effect
+    if (p.boostOnly) {
+      const glowColor = p.boostOnly === 'elephant' ? 'rgba(148, 163, 184, 0.3)' : 'rgba(251, 191, 36, 0.3)';
+      const pulseR = 20 + Math.sin(gameTime / 500) * 5;
+      ctx.fillStyle = glowColor;
+      ctx.beginPath();
+      ctx.ellipse(p.x + p.w / 2, p.y, p.w / 2 + pulseR, 15, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Floating sparkle particles
+      ctx.fillStyle = p.boostOnly === 'elephant' ? '#e2e8f0' : '#fef08a';
+      for (let s = 0; s < 3; s++) {
+        const sx = p.x + p.w * (s + 0.5) / 3 + Math.sin(gameTime / 400 + s * 2) * 8;
+        const sy = p.y - 10 - Math.sin(gameTime / 300 + s) * 8;
+        ctx.beginPath(); ctx.arc(sx, sy, 2, 0, Math.PI * 2); ctx.fill();
+      }
+      // Letter hint
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 10px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText(p.boostOnly === 'elephant' ? 'E' : 'G', p.x + p.w / 2, p.y - 5);
+      ctx.textAlign = 'left';
+    }
   });
 }
 
