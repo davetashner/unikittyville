@@ -149,6 +149,47 @@ function savePostcards() {
   } catch (e) { /* storage full or unavailable */ }
 }
 
+// ── Captain's Mission Log (Moon level) ──
+const MISSION_LOG_PROMPTS = [
+  'My favorite level was ____ because...',
+  'The most amazing fact I learned was...',
+  'If I could visit one place I would go to ____ because...',
+  'The funniest thing that happened was...',
+  'My message to future Moon visitors is...',
+];
+const MISSION_LOG_ENTRY_POINTS = 25;
+const MISSION_LOG_BONUS = 100;
+const MISSION_LOG_MIN_CHARS = 20;
+const MISSION_LOG_MAX_CHARS = 200;
+let missionLogOpen = false;
+let missionLogEntry = 0; // 0-4 current prompt index
+let missionLogTexts = ['', '', '', '', ''];
+let missionLogComplete = false;
+let missionLogScored = [false, false, false, false, false]; // track which entries earned points
+let missionLogBonusAwarded = false;
+
+function loadMissionLog() {
+  try {
+    const data = JSON.parse(localStorage.getItem('unikittyville_missionlog') || 'null');
+    if (data) {
+      missionLogTexts = data.texts || ['', '', '', '', ''];
+      missionLogComplete = data.complete || false;
+      missionLogScored = data.scored || [false, false, false, false, false];
+      missionLogBonusAwarded = data.bonusAwarded || false;
+    }
+  } catch (e) { /* ignore corrupt data */ }
+}
+function saveMissionLog() {
+  try {
+    localStorage.setItem('unikittyville_missionlog', JSON.stringify({
+      texts: missionLogTexts,
+      complete: missionLogComplete,
+      scored: missionLogScored,
+      bonusAwarded: missionLogBonusAwarded,
+    }));
+  } catch (e) { /* storage full or unavailable */ }
+}
+
 // ── Fact Notebook ──
 let factNotebook = JSON.parse(localStorage.getItem('factNotebook') || '[]');
 let notebookOpen = false;
@@ -1590,6 +1631,9 @@ function update(dt) {
 
   // Block all game input while postcard is open
   if (postcardOpen) return;
+
+  // Block all game input while mission log is open
+  if (missionLogOpen) return;
 
   // Tour guide overlay — block normal input while active
   if (tourGuideActive) {
@@ -4786,6 +4830,13 @@ function update(dt) {
     postcardMode = 'write';
     postcardText = '';
     postcardJustSent = false;
+  }
+
+  // Mission Log toggle — M key on Moon level when outdoors
+  if (keys['KeyM'] && currentLevel === 13 && currentScene === null) {
+    keys['KeyM'] = false;
+    missionLogOpen = true;
+    loadMissionLog();
   }
 
   // Prompt

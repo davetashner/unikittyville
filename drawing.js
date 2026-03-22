@@ -138,6 +138,11 @@ function draw() {
   if (artDescActive && currentScene === Scene.THE_MET) {
     drawArtDescOverlay(W, H);
   }
+
+  // Captain's Mission Log overlay (Moon level)
+  if (missionLogOpen && currentLevel === 13) {
+    drawMissionLog(W, H);
+  }
 }
 
 function drawPhotoGallery(W, H) {
@@ -2256,6 +2261,165 @@ function drawTrainPuzzleOverlay(W, H) {
     ctx.font = Math.round(H * 0.028) + 'px "Segoe UI", system-ui, sans-serif';
     ctx.fillText(puzzle.hint, W / 2, btnY + btnH + H * 0.09);
   }
+}
+
+function drawMissionLog(W, H) {
+  // Dark backdrop
+  ctx.fillStyle = 'rgba(0, 0, 20, 0.85)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Panel dimensions
+  const panelW = Math.min(W * 0.8, 620);
+  const panelH = Math.min(H * 0.85, 480);
+  const cx = (W - panelW) / 2;
+  const cy = (H - panelH) / 2;
+
+  // Drop shadow
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+  ctx.fillRect(cx + 5, cy + 5, panelW, panelH);
+
+  // Panel background — dark navy
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(cx, cy, panelW, panelH);
+
+  // Blue border
+  ctx.strokeStyle = '#3b82f6';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(cx, cy, panelW, panelH);
+
+  // Inner border glow
+  ctx.strokeStyle = 'rgba(59, 130, 246, 0.3)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(cx + 4, cy + 4, panelW - 8, panelH - 8);
+
+  // Title bar
+  const titleH = Math.round(panelH * 0.12);
+  ctx.fillStyle = '#1e3a5f';
+  ctx.fillRect(cx, cy, panelW, titleH);
+
+  // Title text
+  ctx.fillStyle = '#60a5fa';
+  ctx.font = 'bold ' + Math.round(titleH * 0.55) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('CAPTAIN\'S LOG', W / 2, cy + titleH * 0.7);
+
+  // Small star decorations around title
+  ctx.fillStyle = '#fbbf24';
+  ctx.font = Math.round(titleH * 0.35) + 'px sans-serif';
+  ctx.fillText('\u2605', cx + 30, cy + titleH * 0.65);
+  ctx.fillText('\u2605', cx + panelW - 30, cy + titleH * 0.65);
+
+  // Entry tabs (1-5) across the top below title
+  const tabY = cy + titleH + 8;
+  const tabH = Math.round(panelH * 0.065);
+  const tabW = Math.round((panelW - 40) / 5);
+  const tabX0 = cx + 20;
+
+  for (let i = 0; i < 5; i++) {
+    const tx = tabX0 + i * tabW;
+    const isActive = i === missionLogEntry;
+    const hasText = missionLogTexts[i].length >= MISSION_LOG_MIN_CHARS;
+
+    // Tab background
+    ctx.fillStyle = isActive ? '#3b82f6' : (hasText ? '#1e40af' : '#1e293b');
+    ctx.fillRect(tx + 2, tabY, tabW - 4, tabH);
+
+    // Tab border
+    ctx.strokeStyle = isActive ? '#60a5fa' : '#334155';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(tx + 2, tabY, tabW - 4, tabH);
+
+    // Tab label
+    ctx.fillStyle = isActive ? '#fff' : (hasText ? '#93c5fd' : '#64748b');
+    ctx.font = 'bold ' + Math.round(tabH * 0.6) + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText((i + 1) + (hasText ? ' \u2713' : ''), tx + tabW / 2, tabY + tabH * 0.72);
+  }
+
+  // Prompt area
+  const promptY = tabY + tabH + 16;
+  const promptH = Math.round(panelH * 0.1);
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = 'italic ' + Math.round(promptH * 0.45) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(MISSION_LOG_PROMPTS[missionLogEntry], cx + 24, promptY + promptH * 0.5);
+
+  // Writing area — dark input box
+  const writeY = promptY + promptH + 4;
+  const writeH = Math.round(panelH * 0.42);
+  const writeX = cx + 20;
+  const writeW = panelW - 40;
+
+  ctx.fillStyle = '#1e293b';
+  ctx.fillRect(writeX, writeY, writeW, writeH);
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(writeX, writeY, writeW, writeH);
+
+  // Draw typed text with word wrapping
+  ctx.fillStyle = '#e2e8f0';
+  const fontSize = Math.round(H * 0.028);
+  ctx.font = fontSize + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'left';
+  const lineH = Math.round(fontSize * 1.4);
+  const maxLineChars = Math.floor((writeW - 16) / (fontSize * 0.55));
+  const text = missionLogTexts[missionLogEntry];
+  const lines = [];
+  let remaining = text;
+  while (remaining.length > 0) {
+    lines.push(remaining.slice(0, maxLineChars));
+    remaining = remaining.slice(maxLineChars);
+  }
+  if (lines.length === 0) lines.push('');
+  const maxVisibleLines = Math.floor((writeH - 16) / lineH);
+  for (let i = 0; i < Math.min(lines.length, maxVisibleLines); i++) {
+    ctx.fillText(lines[i], writeX + 8, writeY + 20 + i * lineH);
+  }
+
+  // Blinking cursor
+  const cursorLine = Math.min(lines.length - 1, maxVisibleLines - 1);
+  const cursorText = lines[cursorLine] || '';
+  const cursorXPos = writeX + 8 + ctx.measureText(cursorText).width + 2;
+  const cursorYPos = writeY + 20 + cursorLine * lineH;
+  if (Math.floor(gameTime / 500) % 2 === 0) {
+    ctx.fillStyle = '#60a5fa';
+    ctx.fillRect(cursorXPos, cursorYPos - fontSize + 2, 2, fontSize);
+  }
+
+  // Character count
+  const charCount = text.length;
+  ctx.fillStyle = charCount >= MISSION_LOG_MAX_CHARS - 10 ? '#ef4444' : (charCount >= MISSION_LOG_MIN_CHARS ? '#4ade80' : '#64748b');
+  ctx.font = Math.round(H * 0.022) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText(charCount + '/' + MISSION_LOG_MAX_CHARS, writeX + writeW - 4, writeY + writeH + 16);
+
+  // Min chars hint
+  if (charCount < MISSION_LOG_MIN_CHARS) {
+    ctx.fillStyle = '#94a3b8';
+    ctx.textAlign = 'left';
+    ctx.fillText((MISSION_LOG_MIN_CHARS - charCount) + ' more chars for +' + MISSION_LOG_ENTRY_POINTS + ' pts', writeX + 4, writeY + writeH + 16);
+  } else if (!missionLogScored[missionLogEntry]) {
+    ctx.fillStyle = '#4ade80';
+    ctx.textAlign = 'left';
+    ctx.fillText('Ready! Press Enter to save (+' + MISSION_LOG_ENTRY_POINTS + ' pts)', writeX + 4, writeY + writeH + 16);
+  } else {
+    ctx.fillStyle = '#60a5fa';
+    ctx.textAlign = 'left';
+    ctx.fillText('Saved! Press Enter to continue', writeX + 4, writeY + writeH + 16);
+  }
+
+  // Progress & bonus info
+  const savedCount = missionLogScored.filter(s => s).length;
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = Math.round(H * 0.022) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Entries: ' + savedCount + '/5' + (savedCount === 5 && !missionLogBonusAwarded ? '' : (savedCount < 5 ? '  |  All 5 = +' + MISSION_LOG_BONUS + ' bonus!' : '  |  Bonus earned!')), W / 2, cy + panelH - 30);
+
+  // Controls hint
+  ctx.fillStyle = '#64748b';
+  ctx.font = Math.round(H * 0.02) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Enter: Save & Next  |  Tab/Shift+Tab: Switch Entry  |  Esc: Close', W / 2, cy + panelH - 10);
 }
 
 function drawSpeechBubbles() {
