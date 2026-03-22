@@ -2591,15 +2591,15 @@ function drawMetMuseumInterior(cam, W, H) {
   const cx = cam + W / 2;
   // Museum walls
   ctx.fillStyle = '#f5f5f4'; ctx.fillRect(cam, 0, W, H);
-  ctx.fillStyle = '#d6d3d1'; ctx.fillRect(cam, H * 0.75, W, H * 0.25);
-  // Red banner
-  ctx.fillStyle = '#dc2626'; ctx.fillRect(cam, 0, W, 45);
-  ctx.fillStyle = '#fff'; ctx.font = 'bold 22px system-ui'; ctx.textAlign = 'center';
-  ctx.fillText('The Metropolitan Museum of Art', cx, 30);
+  ctx.fillStyle = '#d6d3d1'; ctx.fillRect(cam, H * 0.78, W, H * 0.22);
+  // Red banner (below HUD)
+  ctx.fillStyle = '#dc2626'; ctx.fillRect(cam, H * 0.12, W, 30);
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 18px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText('The Metropolitan Museum of Art', cx, H * 0.12 + 21);
 
   const p = MET_PAINTINGS[metPaintingIndex];
-  const frameW = W * 0.55, frameH = H * 0.42;
-  const frameX = cx - frameW / 2, frameY = H * 0.13;
+  const frameW = W * 0.5, frameH = H * 0.35;
+  const frameX = cx - frameW / 2, frameY = H * 0.22;
 
   // Ornate gilded frame
   ctx.fillStyle = '#92400e'; ctx.fillRect(frameX - 12, frameY - 12, frameW + 24, frameH + 24);
@@ -2632,15 +2632,16 @@ function drawMetMuseumInterior(cam, W, H) {
   ctx.fillStyle = '#78716c'; ctx.font = 'italic 10px system-ui';
   ctx.fillText(p.artist, cx, frameY + frameH + 47);
 
-  // Navigation arrows
+  // Navigation arrows (vertically centered on painting)
+  const arrowY = frameY + frameH / 2;
   ctx.fillStyle = '#94a3b8'; ctx.font = 'bold 30px system-ui';
-  if (metPaintingIndex > 0) ctx.fillText('\u2190', cam + 30, H * 0.38);
-  if (metPaintingIndex < MET_PAINTINGS.length - 1) ctx.fillText('\u2192', cam + W - 50, H * 0.38);
+  if (metPaintingIndex > 0) ctx.fillText('\u2190', cam + 20, arrowY);
+  if (metPaintingIndex < MET_PAINTINGS.length - 1) ctx.fillText('\u2192', cam + W - 40, arrowY);
   // Counter
   ctx.fillStyle = '#78716c'; ctx.font = '14px system-ui';
-  ctx.fillText((metPaintingIndex + 1) + ' of ' + MET_PAINTINGS.length, cx, H * 0.72);
+  ctx.fillText((metPaintingIndex + 1) + ' of ' + MET_PAINTINGS.length, cx, H * 0.74);
   // Player viewing
-  drawKitty(cx, H * 0.85, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
+  drawKitty(cx, H * 0.88, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
   ctx.textAlign = 'left';
 }
 
