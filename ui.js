@@ -529,6 +529,23 @@ window.addEventListener('keydown', e => {
       }
     }
   }
+  // Whale Song Transcription typing during transatlantic flight (level 10)
+  if (currentLevel === 10 && whaleTranscription.active && !e.repeat) {
+    const wt = whaleTranscription;
+    const target = WHALE_TRANSMISSIONS[wt.currentIndex].text;
+    if (e.key === 'Backspace') {
+      e.preventDefault();
+      wt.typed = wt.typed.slice(0, -1);
+    } else if (e.key.length === 1 && wt.typed.length < target.length) {
+      e.preventDefault();
+      const expected = target[wt.typed.length];
+      if (e.key === expected) {
+        wt.typed += e.key;
+      } else {
+        wt.errors++;
+      }
+    }
+  }
   // Scroll transcription typing in Pantheon
   if (scrollActive && !scrollComplete && !e.repeat) {
     if (e.key.length === 1 && scrollTyped < scrollText.length) {
@@ -1445,7 +1462,9 @@ function updatePrompt(near) {
       el.style.display = 'block';
       setAction('Enter', 'Land');
     } else {
-      el.textContent = 'Fly through the sky! Dodge seagulls, collect rubies!';
+      el.textContent = whaleTranscription.active
+        ? 'Type the radio transmission! Backspace to correct.'
+        : 'Fly through the sky! Dodge seagulls, collect rubies! Type radio transmissions for bonus points!';
       el.style.display = 'block';
       setAction(null, '');
     }

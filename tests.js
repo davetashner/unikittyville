@@ -237,6 +237,19 @@ for (var tg = 1; tg <= TOTAL_LEVELS; tg++) {
   assert('tourGuideFacts[' + tg + '] has 3 string facts', tourGuideFacts[tg] && tourGuideFacts[tg].length === 3 && tourGuideFacts[tg].every(function(f) { return typeof f === 'string' && f.length > 10; }));
 }
 
+// ============================================================
+// Whale Song Transcription
+// ============================================================
+section('Whale Song Transcription');
+assert('WHALE_TRANSMISSIONS exists and has 5 entries', Array.isArray(WHALE_TRANSMISSIONS) && WHALE_TRANSMISSIONS.length === 5);
+assert('Each transmission has x and text', WHALE_TRANSMISSIONS.every(function(t) { return typeof t.x === 'number' && typeof t.text === 'string' && t.text.length > 0; }));
+assert('Transmission x positions are ascending', WHALE_TRANSMISSIONS.every(function(t, i) { return i === 0 || t.x > WHALE_TRANSMISSIONS[i - 1].x; }));
+assert('All transmission x positions within flight world bounds', WHALE_TRANSMISSIONS.every(function(t) { return t.x > 0 && t.x < level10Flight.worldW; }));
+assert('WHALE_TRANSCRIPTION_POINTS is 25', WHALE_TRANSCRIPTION_POINTS === 25);
+assert('WHALE_TRANSCRIPTION_BONUS is 75', WHALE_TRANSCRIPTION_BONUS === 75);
+assert('WHALE_TRANSCRIPTION_TIMEOUT is 15000', WHALE_TRANSCRIPTION_TIMEOUT === 15000);
+assert('whaleTranscription state object exists', typeof whaleTranscription === 'object' && whaleTranscription.completed instanceof Set);
+
 var summaryClass = failed === 0 ? 'all-pass' : 'has-fail';
 log('<div class="summary ' + summaryClass + '">Results: ' + passed + '/' + total + ' passed, ' + failed + ' failed</div>');
 

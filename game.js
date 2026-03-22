@@ -497,6 +497,28 @@ let collectedAlienCount = 0;
 const MAX_SPACE_ALIENS = 8;
 let spaceInvulnTimer = 0; // brief invulnerability after asteroid hit
 
+// Whale Song Transcription — radio transmissions during transatlantic flight (level 10)
+const WHALE_TRANSMISSIONS = [
+  { x: 1000, text: 'Whale spotted below' },
+  { x: 2000, text: 'Blue whales are the largest animals ever' },
+  { x: 3000, text: 'Humpback whales sing songs' },
+  { x: 4000, text: 'Dolphins travel in groups called pods' },
+  { x: 5000, text: 'The ocean covers seventy percent of Earth' },
+];
+const WHALE_TRANSCRIPTION_POINTS = 25;
+const WHALE_TRANSCRIPTION_BONUS = 75;
+const WHALE_TRANSCRIPTION_TIMEOUT = 15000; // 15 seconds to type each
+let whaleTranscription = {
+  active: false,         // is a transmission currently showing?
+  currentIndex: -1,      // which transmission (0-4)
+  typed: '',             // what the player has typed so far
+  errors: 0,            // error count for current transmission
+  timeLeft: 0,          // ms remaining for current transmission
+  completed: new Set(),  // indices of completed transmissions
+  expired: new Set(),    // indices of expired (timed-out) transmissions
+  allBonusAwarded: false,
+};
+
 // Mission Control typing minigame state
 const MISSION_COMMANDS = [
   'SYSTEMS CHECK',
@@ -1356,6 +1378,18 @@ function completeTransition() {
   fuelCalcCorrect = 0;
   fuelCalcFeedback = '';
   fuelCalcFeedbackTimer = 0;
+  // Reset whale transcription state when re-entering level 10
+  if (levelTransition.toLevel === 10) {
+    whaleTranscription = {
+      active: false, currentIndex: -1, typed: '', errors: 0, timeLeft: 0,
+      completed: new Set(), expired: new Set(), allBonusAwarded: false,
+    };
+    // Reset flight obstacles
+    for (const sg of level10Flight.seagulls) sg.hit = false;
+    for (const storm of level10Flight.storms) storm.hit = false;
+    for (const hur of level10Flight.hurricanes) hur.hit = false;
+    for (const ruby of level10Flight.yarnBalls) ruby.collected = false;
+  }
   // Reset space flight obstacles when re-entering level 12
   if (levelTransition.toLevel === 12) {
     spaceInvulnTimer = 0;
@@ -4053,6 +4087,48 @@ function update(dt) {
         score += POINTS.YARN;
         addPopup(ruby.x, ruby.y - 20, '+' + POINTS.YARN + ' Ruby!', '#ef4444');
         playChaChing();
+      }
+    }
+
+    // Whale Song Transcription — trigger radio transmissions at world x positions
+    const wt = whaleTranscription;
+    if (wt.active) {
+      // Count down timer
+      wt.timeLeft -= 16;
+      if (wt.timeLeft <= 0) {
+        // Expired — auto-dismiss
+        wt.expired.add(wt.currentIndex);
+        wt.active = false;
+        addPopup(player.x, player.y - 40, 'Transmission lost!', '#94a3b8');
+      }
+      // Check if current transmission is fully typed
+      const target = WHALE_TRANSMISSIONS[wt.currentIndex].text;
+      if (wt.typed === target) {
+        wt.completed.add(wt.currentIndex);
+        wt.active = false;
+        score += WHALE_TRANSCRIPTION_POINTS;
+        addPopup(player.x, player.y - 40, '+' + WHALE_TRANSCRIPTION_POINTS + ' Transcribed!', '#22c55e');
+        playChaChing();
+        // Check if all 5 completed — award bonus
+        if (!wt.allBonusAwarded && wt.completed.size === WHALE_TRANSMISSIONS.length) {
+          wt.allBonusAwarded = true;
+          score += WHALE_TRANSCRIPTION_BONUS;
+          addPopup(player.x, player.y - 60, '+' + WHALE_TRANSCRIPTION_BONUS + ' All transmissions!', '#fbbf24');
+        }
+      }
+    } else {
+      // Check if player has crossed a new transmission trigger point
+      for (let i = 0; i < WHALE_TRANSMISSIONS.length; i++) {
+        if (wt.completed.has(i) || wt.expired.has(i)) continue;
+        const tx = WHALE_TRANSMISSIONS[i].x;
+        if (player.x >= tx && player.x < tx + 80) {
+          wt.active = true;
+          wt.currentIndex = i;
+          wt.typed = '';
+          wt.errors = 0;
+          wt.timeLeft = WHALE_TRANSCRIPTION_TIMEOUT;
+          break;
+        }
       }
     }
 

@@ -144,6 +144,11 @@ function draw() {
   if (missionLogOpen && currentLevel === 13) {
     drawMissionLog(W, H);
   }
+
+  // Whale Song Transcription radio panel (flight level 10)
+  if (currentLevel === 10 && whaleTranscription.active) {
+    drawWhaleTranscriptionPanel(W, H);
+  }
 }
 
 function drawPhotoGallery(W, H) {
@@ -7908,6 +7913,116 @@ function drawFlightSky(W, H, cycle, isNight, cam) {
     ctx.arc(W - 80, 60, 22, 0, Math.PI * 2);
     ctx.fill();
   }
+}
+
+// ── Whale Song Transcription radio panel overlay ──
+function drawWhaleTranscriptionPanel(W, H) {
+  const wt = whaleTranscription;
+  if (!wt.active || wt.currentIndex < 0) return;
+  const target = WHALE_TRANSMISSIONS[wt.currentIndex].text;
+  const typed = wt.typed;
+
+  const panelW = Math.min(W * 0.85, 520);
+  const panelH = 100;
+  const px = (W - panelW) / 2;
+  const py = H - panelH - 20;
+
+  // Panel background — dark radio console look
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+  ctx.beginPath();
+  ctx.roundRect(px, py, panelW, panelH, 10);
+  ctx.fill();
+  // Border — subtle radio glow
+  ctx.strokeStyle = '#3b82f6';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(px, py, panelW, panelH, 10);
+  ctx.stroke();
+
+  // Radio icon and label
+  ctx.fillStyle = '#60a5fa';
+  ctx.font = 'bold 12px system-ui';
+  ctx.textAlign = 'left';
+  ctx.fillText('RADIO TRANSMISSION #' + (wt.currentIndex + 1), px + 12, py + 18);
+
+  // Timer bar
+  const timerFrac = Math.max(0, wt.timeLeft / WHALE_TRANSCRIPTION_TIMEOUT);
+  const barX = px + panelW - 120;
+  const barY = py + 8;
+  const barW = 108;
+  const barH = 10;
+  ctx.fillStyle = '#1e293b';
+  ctx.fillRect(barX, barY, barW, barH);
+  const timerColor = timerFrac > 0.3 ? '#22c55e' : '#ef4444';
+  ctx.fillStyle = timerColor;
+  ctx.fillRect(barX, barY, barW * timerFrac, barH);
+  ctx.strokeStyle = '#475569';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(barX, barY, barW, barH);
+
+  // Timer text
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '10px system-ui';
+  ctx.textAlign = 'right';
+  ctx.fillText(Math.ceil(wt.timeLeft / 1000) + 's', barX - 4, barY + 9);
+
+  // Target text with typed portion highlighted
+  const textY = py + 48;
+  ctx.font = '16px "Courier New", monospace';
+  ctx.textAlign = 'center';
+
+  // Measure to center the text
+  const fullWidth = ctx.measureText(target).width;
+  const startX = (W - fullWidth) / 2;
+
+  // Draw character by character
+  let cx = startX;
+  for (let i = 0; i < target.length; i++) {
+    const ch = target[i];
+    const charW = ctx.measureText(ch).width;
+    if (i < typed.length) {
+      // Typed correctly — bright green
+      ctx.fillStyle = '#4ade80';
+    } else if (i === typed.length) {
+      // Current cursor position — white with underline
+      ctx.fillStyle = '#ffffff';
+    } else {
+      // Not yet typed — dim
+      ctx.fillStyle = '#64748b';
+    }
+    ctx.textAlign = 'left';
+    ctx.fillText(ch, cx, textY);
+    // Cursor underline on current position
+    if (i === typed.length) {
+      ctx.fillStyle = '#ffffff';
+      const blinkOn = Math.sin(performance.now() / 300) > 0;
+      if (blinkOn) {
+        ctx.fillRect(cx, textY + 3, charW, 2);
+      }
+    }
+    cx += charW;
+  }
+
+  // Error flash — brief red tint if errors > 0 and recent
+  if (wt.errors > 0) {
+    ctx.fillStyle = '#ef4444';
+    ctx.font = '11px system-ui';
+    ctx.textAlign = 'left';
+    ctx.fillText(wt.errors + ' error' + (wt.errors > 1 ? 's' : ''), px + 12, py + panelH - 12);
+  }
+
+  // Progress indicator
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '11px system-ui';
+  ctx.textAlign = 'right';
+  ctx.fillText(typed.length + '/' + target.length, px + panelW - 12, py + panelH - 12);
+
+  // Completed count
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#60a5fa';
+  ctx.fillText(wt.completed.size + '/' + WHALE_TRANSMISSIONS.length + ' transcribed', W / 2, py + panelH - 12);
+
+  ctx.textAlign = 'left';
 }
 
 function drawFlightWorld(W, H, cam, cycle, isNight) {
