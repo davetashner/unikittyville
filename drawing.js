@@ -59,10 +59,23 @@ function draw() {
     levelRegistry[currentLevel].drawWorld(W, H, cam, cycle, isNight);
   }
 
+  // Draw time capsule glow marker (in world coordinates)
+  drawTimeCapsuleMarker(cam, W);
+
   // Draw speech bubbles above NPCs (in world coordinates)
   drawSpeechBubbles();
 
   ctx.restore();
+
+  // Time Capsule card overlay
+  if (capsuleCardState) {
+    drawTimeCapsuleCard(W, H);
+  }
+
+  // Time Capsule gallery overlay
+  if (capsuleGalleryOpen) {
+    drawTimeCapsuleGallery(W, H);
+  }
 
   // Photo gallery overlay (safari level)
   if (photoGalleryOpen && currentLevel === 9) {
@@ -149,6 +162,216 @@ function draw() {
   // Whale Song Transcription radio panel (flight level 10)
   if (currentLevel === 10 && whaleTranscription.active) {
     drawWhaleTranscriptionPanel(W, H);
+  }
+}
+
+// ── Time Capsule Drawing Functions ──
+
+function drawTimeCapsuleMarker(cam, W) {
+  if (currentScene !== null) return;
+  const capsule = timeCapsules[currentLevel];
+  if (!capsule || capsulesFound.has(currentLevel)) return;
+
+  const dx = Math.abs(player.x - capsule.x);
+  if (dx > TIME_CAPSULE_GLOW_RANGE) return;
+
+  // Pulsing glow intensity based on distance and time
+  const proximity = 1 - dx / TIME_CAPSULE_GLOW_RANGE;
+  const pulse = 0.5 + 0.5 * Math.sin(gameTime / 400);
+  const alpha = proximity * (0.3 + 0.4 * pulse);
+
+  const cx = capsule.x;
+  const cy = GROUND_Y - 5;
+
+  // Outer glow
+  const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 25);
+  grad.addColorStop(0, 'rgba(251, 191, 36, ' + alpha + ')');
+  grad.addColorStop(0.6, 'rgba(251, 191, 36, ' + (alpha * 0.4) + ')');
+  grad.addColorStop(1, 'rgba(251, 191, 36, 0)');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(cx, cy, 25, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Small sparkle dots
+  const sparkleAlpha = alpha * 0.8;
+  ctx.fillStyle = 'rgba(255, 255, 255, ' + sparkleAlpha + ')';
+  for (let i = 0; i < 3; i++) {
+    const angle = gameTime / 600 + i * Math.PI * 2 / 3;
+    const r = 10 + 5 * Math.sin(gameTime / 300 + i);
+    const sx = cx + Math.cos(angle) * r;
+    const sy = cy + Math.sin(angle) * r - 5;
+    ctx.beginPath();
+    ctx.arc(sx, sy, 2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawTimeCapsuleCard(W, H) {
+  const c = capsuleCardState;
+  if (!c) return;
+
+  // Semi-transparent backdrop
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Card dimensions
+  const cardW = Math.min(420, W * 0.85);
+  const cardH = Math.min(280, H * 0.65);
+  const cx = (W - cardW) / 2;
+  const cy = (H - cardH) / 2;
+
+  // Card background with golden border
+  ctx.fillStyle = '#1e1b4b';
+  ctx.fillRect(cx, cy, cardW, cardH);
+  ctx.strokeStyle = '#f59e0b';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(cx, cy, cardW, cardH);
+
+  // Inner glow border
+  ctx.strokeStyle = 'rgba(251, 191, 36, 0.3)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(cx + 6, cy + 6, cardW - 12, cardH - 12);
+
+  // Header: "ARTIFACT DISCOVERED!"
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#f59e0b';
+  ctx.font = 'bold ' + Math.round(H * 0.04) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.fillText('ARTIFACT DISCOVERED!', W / 2, cy + cardH * 0.15);
+
+  // Artifact name
+  ctx.fillStyle = '#fef3c7';
+  ctx.font = 'bold ' + Math.round(H * 0.055) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.fillText(c.name, W / 2, cy + cardH * 0.35);
+
+  // Year
+  ctx.fillStyle = '#fbbf24';
+  ctx.font = Math.round(H * 0.035) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.fillText(c.year, W / 2, cy + cardH * 0.48);
+
+  // Fact text — word wrap
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = Math.round(H * 0.03) + 'px "Segoe UI", system-ui, sans-serif';
+  const maxTextW = cardW - 40;
+  const words = c.fact.split(' ');
+  let line = '';
+  let lineY = cy + cardH * 0.62;
+  for (const word of words) {
+    const test = line + (line ? ' ' : '') + word;
+    if (ctx.measureText(test).width > maxTextW) {
+      ctx.fillText(line, W / 2, lineY);
+      line = word;
+      lineY += H * 0.04;
+    } else {
+      line = test;
+    }
+  }
+  if (line) ctx.fillText(line, W / 2, lineY);
+
+  // Points
+  ctx.fillStyle = '#86efac';
+  ctx.font = 'bold ' + Math.round(H * 0.03) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.fillText('+' + POINTS.TIME_CAPSULE + ' points', W / 2, cy + cardH * 0.88);
+
+  // Dismiss hint
+  ctx.fillStyle = '#64748b';
+  ctx.font = Math.round(H * 0.022) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.fillText('Press T to close', W / 2, cy + cardH * 0.97);
+}
+
+function drawTimeCapsuleGallery(W, H) {
+  // Semi-transparent backdrop
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.82)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Title
+  ctx.fillStyle = '#f59e0b';
+  ctx.font = 'bold ' + Math.round(H * 0.055) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Time Capsule Collection', W / 2, H * 0.1);
+
+  // Subtitle
+  const found = capsulesFound.size;
+  const total = Object.keys(timeCapsules).length;
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = Math.round(H * 0.028) + 'px "Segoe UI", system-ui, sans-serif';
+  ctx.fillText(found + ' / ' + total + ' artifacts discovered  |  Press T to close', W / 2, H * 0.16);
+
+  // Grid layout — 2 columns
+  const cols = W > 500 ? 3 : 2;
+  const cellW = Math.min(200, (W - 40) / cols - 10);
+  const cellH = Math.round(cellW * 0.7);
+  const gap = 8;
+  const totalGridW = cols * cellW + (cols - 1) * gap;
+  const startX = (W - totalGridW) / 2;
+  let row = 0, col = 0;
+  const startY = H * 0.2;
+
+  for (let lvl = 1; lvl <= total; lvl++) {
+    const capsule = timeCapsules[lvl];
+    if (!capsule) continue;
+    const isFound = capsulesFound.has(lvl);
+
+    const fx = startX + col * (cellW + gap);
+    const fy = startY + row * (cellH + gap);
+
+    // Card background
+    ctx.fillStyle = isFound ? '#1e293b' : '#0f172a';
+    ctx.fillRect(fx, fy, cellW, cellH);
+    ctx.strokeStyle = isFound ? '#f59e0b' : '#334155';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(fx, fy, cellW, cellH);
+
+    ctx.textAlign = 'center';
+    const midX = fx + cellW / 2;
+
+    if (isFound) {
+      // Level name
+      const levelName = levelRegistry[lvl] ? levelRegistry[lvl].name : 'Level ' + lvl;
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = Math.round(cellH * 0.14) + 'px "Segoe UI", system-ui, sans-serif';
+      ctx.fillText(levelName, midX, fy + cellH * 0.2);
+
+      // Artifact name
+      ctx.fillStyle = '#fef3c7';
+      ctx.font = 'bold ' + Math.round(cellH * 0.18) + 'px "Segoe UI", system-ui, sans-serif';
+      ctx.fillText(capsule.name, midX, fy + cellH * 0.45);
+
+      // Year
+      ctx.fillStyle = '#fbbf24';
+      ctx.font = Math.round(cellH * 0.14) + 'px "Segoe UI", system-ui, sans-serif';
+      ctx.fillText(capsule.year, midX, fy + cellH * 0.65);
+
+      // Fact (truncated)
+      ctx.fillStyle = '#cbd5e1';
+      ctx.font = Math.round(cellH * 0.12) + 'px "Segoe UI", system-ui, sans-serif';
+      let factText = capsule.fact;
+      while (ctx.measureText(factText).width > cellW - 12 && factText.length > 10) {
+        factText = factText.slice(0, -4) + '...';
+      }
+      ctx.fillText(factText, midX, fy + cellH * 0.85);
+    } else {
+      // Undiscovered — show ? icon
+      ctx.fillStyle = '#334155';
+      ctx.font = 'bold ' + Math.round(cellH * 0.35) + 'px "Segoe UI", system-ui, sans-serif';
+      ctx.fillText('?', midX, fy + cellH * 0.5);
+
+      const levelName = levelRegistry[lvl] ? levelRegistry[lvl].name : 'Level ' + lvl;
+      ctx.fillStyle = '#475569';
+      ctx.font = Math.round(cellH * 0.13) + 'px "Segoe UI", system-ui, sans-serif';
+      ctx.fillText(levelName, midX, fy + cellH * 0.75);
+    }
+
+    col++;
+    if (col >= cols) { col = 0; row++; }
+  }
+
+  // Completion message
+  if (found === total) {
+    ctx.fillStyle = '#86efac';
+    ctx.font = 'bold ' + Math.round(H * 0.03) + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('All artifacts collected! You are a history master!', W / 2, H * 0.95);
   }
 }
 

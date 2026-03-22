@@ -50,6 +50,7 @@ const POINTS = {
   DIVE_LOG_PIECE: 30, DIVE_LOG_BONUS: 150,
   ROVER_CHALLENGE: 50, ROVER_BONUS: 200,
   MARKET_HAGGLE: 30, MARKET_BONUS: 100,
+  TIME_CAPSULE: 75,
 };
 
 // ── Timing durations (ms) ──
@@ -192,6 +193,18 @@ function saveMissionLog() {
       bonusAwarded: missionLogBonusAwarded,
     }));
   } catch (e) { /* storage full or unavailable */ }
+}
+
+// ── Time Capsule Collectibles ──
+const TIME_CAPSULE_RANGE = 80;        // proximity to discover
+const TIME_CAPSULE_GLOW_RANGE = 200;  // visible glow radius
+const TIME_CAPSULE_POINTS = 75;
+let capsulesFound = new Set(JSON.parse(localStorage.getItem('unikittyville_capsules') || '[]'));
+let capsuleCardState = null;  // { level, name, year, fact, timer } or null
+let capsuleGalleryOpen = false;
+
+function saveCapsules() {
+  try { localStorage.setItem('unikittyville_capsules', JSON.stringify([...capsulesFound])); } catch (e) { /* storage unavailable */ }
 }
 
 // ── Fact Notebook ──
@@ -1777,6 +1790,29 @@ function update(dt) {
       tourGuideActive = false;
     }
     return;
+  }
+
+  // Time Capsule card overlay — dismiss with T, Enter, or Escape
+  if (capsuleCardState) {
+    capsuleCardState.timer -= dt;
+    if (keys['KeyT'] || keys['Enter'] || keys['Escape'] || capsuleCardState.timer <= 0) {
+      keys['KeyT'] = false;
+      keys['Enter'] = false;
+      keys['Escape'] = false;
+      capsuleCardState = null;
+    }
+    return; // freeze while card is showing
+  }
+
+  // Time Capsule gallery overlay — T to close, arrow keys to scroll
+  if (capsuleGalleryOpen) {
+    if (keys['KeyT'] || keys['Escape'] || keys['Enter']) {
+      keys['KeyT'] = false;
+      keys['Escape'] = false;
+      keys['Enter'] = false;
+      capsuleGalleryOpen = false;
+    }
+    return; // freeze while gallery is open
   }
 
   // Fact Notebook overlay — N to toggle (only when not in a scene/minigame)
@@ -5025,6 +5061,32 @@ function update(dt) {
     }
   }
 
+  // Time Capsule — T key when outdoors (not in a scene that uses T)
+  if (keys['KeyT'] && currentScene === null) {
+    const capsule = timeCapsules[currentLevel];
+    if (capsule) {
+      const dx = Math.abs(player.x - capsule.x);
+      if (dx < TIME_CAPSULE_RANGE && !capsulesFound.has(currentLevel)) {
+        // Discover the artifact!
+        keys['KeyT'] = false;
+        capsulesFound.add(currentLevel);
+        saveCapsules();
+        score += POINTS.TIME_CAPSULE;
+        addPopup(player.x, player.y - 40, '+' + POINTS.TIME_CAPSULE + ' Artifact found!', '#f59e0b');
+        playChaChing();
+        capsuleCardState = { level: currentLevel, name: capsule.name, year: capsule.year, fact: capsule.fact, timer: 8000 };
+      } else if (dx >= TIME_CAPSULE_RANGE || capsulesFound.has(currentLevel)) {
+        // Open gallery when not near an undiscovered capsule
+        keys['KeyT'] = false;
+        capsuleGalleryOpen = true;
+      }
+    } else {
+      // No capsule for this level — open gallery
+      keys['KeyT'] = false;
+      capsuleGalleryOpen = true;
+    }
+  }
+
   // Notebook toggle — N key when not in a scene
   if (currentScene === null && keys['KeyN']) {
     keys['KeyN'] = false;
@@ -5189,6 +5251,11 @@ function update(dt) {
     loadMissionLog();
   }
 
+  // Time capsule proximity check
+  const capsuleForLevel = timeCapsules[currentLevel];
+  const nearTimeCapsule = currentScene === null && capsuleForLevel && !capsulesFound.has(currentLevel) &&
+    Math.abs(player.x - capsuleForLevel.x) < TIME_CAPSULE_RANGE;
+
   // Prompt
   updatePrompt({
     inPond, nearGrill, nearHouse, nearCamper, nearWindmill, nearBeehive,
@@ -5199,7 +5266,7 @@ function update(dt) {
     nearSailboat, nearDiveSpot, nearBaobab, nearCheetah, nearSafariJeep,
     nearWateringHole, nearElephant, nearMarket, nearHospital,
     nearFao, nearEmpire, nearThirtyRock, nearGrandCentral, nearMet,
-    nearBugNet
+    nearBugNet, nearTimeCapsule
   });
 }
 
