@@ -386,6 +386,17 @@
       border-radius: 14px;
     }
 
+    /* Difficulty selector */
+    #difficultySelector {
+      gap: 6px !important;
+      margin: 8px 0 !important;
+    }
+    .diff-btn {
+      font-size: 0.8rem !important;
+      padding: 6px 14px !important;
+      min-height: 36px;
+    }
+
     /* HUD */
     #hud {
       top: calc(4px + var(--sat));
@@ -524,6 +535,11 @@
       </div>
     </div>
   </div>
+  <div id="difficultySelector" style="display:flex;gap:10px;margin:10px 0;align-items:center;">
+    <button class="diff-btn" data-diff="easy" aria-label="Easy difficulty (ages 5-7)" style="font-size:0.95rem;padding:8px 20px;border-radius:999px;border:3px solid transparent;cursor:pointer;font-weight:700;transition:transform 0.15s,border-color 0.15s,box-shadow 0.15s;background:#22c55e;color:#fff;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">Easy (5-7)</button>
+    <button class="diff-btn" data-diff="medium" aria-label="Medium difficulty (ages 8-10)" style="font-size:0.95rem;padding:8px 20px;border-radius:999px;border:3px solid #fff;cursor:pointer;font-weight:700;transition:transform 0.15s,border-color 0.15s,box-shadow 0.15s;background:#3b82f6;color:#fff;box-shadow:0 0 12px rgba(255,255,255,0.4);touch-action:manipulation;-webkit-tap-highlight-color:transparent;">Medium (8-10)</button>
+    <button class="diff-btn" data-diff="hard" aria-label="Hard difficulty (ages 11-13)" style="font-size:0.95rem;padding:8px 20px;border-radius:999px;border:3px solid transparent;cursor:pointer;font-weight:700;transition:transform 0.15s,border-color 0.15s,box-shadow 0.15s;background:#9333ea;color:#fff;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">Hard (11-13)</button>
+  </div>
   <label for="nameInput">Name your kitty:</label>
   <input type="text" id="nameInput" aria-label="Name your kitty" placeholder="Sparkle" maxlength="16" autofocus>
   <button id="startBtn" aria-label="Start game">Play!</button>
@@ -543,6 +559,7 @@
   <p>Unikittyville plays best in landscape mode</p>
 </div>
 <div id="hud" aria-live="polite">
+  <span id="hudDifficulty" title="Difficulty" style="background:rgba(255,255,255,0.2);border-radius:6px;padding:1px 6px;font-size:0.8em;letter-spacing:1px;">M</span>
   <span id="hudLevel">Level 1</span>
   <span id="hudName"></span>
   <span>Score: <b id="hudScore">0</b></span>
