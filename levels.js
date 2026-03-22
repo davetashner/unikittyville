@@ -2283,6 +2283,24 @@ npcDialogs[13] = [
   "Congratulations on making it to the Moon! You're officially an astro-cat!",
 ];
 
+// ── Time Capsule Collectibles ──
+// One hidden historical artifact per level. Player walks near and presses T to discover.
+const timeCapsules = {
+  1:  { x: 3500, name: 'Wildflower Seeds',        year: '1850',   fact: 'Wildflower meadows support 10x more pollinators.' },
+  2:  { x: 1500, name: 'Wooden Toboggan',          year: '1400s',  fact: 'Indigenous peoples invented the toboggan.' },
+  3:  { x: 3000, name: 'Subway Token',             year: '1953',   fact: 'NYC subway tokens were used from 1953 to 2003.' },
+  4:  { x: 2000, name: 'Roman Coin',               year: '27 BC',  fact: 'Roman denarius coins featured emperors\' portraits.' },
+  5:  { x: 2500, name: 'Polynesian Compass',       year: '400 AD', fact: 'Polynesian navigators used stars to cross oceans.' },
+  6:  { x: 1800, name: 'Ship\'s Bell',             year: '1862',   fact: 'The USS Oriental\'s bell was recovered from the Neuse River.' },
+  7:  { x: 2200, name: 'Swiss Watch',              year: '1755',   fact: 'Swiss watchmaking began in the 1500s.' },
+  8:  { x: 3200, name: 'Arrowhead',                year: '3000 BC',fact: 'Stone arrowheads took hours of careful flint-knapping.' },
+  9:  { x: 3500, name: 'Tribal Mask',              year: '1200 AD',fact: 'African masks represent spirits and nature.' },
+  10: { x: 3000, name: 'Amelia Earhart\'s Compass',year: '1932',   fact: 'Amelia Earhart flew solo across the Atlantic.' },
+  11: { x: 1200, name: 'Apollo Patch',             year: '1969',   fact: 'NASA mission patches are designed by astronaut crews.' },
+  12: { x: 4000, name: 'Voyager Record',           year: '1977',   fact: 'The Voyager Golden Record carries sounds from Earth.' },
+  13: { x: 2500, name: 'Moon Rock',                year: '1969',   fact: 'Apollo astronauts brought back 842 pounds of moon rocks.' },
+};
+
 // ── NPC Quiz Questions ──
 // Triggered randomly (~33%) after dismissing an NPC speech bubble.
 // Questions test comprehension of facts from npcDialogs above.

@@ -102,6 +102,23 @@ for (var i = 1; i <= TOTAL_LEVELS; i++) {
 }
 
 // ============================================================
+// Time Capsule Data
+// ============================================================
+section('Time Capsule Data');
+assert('timeCapsules exists', typeof timeCapsules === 'object');
+for (var i = 1; i <= TOTAL_LEVELS; i++) {
+  var tc = timeCapsules[i];
+  assert('timeCapsules[' + i + '] exists', !!tc);
+  if (!tc) continue;
+  assert('timeCapsules[' + i + '] has name', typeof tc.name === 'string' && tc.name.length > 0);
+  assert('timeCapsules[' + i + '] has year', typeof tc.year === 'string' && tc.year.length > 0);
+  assert('timeCapsules[' + i + '] has fact', typeof tc.fact === 'string' && tc.fact.length > 0);
+  assert('timeCapsules[' + i + '] has valid x', typeof tc.x === 'number' && tc.x > 0);
+  var worldW = levelRegistry[i].worldW;
+  assert('timeCapsules[' + i + '] x within world bounds', tc.x <= worldW);
+}
+
+// ============================================================
 // Scene Enum
 // ============================================================
 section('Scene Enum');

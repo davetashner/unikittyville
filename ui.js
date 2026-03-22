@@ -1747,6 +1747,10 @@ function updatePrompt(near) {
     el.textContent = 'Press Enter to go sledding!';
     el.style.display = 'block';
     setAction('Enter', 'Sled');
+  } else if (near.nearTimeCapsule) {
+    el.textContent = 'Something is glowing... Press T to investigate!';
+    el.style.display = 'block';
+    setAction('KeyT', 'Dig');
   } else {
     el.style.display = 'none';
     setAction(null, '');
