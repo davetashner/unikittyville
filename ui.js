@@ -316,7 +316,9 @@ window.addEventListener('keydown', e => {
       const theme = POSTCARD_THEMES[currentLevel];
       const levelName = LEVEL_NAMES[currentLevel - 1] || 'Level ' + currentLevel;
       const isNew = !postcardSentLevels.has(currentLevel);
-      postcardsSent.push({ level: currentLevel, text: postcardText, levelName: levelName });
+      const postcardEntry = { level: currentLevel, text: postcardText, levelName: levelName };
+      if (currentLevel === 8 && bigfootPhotoTaken) postcardEntry.bigfootPhoto = true;
+      postcardsSent.push(postcardEntry);
       postcardSentLevels.add(currentLevel);
       savePostcards();
       if (isNew) {
@@ -1463,7 +1465,15 @@ function updatePrompt(near) {
     el.style.display = 'block';
     setAction('KeyN', 'Nap');
   } else if (near.nearBigfoot) {
-    el.textContent = 'Press M for chocolate milk with Bigfoot!';
+    let prompt = 'M: Chocolate milk';
+    if (!bigfootPhotoTaken && leprechaunGold >= 1) {
+      prompt += ' | P: Take photo (1 gold)';
+    } else if (!bigfootPhotoTaken && leprechaunGold < 1) {
+      prompt += ' | Need 1 gold for photo';
+    } else if (bigfootPhotoTaken) {
+      prompt += ' | Photo taken!';
+    }
+    el.textContent = prompt;
     el.style.display = 'block';
     setAction('KeyM', 'Drink');
   } else if (near.nearDigSite && !campPool.dug) {
