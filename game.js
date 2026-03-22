@@ -40,6 +40,7 @@ const POINTS = {
   CHEETAH_RIDE: 50, GIRAFFE_LIFT: 10, JOURNAL_BONUS: 20,
   TRAIN_PUZZLE: 25, TRAIN_PUZZLE_BONUS: 100,
   HOTDOG_MATH: 25,
+  STORY_TYPING: 40, STORY_SPEED_BONUS: 30,
   LIGHT_SHOW_CHALLENGE: 40, LIGHT_SHOW_BONUS: 150,
   TELEGRAM_BASE: 30,
   SCROLL: 35, SCROLL_BONUS: 100,
@@ -1399,6 +1400,14 @@ const LIGHT_SHOW_TARGETS = [
 const LIGHT_SHOW_COLORS = {
   R: '#ef4444', B: '#3b82f6', G: '#22c55e', Y: '#facc15', W: '#ffffff'
 };
+// Campfire Story Typing minigame
+const CAMPFIRE_STORIES = [
+  "Once upon a time a brave little kitten climbed the tallest tree in the forest. From the top she could see the whole world sparkling below.",
+  "The stars twinkled above the campfire as the crickets sang their nightly song. It was the perfect end to a perfect adventure day.",
+  "Deep in the woods there lived a friendly bear who loved to share honey with all the forest animals. Everyone called him Sunny.",
+];
+let storyTyping = { active: false, storyIndex: 0, typed: 0, errors: 0, startTime: 0, complete: false, completeTimer: 0, sessionPick: -1 };
+
 // Camp camper (end of campground level)
 let campCamperPlayerX = 0;
 let campCamperSleeping = false;
@@ -3317,6 +3326,18 @@ function update(dt) {
         lightShowStep = 0;
         lightShowTimer = 0;
       }
+      // Story Typing minigame — press Y near lit campfire
+      if (campfire.lit && !lightShowActive && !roasting.active && !storyTyping.active && !geometryActive && keys['KeyY']) {
+        keys['KeyY'] = false;
+        if (storyTyping.sessionPick < 0) storyTyping.sessionPick = Math.floor(Math.random() * CAMPFIRE_STORIES.length);
+        storyTyping.active = true;
+        storyTyping.storyIndex = storyTyping.sessionPick;
+        storyTyping.typed = 0;
+        storyTyping.errors = 0;
+        storyTyping.startTime = performance.now();
+        storyTyping.complete = false;
+        storyTyping.completeTimer = 0;
+      }
       // Geometry minigame — press G near fire pit with 5+ sticks
       if (stickCount >= 5 && !geometryActive && !geometryAllComplete) nearGeometry = true;
       if (nearGeometry && keys['KeyG']) {
@@ -3356,6 +3377,13 @@ function update(dt) {
     // Light show minigame update
     if (lightShowActive) {
       updateLightShowMinigame(dt);
+    }
+    // Story typing completion timer
+    if (storyTyping.active && storyTyping.complete) {
+      storyTyping.completeTimer += dt;
+      if (storyTyping.completeTimer >= 3000) {
+        storyTyping.active = false;
+      }
     }
     // Hammock nap
     if (Math.abs(player.x - HAMMOCK_POS.x) < 50) {

@@ -109,6 +109,11 @@ function draw() {
     drawLightShowOverlay(W, H);
   }
 
+  // Campfire Story Typing overlay (campground level)
+  if (storyTyping.active && currentLevel === 8) {
+    drawStoryTypingOverlay(W, H);
+  }
+
   // Safari Field Journal overlay
   if (journalActive && currentLevel === 9) {
     drawFieldJournal(W, H);
@@ -1369,6 +1374,143 @@ function drawLightShowOverlay(W, H) {
   } else {
     ctx.fillText('R/B/G/Y/W: add color   X: repeat x3   Backspace: delete   Space: run   N: next   Esc: exit', W / 2, helpY);
   }
+}
+
+function drawStoryTypingOverlay(W, H) {
+  const st = storyTyping;
+  const story = CAMPFIRE_STORIES[st.storyIndex];
+  const font = '"Segoe UI", system-ui, sans-serif';
+  const panelW = Math.round(W * 0.8);
+  const panelH = Math.round(H * 0.7);
+  const px = Math.round((W - panelW) / 2);
+  const py = Math.round(H * 0.1);
+
+  // Campfire glow background
+  ctx.fillStyle = 'rgba(15, 10, 5, 0.85)';
+  ctx.fillRect(0, 0, W, H);
+
+  // Warm glow radial gradient
+  const glowGrad = ctx.createRadialGradient(W / 2, H * 0.85, 10, W / 2, H * 0.85, H * 0.6);
+  glowGrad.addColorStop(0, 'rgba(249, 115, 22, 0.25)');
+  glowGrad.addColorStop(0.5, 'rgba(234, 88, 12, 0.08)');
+  glowGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = glowGrad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Panel
+  ctx.fillStyle = 'rgba(30, 20, 10, 0.92)';
+  ctx.beginPath(); ctx.roundRect(px, py, panelW, panelH, 12); ctx.fill();
+  ctx.strokeStyle = '#f97316';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.roundRect(px, py, panelW, panelH, 12); ctx.stroke();
+
+  // Title
+  ctx.fillStyle = '#fbbf24';
+  ctx.font = 'bold ' + Math.round(H * 0.045) + 'px ' + font;
+  ctx.textAlign = 'center';
+  ctx.fillText('Campfire Story Time', W / 2, py + H * 0.06);
+
+  if (st.complete) {
+    // Completion screen
+    const elapsed = (st.completeTimer > 0 ? st.startTime : performance.now()) - st.startTime;
+    const elapsedSec = Math.max(1, (performance.now() - st.startTime - st.completeTimer) / 1000);
+    const wpm = Math.round((story.length / 5) / (elapsedSec / 60));
+    const totalPoints = POINTS.STORY_TYPING + (wpm >= 40 ? POINTS.STORY_SPEED_BONUS : Math.round(POINTS.STORY_SPEED_BONUS * Math.min(1, wpm / 40)));
+
+    ctx.fillStyle = '#4ade80';
+    ctx.font = 'bold ' + Math.round(H * 0.05) + 'px ' + font;
+    ctx.fillText('Story Complete!', W / 2, py + H * 0.2);
+
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = Math.round(H * 0.035) + 'px ' + font;
+    ctx.fillText('+' + totalPoints + ' points', W / 2, py + H * 0.3);
+
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = Math.round(H * 0.028) + 'px ' + font;
+    ctx.fillText('Speed: ' + wpm + ' WPM', W / 2, py + H * 0.38);
+    ctx.fillText('Errors: ' + st.errors, W / 2, py + H * 0.44);
+    return;
+  }
+
+  // Story text — word-wrap into lines
+  const fontSize = Math.round(H * 0.035);
+  ctx.font = fontSize + 'px ' + font;
+  const maxLineW = panelW - 60;
+  const words = story.split(' ');
+  const lines = [];
+  let currentLine = '';
+  for (const word of words) {
+    const test = currentLine ? currentLine + ' ' + word : word;
+    if (ctx.measureText(test).width > maxLineW) {
+      lines.push(currentLine);
+      currentLine = word;
+    } else {
+      currentLine = test;
+    }
+  }
+  if (currentLine) lines.push(currentLine);
+
+  // Draw each line with typed/current/remaining coloring
+  const lineH = Math.round(fontSize * 1.6);
+  const startY = py + H * 0.14;
+  let charIndex = 0;
+  ctx.textAlign = 'left';
+  const textX = px + 30;
+
+  for (let li = 0; li < lines.length; li++) {
+    const line = lines[li];
+    const ly = startY + li * lineH;
+    let cx = textX;
+
+    for (let ci = 0; ci < line.length; ci++) {
+      const ch = line[ci];
+      const charW = ctx.measureText(ch).width;
+
+      if (charIndex < st.typed) {
+        // Already typed — gold
+        ctx.fillStyle = '#fbbf24';
+      } else if (charIndex === st.typed) {
+        // Current character — highlighted
+        ctx.fillStyle = 'rgba(249, 115, 22, 0.4)';
+        ctx.fillRect(cx - 1, ly - fontSize + 2, charW + 2, fontSize + 4);
+        ctx.fillStyle = '#ffffff';
+      } else {
+        // Remaining — dim
+        ctx.fillStyle = '#6b7280';
+      }
+
+      ctx.font = fontSize + 'px ' + font;
+      ctx.fillText(ch, cx, ly);
+      cx += charW;
+      charIndex++;
+    }
+    // Account for the space between lines (word join)
+    if (li < lines.length - 1) charIndex++; // space between words across line break
+  }
+
+  // WPM counter
+  const elapsed = (performance.now() - st.startTime) / 1000;
+  const wpm = elapsed > 1 ? Math.round((st.typed / 5) / (elapsed / 60)) : 0;
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = Math.round(H * 0.025) + 'px ' + font;
+  ctx.fillText('WPM: ' + wpm + '   Errors: ' + st.errors, W / 2, py + panelH - H * 0.08);
+
+  // Progress bar
+  const barW = panelW - 80;
+  const barH = 8;
+  const barX = px + 40;
+  const barY = py + panelH - H * 0.04;
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+  ctx.fillRect(barX, barY, barW, barH);
+  ctx.fillStyle = '#f97316';
+  ctx.fillRect(barX, barY, barW * (st.typed / story.length), barH);
+
+  // Controls
+  ctx.fillStyle = '#6b7280';
+  ctx.font = Math.round(H * 0.02) + 'px ' + font;
+  ctx.fillText('Type the story!   Esc: exit', W / 2, py + panelH - H * 0.01);
 }
 
 function drawHotdogMathOverlay(W, H) {
