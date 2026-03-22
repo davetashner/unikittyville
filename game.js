@@ -346,6 +346,7 @@ let telegramText = '';
 let telegramTyped = '';
 let telegramErrors = 0;
 let telegramStartTime = 0;
+let telegramEndTime = 0;
 let telegramComplete = false;
 let telegramLevel = 0; // 0-2 (difficulty)
 let telegramErrorFlash = 0; // timestamp of last error for red flash
@@ -2369,7 +2370,8 @@ function update(dt) {
       if (telegramTyped.length === telegramText.length) {
         telegramComplete = true;
         telegramActive = false;
-        const elapsed = (performance.now() - telegramStartTime) / 1000; // seconds
+        telegramEndTime = performance.now();
+        const elapsed = (telegramEndTime - telegramStartTime) / 1000; // seconds
         const words = telegramText.split(' ').length;
         const wpm = Math.round((words / elapsed) * 60);
         const accuracy = Math.round(((telegramText.length - telegramErrors) / telegramText.length) * 100);
