@@ -49,6 +49,7 @@ const POINTS = {
   BUG_CORRECT: 15, BUG_WRONG: 5,
   DIVE_LOG_PIECE: 30, DIVE_LOG_BONUS: 150,
   ROVER_CHALLENGE: 50, ROVER_BONUS: 200,
+  MARKET_HAGGLE: 30, MARKET_BONUS: 100,
 };
 
 // ── Timing durations (ms) ──
@@ -109,6 +110,7 @@ const Scene = {
   ROVER_PROGRAMMING: 'roverProgramming',
 
   GELATO_SHOP: 'gelatoShop',
+  MARKET: 'market',
 };
 let currentScene = null;
 
@@ -1352,6 +1354,13 @@ function completeTransition() {
   campCamperShowering = false;
   campCamperShowerTimer = 0;
   ridingCheetah = false;
+  marketActive = false;
+  marketProblem = 0;
+  marketAnswer = '';
+  marketCorrect = 0;
+  marketFeedback = '';
+  marketFeedbackTimer = 0;
+  marketComplete = false;
   safariPhotography = { active: false, timer: 0, targetAnimal: '' };
   scrollActive = false;
   scrollComplete = false;
@@ -1606,6 +1615,22 @@ let dustParticles = []; // cheetah ride dust trail
 const CHEETAH_SPEED = 6.5; // faster than normal 4px
 const CHEETAH_YARN_MAGNET = 80; // auto-collect radius while riding
 const SAFARI_JEEP_POS_GAME = { x: 5200 };
+// Market haggling minigame
+const MARKET_POS = { x: 2000, w: 120 };
+const MARKET_PROBLEMS = [
+  { question: 'Necklace costs 25 coins.\nHow many can you buy with 100 coins?', answer: 4 },
+  { question: 'Mask is 30 coins.\nYou buy 3 from 100 coins.\nHow much change?', answer: 10 },
+  { question: 'Basket is 40 coins, 50% off.\nWhat is the sale price?', answer: 20 },
+  { question: 'Drum costs 35 coins.\nFabric costs 15 coins.\nWhat is the total?', answer: 50 },
+  { question: '100 coins - 2 necklaces (25 each)\n- 1 drum (35).\nHow many coins left?', answer: 15 },
+];
+let marketActive = false;
+let marketProblem = 0; // 0-4
+let marketAnswer = '';
+let marketCorrect = 0;
+let marketFeedback = ''; // 'correct' | 'wrong' | ''
+let marketFeedbackTimer = 0;
+let marketComplete = false;
 // Watering hole crocodile and parrot
 let wateringHoleTimer = 0; // ms spent in the watering hole
 let crocVisible = false;
@@ -2780,8 +2805,8 @@ function update(dt) {
     // Block all movement/jumping during journal
   } else {
   const effectiveMoveSpeed = currentLevel === 13 ? MOON_MOVE_SPEED : MOVE_SPEED;
-  if (!hotdogMath.active && !lightShowActive && !fuelCalcActive && keys['ArrowLeft']) { player.vx = -effectiveMoveSpeed; player.facing = -1; }
-  if (!hotdogMath.active && !lightShowActive && !fuelCalcActive && keys['ArrowRight']) { player.vx = effectiveMoveSpeed; player.facing = 1; }
+  if (!hotdogMath.active && !lightShowActive && !fuelCalcActive && !marketActive && keys['ArrowLeft']) { player.vx = -effectiveMoveSpeed; player.facing = -1; }
+  if (!hotdogMath.active && !lightShowActive && !fuelCalcActive && !marketActive && keys['ArrowRight']) { player.vx = effectiveMoveSpeed; player.facing = 1; }
   if (keys['ArrowUp']) { player.vx += 0; } // up on land is no-op for now
   if (keys['ArrowDown']) { player.vx += 0; }
 
@@ -3659,6 +3684,7 @@ function update(dt) {
   let nearSafariJeep = false;
   let nearWateringHole = false;
   let nearElephant = false;
+  let nearMarket = false;
   if (currentLevel === 9) {
     // Start ambient savanna wind if not already playing
     startLoopSfx('sfxSavannaWind');
@@ -3789,6 +3815,45 @@ function update(dt) {
           parrotState = 'hidden';
         }
       }
+    }
+
+    // Market stall — enter with Enter key
+    if (player.x > MARKET_POS.x - MARKET_POS.w / 2 && player.x < MARKET_POS.x + MARKET_POS.w / 2) {
+      nearMarket = true;
+      if (currentScene !== Scene.MARKET && !marketComplete && keys['Enter']) {
+        keys['Enter'] = false;
+        currentScene = Scene.MARKET;
+        marketActive = true;
+        marketProblem = 0;
+        marketAnswer = '';
+        marketCorrect = 0;
+        marketFeedback = '';
+        marketFeedbackTimer = 0;
+      }
+    }
+    // Market haggling feedback timer
+    if (currentScene === Scene.MARKET && marketFeedbackTimer > 0) {
+      marketFeedbackTimer -= dt;
+      if (marketFeedbackTimer <= 0) {
+        marketFeedback = '';
+        if (marketProblem >= MARKET_PROBLEMS.length) {
+          // All problems done
+          marketActive = false;
+          marketComplete = true;
+          if (marketCorrect >= MARKET_PROBLEMS.length) {
+            score += POINTS.MARKET_BONUS;
+            addPopup(player.x, player.y - 60, '+' + POINTS.MARKET_BONUS + ' Perfect haggling!', '#fbbf24');
+            playChaChing();
+          }
+          currentScene = null;
+        }
+      }
+    }
+    // Exit market with Escape
+    if (currentScene === Scene.MARKET && keys['Escape']) {
+      keys['Escape'] = false;
+      currentScene = null;
+      marketActive = false;
     }
 
     // Elephant water launch — press E near elephant to get launched high
@@ -5132,7 +5197,7 @@ function update(dt) {
     nearChalet, nearTrain, nearNpc, nearStick, nearFirePit, nearHammock,
     nearBigfoot, nearDigSite, nearWaterPump, nearPool, nearCampCamper, nearGeometry,
     nearSailboat, nearDiveSpot, nearBaobab, nearCheetah, nearSafariJeep,
-    nearWateringHole, nearElephant, nearHospital,
+    nearWateringHole, nearElephant, nearMarket, nearHospital,
     nearFao, nearEmpire, nearThirtyRock, nearGrandCentral, nearMet,
     nearBugNet
   });

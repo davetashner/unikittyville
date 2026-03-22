@@ -1810,7 +1810,7 @@ const level7 = {
     // Rocks and boulders
     { type: 'safari_rock', x: 400 },
     { type: 'safari_rock', x: 1100 },
-    { type: 'safari_rock', x: 2000 },
+    { type: 'market_stall', x: 2000 },
     { type: 'safari_rock', x: 3000 },
     { type: 'safari_rock', x: 4300 },
     // Animal tracks (lead to hidden yarn)
