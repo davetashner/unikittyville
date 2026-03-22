@@ -2734,6 +2734,8 @@ function drawMissionLog(W, H) {
 }
 
 function drawSpeechBubbles() {
+  // Suppress NPC dialogue during Alps skiing — it covers the gameplay
+  if (currentLevel === 7 && skiing && !alpsChoosing) return;
   for (const bubble of activeSpeechBubbles) {
     const npc = bubble.npc;
     const alpha = Math.min(1, bubble.life / 800);
@@ -5431,33 +5433,56 @@ function drawSnowflakes(cam, W, H) {
 }
 
 function drawAlpsSky(W, H, cycle, isNight) {
-  const dayTop = [180, 210, 240]; const nightTop = [15, 20, 40];
-  const dayBot = [230, 240, 255]; const nightBot = [30, 35, 60];
+  // Use FP vanishing point as horizon when actively skiing
+  const fpActive = currentLevel === 7 && skiing && !alpsChoosing;
+  const horizonY = fpActive ? H * 0.3 : GROUND_Y;
+
+  // Brighter alpine sky colors
+  const dayTop = fpActive ? [30, 120, 220] : [180, 210, 240];
+  const nightTop = [15, 20, 40];
+  const dayBot = fpActive ? [135, 195, 245] : [230, 240, 255];
+  const nightBot = [30, 35, 60];
   const skyTop = lerpColor(dayTop, nightTop, cycle);
   const skyBot = lerpColor(dayBot, nightBot, cycle);
-  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  const grad = ctx.createLinearGradient(0, 0, 0, fpActive ? horizonY : H);
   grad.addColorStop(0, `rgb(${skyTop})`);
   grad.addColorStop(1, `rgb(${skyBot})`);
-  ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, fpActive ? horizonY : H);
+
   if (isNight) drawStars(W, H, cycle);
   drawCelestial(W, H, cycle);
-  // Distant mountain range silhouette
-  ctx.fillStyle = `rgba(${isNight ? '60,70,100' : '180,195,220'}, 0.6)`;
-  ctx.beginPath(); ctx.moveTo(0, GROUND_Y - 40);
-  for (let mx = 0; mx <= W; mx += 60) {
-    const mh = 50 + Math.sin(mx * 0.015 + 2) * 30 + Math.sin(mx * 0.007) * 20;
-    ctx.lineTo(mx, GROUND_Y - 40 - mh);
+
+  // Distant mountain range — large dramatic peaks
+  const mtnBase = fpActive ? horizonY : GROUND_Y;
+  const mtnScale = fpActive ? 2.2 : 1;
+  // Back range (darker, taller)
+  ctx.fillStyle = `rgba(${isNight ? '50,60,90' : '100,140,185'}, 0.7)`;
+  ctx.beginPath(); ctx.moveTo(0, mtnBase);
+  for (let mx = 0; mx <= W; mx += 40) {
+    const mh = (70 + Math.sin(mx * 0.012 + 1) * 45 + Math.sin(mx * 0.005) * 30) * mtnScale;
+    ctx.lineTo(mx, mtnBase - mh);
   }
-  ctx.lineTo(W, GROUND_Y); ctx.lineTo(0, GROUND_Y); ctx.closePath(); ctx.fill();
-  // Snow peaks
-  ctx.fillStyle = `rgba(255,255,255, ${isNight ? 0.3 : 0.6})`;
-  for (let mx = 0; mx <= W; mx += 60) {
-    const mh = 50 + Math.sin(mx * 0.015 + 2) * 30 + Math.sin(mx * 0.007) * 20;
-    const peakY = GROUND_Y - 40 - mh;
+  ctx.lineTo(W, mtnBase); ctx.closePath(); ctx.fill();
+  // Front range (lighter, shorter)
+  ctx.fillStyle = `rgba(${isNight ? '70,80,110' : '150,180,210'}, 0.6)`;
+  ctx.beginPath(); ctx.moveTo(0, mtnBase);
+  for (let mx = 0; mx <= W; mx += 50) {
+    const mh = (40 + Math.sin(mx * 0.018 + 3) * 25 + Math.sin(mx * 0.009) * 15) * mtnScale;
+    ctx.lineTo(mx, mtnBase - mh);
+  }
+  ctx.lineTo(W, mtnBase); ctx.closePath(); ctx.fill();
+
+  // Snow peaks on back range
+  ctx.fillStyle = `rgba(255,255,255, ${isNight ? 0.4 : 0.85})`;
+  for (let mx = 0; mx <= W; mx += 40) {
+    const mh = (70 + Math.sin(mx * 0.012 + 1) * 45 + Math.sin(mx * 0.005) * 30) * mtnScale;
+    const peakY = mtnBase - mh;
+    const pw = 14 * mtnScale;
     ctx.beginPath();
-    ctx.moveTo(mx - 10, peakY + 12);
+    ctx.moveTo(mx - pw, peakY + pw * 0.9);
     ctx.lineTo(mx, peakY);
-    ctx.lineTo(mx + 10, peakY + 12);
+    ctx.lineTo(mx + pw, peakY + pw * 0.9);
     ctx.closePath(); ctx.fill();
   }
 }
@@ -5469,47 +5494,103 @@ function drawAlpsWorld(W, H, cam) {
   const groundH = H - vanishY; // ground area height
   const focal = 300; // perspective focal length
 
-  // Snow-covered slope — gradient from horizon to bottom
+  // Snow-covered slope — brighter, crisper gradient
   const snowGrad = ctx.createLinearGradient(cam, vanishY, cam, H);
-  snowGrad.addColorStop(0, '#cce4f7');
-  snowGrad.addColorStop(0.3, '#e0f2fe');
-  snowGrad.addColorStop(1, '#f8fafc');
+  snowGrad.addColorStop(0, '#a8d8f0');
+  snowGrad.addColorStop(0.15, '#d0eafa');
+  snowGrad.addColorStop(0.5, '#e8f4ff');
+  snowGrad.addColorStop(1, '#ffffff');
   ctx.fillStyle = snowGrad;
   ctx.fillRect(cam, vanishY, W, groundH);
 
-  // Perspective slope lines (converge to vanishing point)
-  ctx.strokeStyle = 'rgba(180, 210, 235, 0.3)';
-  ctx.lineWidth = 1;
-  for (let i = -5; i <= 5; i++) {
+  // Perspective slope lines (converge to vanishing point) — more visible
+  for (let i = -7; i <= 7; i++) {
+    const intensity = 1 - Math.abs(i) / 8;
+    ctx.strokeStyle = `rgba(120, 170, 210, ${0.15 + intensity * 0.2})`;
+    ctx.lineWidth = 1 + intensity;
     ctx.beginPath();
     ctx.moveTo(cx, vanishY);
-    ctx.lineTo(cx + i * W * 0.15, H);
+    ctx.lineTo(cx + i * W * 0.14, H);
     ctx.stroke();
   }
 
-  // Horizontal depth lines (closer = wider apart)
-  ctx.strokeStyle = 'rgba(200, 220, 240, 0.25)';
-  for (let d = 1; d < 8; d++) {
-    const depthY = vanishY + groundH * (d / 8) * (d / 8);
+  // Horizontal depth lines with color variation
+  for (let d = 1; d < 12; d++) {
+    const t = d / 12;
+    const depthY = vanishY + groundH * t * t;
+    const alpha = 0.08 + t * 0.2;
+    ctx.strokeStyle = `rgba(150, 195, 230, ${alpha})`;
+    ctx.lineWidth = 0.5 + t * 1.5;
     ctx.beginPath();
     ctx.moveTo(cam, depthY);
     ctx.lineTo(cam + W, depthY);
     ctx.stroke();
   }
 
-  // Snow sparkles on the slope
-  ctx.fillStyle = '#fff';
-  for (let i = 0; i < 30; i++) {
+  // Ski/snowboard tracks behind the player
+  if (skiing && !alpsChoosing) {
+    const trackAlpha = 0.2;
+    ctx.strokeStyle = `rgba(140, 180, 210, ${trackAlpha})`;
+    ctx.lineWidth = 2;
+    const trackStartY = H * 0.85;
+    const trackEndY = H;
+    if (alpsEquipment === 'skis') {
+      // Two parallel ski tracks
+      for (const offset of [-6, 6]) {
+        ctx.beginPath();
+        ctx.moveTo(cx + alpsPlayerLane + offset, trackStartY);
+        ctx.lineTo(cx + alpsPlayerLane * 0.3 + offset, trackEndY);
+        ctx.stroke();
+      }
+    } else {
+      // Single snowboard track
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(cx + alpsPlayerLane, trackStartY);
+      ctx.lineTo(cx + alpsPlayerLane * 0.3, trackEndY);
+      ctx.stroke();
+    }
+  }
+
+  // Snow sparkles — more numerous and varied shapes
+  for (let i = 0; i < 50; i++) {
     const sparkleZ = ((i * 137 + alpsScrollZ * 0.5) % 600) + 20;
-    const sparkleL = ((i * 89) % 400) - 200;
+    const sparkleL = ((i * 89) % 500) - 250;
     const sz = focal / sparkleZ;
     if (sz < 0.05 || sz > 3) continue;
     const sy = vanishY + groundH * (1 - 1 / (sparkleZ * 0.01 + 1));
     const ssx = cx + sparkleL * sz;
-    ctx.globalAlpha = Math.sin(gameTime / 300 + i) * 0.3 + 0.4;
-    ctx.beginPath();
-    ctx.arc(ssx, sy, sz * 1.5, 0, Math.PI * 2);
-    ctx.fill();
+    const brightness = Math.sin(gameTime / 200 + i * 1.3) * 0.3 + 0.6;
+    ctx.globalAlpha = brightness;
+    ctx.fillStyle = '#fff';
+    // Alternate between circles and small diamond shapes
+    if (i % 3 === 0) {
+      const ds = sz * 2;
+      ctx.beginPath();
+      ctx.moveTo(ssx, sy - ds); ctx.lineTo(ssx + ds * 0.6, sy);
+      ctx.lineTo(ssx, sy + ds); ctx.lineTo(ssx - ds * 0.6, sy);
+      ctx.closePath(); ctx.fill();
+    } else {
+      ctx.beginPath();
+      ctx.arc(ssx, sy, sz * 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // Powder spray particles along the sides during skiing
+  if (skiing && !alpsChoosing) {
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    for (let i = 0; i < 20; i++) {
+      const t = ((gameTime / 10 + i * 47) % 100) / 100;
+      const side = i % 2 === 0 ? -1 : 1;
+      const px = cx + side * (W * 0.35 + Math.sin(i * 2.1) * 40) * (1 - t * 0.3);
+      const py = vanishY + groundH * (0.3 + t * 0.7);
+      const pr = 1.5 + t * 3;
+      ctx.globalAlpha = (1 - t) * 0.5;
+      ctx.beginPath();
+      ctx.arc(px, py, pr, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
   ctx.globalAlpha = 1;
 
@@ -5550,33 +5631,59 @@ function drawAlpsWorld(W, H, cam) {
 
     if (obj.type === 'tree') {
       const tx = cx + obj.lane * scale;
-      const treeH = 40 * obj.size * scale;
-      const treeW = 20 * obj.size * scale;
+      const treeH = 65 * obj.size * scale;
+      const treeW = 32 * obj.size * scale;
+      // Shadow on snow beneath tree
+      ctx.fillStyle = 'rgba(100, 140, 180, 0.15)';
+      ctx.beginPath();
+      ctx.ellipse(tx + treeW * 0.2, screenY + 2, treeW * 0.9, treeH * 0.06, 0, 0, Math.PI * 2);
+      ctx.fill();
       // Trunk
-      ctx.fillStyle = '#78350f';
-      ctx.fillRect(tx - treeW * 0.1, screenY - treeH * 0.2, treeW * 0.2, treeH * 0.3);
-      // Tree layers
-      ctx.fillStyle = obj.hit ? '#ef4444' : '#166534';
-      for (let layer = 0; layer < 3; layer++) {
-        const ly = screenY - treeH * (0.2 + layer * 0.28);
-        const lw = treeW * (1 - layer * 0.25);
+      ctx.fillStyle = '#5c2d0a';
+      ctx.fillRect(tx - treeW * 0.08, screenY - treeH * 0.18, treeW * 0.16, treeH * 0.25);
+      // Tree layers — richer green, more layers
+      const treeColor = obj.hit ? '#ef4444' : '#1a5c2a';
+      const treeLightColor = obj.hit ? '#f87171' : '#22763a';
+      for (let layer = 0; layer < 4; layer++) {
+        const ly = screenY - treeH * (0.15 + layer * 0.22);
+        const lw = treeW * (1.1 - layer * 0.22);
+        // Darker back layer
+        ctx.fillStyle = treeColor;
         ctx.beginPath();
         ctx.moveTo(tx - lw, ly);
-        ctx.lineTo(tx, ly - treeH * 0.3);
+        ctx.lineTo(tx, ly - treeH * 0.26);
         ctx.lineTo(tx + lw, ly);
         ctx.closePath();
         ctx.fill();
-      }
-      // Snow caps
-      ctx.fillStyle = 'rgba(255,255,255,0.7)';
-      for (let layer = 0; layer < 3; layer++) {
-        const ly = screenY - treeH * (0.2 + layer * 0.28);
-        const lw = treeW * (0.6 - layer * 0.15);
+        // Lighter front highlight
+        ctx.fillStyle = treeLightColor;
         ctx.beginPath();
-        ctx.moveTo(tx - lw, ly - treeH * 0.15);
-        ctx.lineTo(tx, ly - treeH * 0.3);
-        ctx.lineTo(tx + lw, ly - treeH * 0.15);
+        ctx.moveTo(tx - lw * 0.5, ly - treeH * 0.02);
+        ctx.lineTo(tx + lw * 0.1, ly - treeH * 0.24);
+        ctx.lineTo(tx + lw * 0.6, ly - treeH * 0.02);
         ctx.closePath();
+        ctx.fill();
+      }
+      // Snow caps on branches
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      for (let layer = 0; layer < 4; layer++) {
+        const ly = screenY - treeH * (0.15 + layer * 0.22);
+        const lw = treeW * (0.7 - layer * 0.13);
+        ctx.beginPath();
+        ctx.moveTo(tx - lw, ly - treeH * 0.12);
+        ctx.lineTo(tx, ly - treeH * 0.26);
+        ctx.lineTo(tx + lw, ly - treeH * 0.12);
+        ctx.closePath();
+        ctx.fill();
+      }
+      // Snow clumps on branches (white blobs)
+      ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      for (let c = 0; c < 3; c++) {
+        const clumpY = screenY - treeH * (0.25 + c * 0.2);
+        const clumpX = tx + (c % 2 === 0 ? -1 : 1) * treeW * (0.3 + c * 0.08);
+        const clumpR = treeW * 0.12;
+        ctx.beginPath();
+        ctx.arc(clumpX, clumpY, clumpR, 0, Math.PI * 2);
         ctx.fill();
       }
     } else if (obj.type === 'cornice') {
@@ -5655,65 +5762,123 @@ function drawAlpsWorld(W, H, cam) {
   // Draw player (from behind) at bottom-center of screen
   const playerY = alpsAirborne ? H * 0.65 - Math.sin(alpsAirTimer / ALPS_AIR_DURATION * Math.PI) * 80 : H * 0.82;
   const playerX = cx + alpsPlayerLane;
-  // Simple back-view silhouette
-  const pScale = 1.2;
-  // Body
+  const pScale = 1.7;
+
+  // Snow spray at player's feet during skiing
+  if (skiing && !alpsChoosing && !alpsAirborne) {
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+    for (let sp = 0; sp < 12; sp++) {
+      const t = ((gameTime / 8 + sp * 31) % 60) / 60;
+      const side = sp % 2 === 0 ? -1 : 1;
+      const spx = playerX + side * (5 + t * 25) * pScale;
+      const spy = playerY + 5 - t * 15;
+      const spr = (1 - t) * 3.5;
+      ctx.globalAlpha = (1 - t) * 0.6;
+      ctx.beginPath();
+      ctx.arc(spx, spy, spr, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // Body (larger, more visible)
   ctx.fillStyle = player.color;
   ctx.beginPath();
-  ctx.ellipse(playerX, playerY - 12 * pScale, 10 * pScale, 14 * pScale, 0, 0, Math.PI * 2);
+  ctx.ellipse(playerX, playerY - 12 * pScale, 11 * pScale, 15 * pScale, 0, 0, Math.PI * 2);
   ctx.fill();
   // Head
   ctx.beginPath();
-  ctx.arc(playerX, playerY - 30 * pScale, 8 * pScale, 0, Math.PI * 2);
+  ctx.arc(playerX, playerY - 30 * pScale, 9 * pScale, 0, Math.PI * 2);
   ctx.fill();
-  // Horn
+  // Helmet (darker band on head)
+  ctx.fillStyle = 'rgba(0,0,0,0.25)';
+  ctx.beginPath();
+  ctx.arc(playerX, playerY - 31 * pScale, 9.5 * pScale, Math.PI * 1.1, Math.PI * 1.9);
+  ctx.fill();
+  // Horn — larger and more visible
   ctx.fillStyle = '#c084fc';
   ctx.beginPath();
-  ctx.moveTo(playerX - 2, playerY - 38 * pScale);
-  ctx.lineTo(playerX, playerY - 52 * pScale);
-  ctx.lineTo(playerX + 2, playerY - 38 * pScale);
+  ctx.moveTo(playerX - 3 * pScale, playerY - 38 * pScale);
+  ctx.lineTo(playerX, playerY - 54 * pScale);
+  ctx.lineTo(playerX + 3 * pScale, playerY - 38 * pScale);
   ctx.closePath();
+  ctx.fill();
+  // Horn glow
+  ctx.fillStyle = 'rgba(192, 132, 252, 0.3)';
+  ctx.beginPath();
+  ctx.arc(playerX, playerY - 48 * pScale, 4 * pScale, 0, Math.PI * 2);
   ctx.fill();
   // Ears
   ctx.fillStyle = player.color;
   ctx.beginPath();
   ctx.moveTo(playerX - 7 * pScale, playerY - 34 * pScale);
-  ctx.lineTo(playerX - 4 * pScale, playerY - 42 * pScale);
+  ctx.lineTo(playerX - 4 * pScale, playerY - 43 * pScale);
   ctx.lineTo(playerX - 1 * pScale, playerY - 34 * pScale);
   ctx.closePath();
   ctx.fill();
   ctx.beginPath();
   ctx.moveTo(playerX + 1 * pScale, playerY - 34 * pScale);
-  ctx.lineTo(playerX + 4 * pScale, playerY - 42 * pScale);
+  ctx.lineTo(playerX + 4 * pScale, playerY - 43 * pScale);
   ctx.lineTo(playerX + 7 * pScale, playerY - 34 * pScale);
   ctx.closePath();
   ctx.fill();
-  // Equipment under feet
+  // Scarf fluttering behind
+  ctx.fillStyle = '#ef4444';
+  ctx.beginPath();
+  const scarfWave = Math.sin(gameTime / 150) * 4;
+  ctx.moveTo(playerX - 5 * pScale, playerY - 22 * pScale);
+  ctx.quadraticCurveTo(playerX - 12 * pScale, playerY - 18 * pScale + scarfWave,
+                       playerX - 16 * pScale, playerY - 12 * pScale + scarfWave * 1.5);
+  ctx.lineTo(playerX - 14 * pScale, playerY - 14 * pScale + scarfWave * 1.5);
+  ctx.quadraticCurveTo(playerX - 10 * pScale, playerY - 19 * pScale + scarfWave,
+                       playerX - 3 * pScale, playerY - 22 * pScale);
+  ctx.closePath();
+  ctx.fill();
+  // Equipment under feet — scaled up
   if (alpsEquipment === 'skis') {
     ctx.strokeStyle = '#3b82f6';
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 3.5;
     ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(playerX - 6, playerY + 4); ctx.lineTo(playerX - 6, playerY + 14); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(playerX + 6, playerY + 4); ctx.lineTo(playerX + 6, playerY + 14); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(playerX - 7 * pScale, playerY + 4); ctx.lineTo(playerX - 7 * pScale, playerY + 16); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(playerX + 7 * pScale, playerY + 4); ctx.lineTo(playerX + 7 * pScale, playerY + 16); ctx.stroke();
   } else if (alpsEquipment === 'snowboard') {
     ctx.fillStyle = '#7c3aed';
     ctx.beginPath();
-    ctx.roundRect(playerX - 14, playerY + 4, 28, 6, 3);
+    ctx.roundRect(playerX - 16 * pScale, playerY + 4, 32 * pScale, 7, 3);
     ctx.fill();
   }
 
-  // Speed lines (motion blur effect)
+  // Speed lines (motion blur effect) — more prominent
   if (skiing && !alpsChoosing) {
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-    ctx.lineWidth = 1;
-    for (let i = 0; i < 8; i++) {
-      const lx = cx + ((i * 137 + 50) % W) - W / 2;
-      const ly1 = vanishY + 50 + (i * 40);
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 18; i++) {
+      const lx = cx + ((i * 107 + 30) % W) - W / 2;
+      const ly1 = vanishY + 30 + (i * 28);
+      const dist = Math.abs(lx - cx) / (W / 2);
+      const alpha = 0.2 + dist * 0.35;
+      const lineLen = 40 + i * 8 + dist * 30;
+      ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+      ctx.lineWidth = 1.5 + dist;
       ctx.beginPath();
       ctx.moveTo(lx, ly1);
-      ctx.lineTo(lx + (lx - cx) * 0.3, ly1 + 30 + i * 5);
+      ctx.lineTo(lx + (lx - cx) * 0.4, ly1 + lineLen);
       ctx.stroke();
     }
+    // Snow particles rushing past
+    ctx.fillStyle = '#fff';
+    for (let i = 0; i < 25; i++) {
+      const t = ((gameTime / 6 + i * 53) % 120) / 120;
+      const startX = cx + ((i * 83) % W) - W / 2;
+      const px = startX + (startX - cx) * t * 0.5;
+      const py = vanishY + groundH * t * t;
+      const pr = 1 + t * 2.5;
+      ctx.globalAlpha = (1 - t * 0.7) * 0.6;
+      ctx.beginPath();
+      ctx.arc(px, py, pr, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    ctx.lineCap = 'butt';
   }
 
   // Progress indicator
