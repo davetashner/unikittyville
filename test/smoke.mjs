@@ -300,8 +300,498 @@ async function runDataTests() {
   server.close();
 }
 
+// ── Detailed tests: interiors, minigames, NPC, scoring, level transitions ──
+async function runDetailedTests() {
+  console.log('\n' + '═'.repeat(50));
+  console.log('🔬 Running detailed tests\n');
+
+  const server = await startServer();
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext({ viewport: { width: 960, height: 540 } });
+  const page = await context.newPage();
+
+  const errors = [];
+  page.on('pageerror', err => errors.push({ type: 'pageerror', msg: err.message }));
+  page.on('console', msg => {
+    if (msg.type() === 'error') errors.push({ type: 'console.error', msg: msg.text() });
+  });
+
+  await page.goto(`http://localhost:${PORT}/index.html`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(500);
+
+  const results = { passed: 0, failed: 0, details: [] };
+
+  function record(name, pass, reason = '') {
+    if (pass) {
+      results.passed++;
+      console.log(`  ✅ ${name}`);
+    } else {
+      results.failed++;
+      console.log(`  ❌ ${name}: ${reason}`);
+    }
+    results.details.push({ name, pass, reason });
+  }
+
+  // Helper: enter a scene and verify, then exit and verify
+  async function testEnterExit(label, level, setupFn, enterKey, exitKey, expectedScene, extraFrames = 30) {
+    const errBefore = errors.length;
+    // Ensure clean scene state before each test
+    await page.evaluate(() => { currentScene = null; });
+    await startGameAtLevel(page, level);
+    await page.evaluate(() => { currentScene = null; });
+    // Run any setup (teleport, set state, etc.)
+    if (setupFn) await setupFn();
+    await advanceFrames(page, 10);
+    // Press the enter key
+    await pressKey(page, enterKey, 50);
+    await advanceFrames(page, extraFrames);
+    const afterEnter = await getState(page);
+    const entered = afterEnter.scene === expectedScene;
+    // Exit
+    await pressKey(page, exitKey, 50);
+    await advanceFrames(page, 30);
+    const afterExit = await getState(page);
+    // Some scenes (like chalet) switch levels on exit, so null OR different level is ok
+    const exited = afterExit.scene === null || afterExit.scene !== expectedScene;
+    const noNewErrors = errors.length === errBefore;
+    const pass = entered && exited && noNewErrors;
+    let reason = '';
+    if (!entered) reason += `scene=${afterEnter.scene} (expected ${expectedScene}); `;
+    if (!exited) reason += `exit failed scene=${afterExit.scene}; `;
+    if (!noNewErrors) reason += `${errors.length - errBefore} JS errors; `;
+    record(label, pass, reason);
+    return entered;
+  }
+
+  // ═══════════════════════════════════════════════
+  // 1. INTERIOR SCENE TESTS
+  // ═══════════════════════════════════════════════
+  console.log('\n  ── Interior Scenes ──');
+
+  // Level 1: House
+  await testEnterExit('L1 House enter/exit', 1,
+    () => page.evaluate(() => { player.x = HOUSE.x + 10; player.y = GROUND_Y; player.onGround = true; }),
+    'Enter', 'Enter', 'house');
+
+  // Level 1: Camper (RV at x=800)
+  await testEnterExit('L1 Camper enter/exit', 1,
+    () => page.evaluate(() => { player.x = 800; player.y = GROUND_Y; player.onGround = true; }),
+    'Enter', 'Enter', 'camper');
+
+  // Level 1: Windmill (at x=3200)
+  await testEnterExit('L1 Windmill enter/exit', 1,
+    () => page.evaluate(() => { player.x = 3200; player.y = GROUND_Y; player.onGround = true; }),
+    'Enter', 'Enter', 'windmill');
+
+  // Level 3 (NYC): Pizza Shop
+  await testEnterExit('L3 Pizza Shop enter/exit', 3,
+    () => page.evaluate(() => { player.x = PIZZA_SHOP.x; player.y = GROUND_Y; player.onGround = true; }),
+    'Enter', 'Enter', 'pizza');
+
+  // Level 3: FAO Schwarz
+  await testEnterExit('L3 FAO Schwarz enter/exit', 3,
+    () => page.evaluate(() => { player.x = FAO_SCHWARZ_POS.x; player.y = GROUND_Y; player.onGround = true; }),
+    'Enter', 'Enter', 'faoSchwarz');
+
+  // Level 3: Empire State
+  await testEnterExit('L3 Empire State enter/exit', 3,
+    () => page.evaluate(() => { player.x = EMPIRE_STATE_POS.x; player.y = GROUND_Y; player.onGround = true; }),
+    'Enter', 'Enter', 'empireState');
+
+  // Level 3: 30 Rock — must wait for dance to finish before Enter exits
+  await (async () => {
+    const errBefore = errors.length;
+    await startGameAtLevel(page, 3);
+    await page.evaluate(() => { player.x = THIRTY_ROCK_POS.x; player.y = GROUND_Y; player.onGround = true; });
+    await advanceFrames(page, 10);
+    await pressKey(page, 'Enter', 50);
+    await advanceFrames(page, 30);
+    const s1 = await getState(page);
+    const entered = s1.scene === 'thirtyRock';
+    // Advance past the showing phase (3s) + timeout (8s) = ~11s = 660 frames
+    await advanceFrames(page, 700);
+    // Now dance should be inactive, Enter should exit
+    await pressKey(page, 'Enter', 50);
+    await advanceFrames(page, 30);
+    const s2 = await getState(page);
+    const exited = s2.scene === null;
+    const pass = entered && exited && errors.length === errBefore;
+    let reason = '';
+    if (!entered) reason += `scene=${s1.scene}; `;
+    if (!exited) reason += `exit failed scene=${s2.scene}; `;
+    record('L3 30 Rock enter/exit', pass, reason);
+  })();
+
+  // Level 3: Grand Central
+  await testEnterExit('L3 Grand Central enter/exit', 3,
+    () => page.evaluate(() => { player.x = GRAND_CENTRAL_POS.x; player.y = GROUND_Y; player.onGround = true; }),
+    'Enter', 'Enter', 'grandCentral');
+
+  // Level 3: The Met
+  await testEnterExit('L3 The Met enter/exit', 3,
+    () => page.evaluate(() => { player.x = MET_MUSEUM_POS.x; player.y = GROUND_Y; player.onGround = true; }),
+    'Enter', 'Enter', 'theMet');
+
+  // Level 3: Hospital — need hospitalDelivered=false; exit requires multi-stage minigame,
+  // so we just verify entry then force-exit
+  await (async () => {
+    const errBefore = errors.length;
+    await startGameAtLevel(page, 3);
+    await page.evaluate(() => {
+      hospitalDelivered = false;
+      player.x = HOSPITAL_POS.x; player.y = GROUND_Y; player.onGround = true;
+    });
+    await advanceFrames(page, 10);
+    await pressKey(page, 'Enter', 50);
+    await advanceFrames(page, 30);
+    const s1 = await getState(page);
+    const entered = s1.scene === 'hospital';
+    // Force exit (hospital has a multi-stage flow that can't be trivially exited)
+    await page.evaluate(() => { currentScene = null; hospitalDelivered = false; });
+    await advanceFrames(page, 10);
+    const s2 = await getState(page);
+    const pass = entered && s2.scene === null && errors.length === errBefore;
+    record('L3 Hospital enter (force exit)', pass,
+      !entered ? `scene=${s1.scene}` : (s2.scene !== null ? `exit failed` : ''));
+  })();
+
+  // Level 4 (Rome): Pantheon
+  await testEnterExit('L4 Pantheon enter/exit', 4,
+    () => page.evaluate(() => { player.x = PANTHEON_POS.x; player.y = GROUND_Y; player.onGround = true; }),
+    'Enter', 'Enter', 'pantheon');
+
+  // Level 4 (Rome): Fountain swimming (KeyS to enter and exit)
+  await testEnterExit('L4 Fountain swimming enter/exit', 4,
+    () => page.evaluate(() => { player.x = FOUNTAIN_POS.x; player.y = GROUND_Y; player.onGround = true; }),
+    'KeyS', 'KeyS', 'swimming');
+
+  // Level 5 (Hawaii): Surfing (KeyS to enter and exit)
+  await testEnterExit('L5 Surfing enter/exit', 5,
+    () => page.evaluate(() => { player.x = SURF_POS.x; player.y = GROUND_Y; player.onGround = true; }),
+    'KeyS', 'KeyS', 'surfing');
+
+  // Level 6 (Oriental): Sailing (Enter to enter and exit)
+  await testEnterExit('L6 Sailing enter/exit', 6,
+    () => page.evaluate(() => { player.x = SAILBOAT_POS.x; player.y = GROUND_Y; player.onGround = true; }),
+    'Enter', 'Enter', 'sailing');
+
+  // Level 6 (Oriental): Scuba diving (Enter to enter and exit)
+  await testEnterExit('L6 Scuba diving enter/exit', 6,
+    () => page.evaluate(() => { player.x = DIVE_SPOT_POS.x; player.y = GROUND_Y; player.onGround = true; }),
+    'Enter', 'Enter', 'scubaDiving');
+
+  // Level 7 (Alps): Chalet — entered by directly setting scene
+  await (async () => {
+    const errBefore = errors.length;
+    await startGameAtLevel(page, 7);
+    // Directly set the scene to chalet (normally reached after skiing)
+    await page.evaluate(() => {
+      currentScene = Scene.CHALET;
+      marshmallowAngle = Math.PI / 5;
+    });
+    await advanceFrames(page, 30);
+    const s1 = await getState(page);
+    const entered = s1.scene === 'chalet';
+    // Exit chalet (switches to level 8)
+    await pressKey(page, 'Enter', 50);
+    await advanceFrames(page, 120);
+    const s2 = await getState(page);
+    const exited = s2.scene === null || s2.scene !== 'chalet';
+    const pass = entered && exited && errors.length === errBefore;
+    let reason = '';
+    if (!entered) reason += `scene=${s1.scene}; `;
+    if (!exited) reason += `exit failed; `;
+    record('L7 Chalet enter/exit', pass, reason);
+  })();
+
+  // Level 8 (Campground): Camp Camper
+  await testEnterExit('L8 Camp Camper enter/exit', 8,
+    () => page.evaluate(() => { player.x = CAMP_CAMPER_POS.x; player.y = GROUND_Y; player.onGround = true; }),
+    'Enter', 'Enter', 'campCamper');
+
+  // Level 9 (Safari): Watering hole (KeyS to enter and exit)
+  await testEnterExit('L9 Watering hole enter/exit', 9,
+    () => page.evaluate(() => {
+      player.x = WATERING_HOLE_POS.x + 50;
+      player.y = GROUND_Y; player.onGround = true;
+    }),
+    'KeyS', 'KeyS', 'wateringHole');
+
+  // Level 11 (Cape): NASA Museum
+  await testEnterExit('L11 NASA Museum enter/exit', 11,
+    () => page.evaluate(() => {
+      player.x = NASA_BUILDING_POS.x + NASA_BUILDING_POS.w / 2;
+      player.y = GROUND_Y; player.onGround = true;
+    }),
+    'Enter', 'Enter', 'nasaMuseum');
+
+  // ═══════════════════════════════════════════════
+  // 2. MINIGAME SMOKE TESTS
+  // ═══════════════════════════════════════════════
+  console.log('\n  ── Minigame Smoke Tests ──');
+
+  // FAO Schwarz: Enter, press left/right/space a few times, press Enter to exit
+  await (async () => {
+    const errBefore = errors.length;
+    await startGameAtLevel(page, 3);
+    await page.evaluate(() => { player.x = FAO_SCHWARZ_POS.x; player.y = GROUND_Y; player.onGround = true; });
+    await advanceFrames(page, 10);
+    await pressKey(page, 'Enter', 50);
+    await advanceFrames(page, 10);
+    const s1 = await getState(page);
+    if (s1.scene !== 'faoSchwarz') { record('Minigame: FAO Schwarz piano', false, `not entered: ${s1.scene}`); return; }
+    // Play some notes
+    await pressKey(page, 'ArrowRight', 30);
+    await advanceFrames(page, 5);
+    await pressKey(page, 'Space', 30);
+    await advanceFrames(page, 5);
+    await pressKey(page, 'ArrowLeft', 30);
+    await advanceFrames(page, 5);
+    await pressKey(page, 'Space', 30);
+    await advanceFrames(page, 5);
+    await pressKey(page, 'ArrowRight', 30);
+    await advanceFrames(page, 5);
+    await pressKey(page, 'Space', 30);
+    await advanceFrames(page, 10);
+    // Exit
+    await pressKey(page, 'Enter', 50);
+    await advanceFrames(page, 10);
+    const s2 = await getState(page);
+    record('Minigame: FAO Schwarz piano', s2.scene === null && errors.length === errBefore,
+      s2.scene !== null ? `exit failed scene=${s2.scene}` : '');
+  })();
+
+  // Empire State: Enter, wait for elevator, press Enter to exit
+  await (async () => {
+    const errBefore = errors.length;
+    await startGameAtLevel(page, 3);
+    await page.evaluate(() => { player.x = EMPIRE_STATE_POS.x; player.y = GROUND_Y; player.onGround = true; });
+    await advanceFrames(page, 10);
+    await pressKey(page, 'Enter', 50);
+    await advanceFrames(page, 10);
+    const s1 = await getState(page);
+    if (s1.scene !== 'empireState') { record('Minigame: Empire State elevator', false, `not entered: ${s1.scene}`); return; }
+    // Advance frames for elevator to reach top (empireElevator goes 0→100 at dt/30 rate)
+    // Each frame is ~16.67ms, so need ~3000/16.67 = ~180 frames
+    await advanceFrames(page, 200);
+    // Exit
+    await pressKey(page, 'Enter', 50);
+    await advanceFrames(page, 10);
+    const s2 = await getState(page);
+    record('Minigame: Empire State elevator', s2.scene === null && errors.length === errBefore,
+      s2.scene !== null ? `exit failed scene=${s2.scene}` : '');
+  })();
+
+  // 30 Rock: Enter, wait for sequence to show, press arrow keys, press Enter
+  await (async () => {
+    const errBefore = errors.length;
+    await startGameAtLevel(page, 3);
+    await page.evaluate(() => { player.x = THIRTY_ROCK_POS.x; player.y = GROUND_Y; player.onGround = true; });
+    await advanceFrames(page, 10);
+    await pressKey(page, 'Enter', 50);
+    await advanceFrames(page, 10);
+    const s1 = await getState(page);
+    if (s1.scene !== 'thirtyRock') { record('Minigame: 30 Rock dance', false, `not entered: ${s1.scene}`); return; }
+    // Wait past showing phase (3s = ~180 frames)
+    await advanceFrames(page, 200);
+    // Press some dance keys
+    await pressKey(page, 'ArrowLeft', 30); await advanceFrames(page, 5);
+    await pressKey(page, 'ArrowRight', 30); await advanceFrames(page, 5);
+    await pressKey(page, 'ArrowUp', 30); await advanceFrames(page, 5);
+    await pressKey(page, 'Space', 30); await advanceFrames(page, 5);
+    await pressKey(page, 'ArrowLeft', 30); await advanceFrames(page, 5);
+    await pressKey(page, 'ArrowRight', 30); await advanceFrames(page, 5);
+    // Wait for dance to end
+    await advanceFrames(page, 500);
+    await pressKey(page, 'Enter', 50);
+    await advanceFrames(page, 10);
+    const s2 = await getState(page);
+    record('Minigame: 30 Rock dance', s2.scene === null && errors.length === errBefore,
+      s2.scene !== null ? `exit failed scene=${s2.scene}` : '');
+  })();
+
+  // Pizza making: Enter, press C a few times (to advance prep stages), press Enter to exit
+  await (async () => {
+    const errBefore = errors.length;
+    await startGameAtLevel(page, 3);
+    await page.evaluate(() => { player.x = PIZZA_SHOP.x; player.y = GROUND_Y; player.onGround = true; });
+    await advanceFrames(page, 10);
+    await pressKey(page, 'Enter', 50);
+    await advanceFrames(page, 10);
+    const s1 = await getState(page);
+    if (s1.scene !== 'pizza') { record('Minigame: Pizza making', false, `not entered: ${s1.scene}`); return; }
+    // Press C a few times to interact
+    for (let i = 0; i < 5; i++) {
+      await pressKey(page, 'KeyC', 30);
+      await advanceFrames(page, 30);
+    }
+    // Exit (only works when stage is idle)
+    await page.evaluate(() => { pizzaMaking.stage = 'idle'; });
+    await pressKey(page, 'Enter', 50);
+    await advanceFrames(page, 10);
+    const s2 = await getState(page);
+    record('Minigame: Pizza making', s2.scene === null && errors.length === errBefore,
+      s2.scene !== null ? `exit failed scene=${s2.scene}` : '');
+  })();
+
+  // Chalet marshmallow: Set level 7, enter chalet directly, press Space to launch marshmallow
+  await (async () => {
+    const errBefore = errors.length;
+    await startGameAtLevel(page, 7);
+    // Directly set chalet scene
+    await page.evaluate(() => {
+      currentScene = Scene.CHALET;
+      marshmallowAngle = Math.PI / 5;
+      marshmallow = { active: false, x: 0, y: 0, vx: 0, vy: 0, landed: false };
+    });
+    await advanceFrames(page, 30);
+    const s1 = await getState(page);
+    if (s1.scene !== 'chalet') { record('Minigame: Chalet marshmallow', false, `not entered: ${s1.scene}`); return; }
+    // Launch marshmallow
+    await pressKey(page, 'Space', 30);
+    await advanceFrames(page, 60);
+    // Check no crash
+    const noErrors = errors.length === errBefore;
+    // Exit
+    await pressKey(page, 'Enter', 50);
+    await advanceFrames(page, 120);
+    const s2 = await getState(page);
+    record('Minigame: Chalet marshmallow', noErrors && (s2.scene === null || s2.scene !== 'chalet'),
+      !noErrors ? `${errors.length - errBefore} JS errors` : '');
+  })();
+
+  // ═══════════════════════════════════════════════
+  // 3. NPC DIALOGUE TEST
+  // ═══════════════════════════════════════════════
+  console.log('\n  ── NPC Dialogue ──');
+
+  await (async () => {
+    const errBefore = errors.length;
+    await startGameAtLevel(page, 1);
+    // Find the first NPC and teleport near it
+    const npcInfo = await page.evaluate(() => {
+      const npcs = levelRegistry[currentLevel].npcs;
+      if (!npcs || npcs.length === 0) return null;
+      return { x: npcs[0].x, count: npcs.length };
+    });
+    if (!npcInfo) {
+      record('NPC dialogue (press Q)', false, 'no NPCs found on level 1');
+    } else {
+      await page.evaluate((nx) => {
+        player.x = nx;
+        player.y = GROUND_Y;
+        player.onGround = true;
+        activeSpeechBubbles = [];
+      }, npcInfo.x);
+      await advanceFrames(page, 10);
+      // Press Q to talk
+      await pressKey(page, 'KeyQ', 50);
+      await advanceFrames(page, 10);
+      const bubbles = await page.evaluate(() => activeSpeechBubbles.length);
+      record('NPC dialogue (press Q)', bubbles > 0 && errors.length === errBefore,
+        bubbles === 0 ? 'no speech bubbles appeared' : '');
+    }
+  })();
+
+  // ═══════════════════════════════════════════════
+  // 4. SCORING TEST — collect a yarn ball
+  // ═══════════════════════════════════════════════
+  console.log('\n  ── Scoring ──');
+
+  await (async () => {
+    const errBefore = errors.length;
+    await startGameAtLevel(page, 1);
+    // Find the first uncollected yarn ball and teleport to it
+    const yarnInfo = await page.evaluate(() => {
+      const ybs = getCurrentYarnBalls();
+      for (const yb of ybs) {
+        if (!yb.collected) return { x: yb.x, y: yb.y };
+      }
+      return null;
+    });
+    if (!yarnInfo) {
+      record('Yarn ball collection increases score', false, 'no uncollected yarn balls on level 1');
+    } else {
+      const scoreBefore = await page.evaluate(() => score);
+      // Teleport player right on top of the yarn ball
+      await page.evaluate((yi) => {
+        player.x = yi.x;
+        player.y = yi.y + 20; // yarn collision checks (player.y - 20) against yb.y
+        player.onGround = false;
+      }, yarnInfo);
+      // Advance frames to trigger collection
+      await advanceFrames(page, 30);
+      const scoreAfter = await page.evaluate(() => score);
+      const increased = scoreAfter > scoreBefore;
+      record('Yarn ball collection increases score', increased && errors.length === errBefore,
+        !increased ? `score unchanged: ${scoreBefore} -> ${scoreAfter}` : '');
+    }
+  })();
+
+  // ═══════════════════════════════════════════════
+  // 5. LEVEL TRANSITION TEST — rainbow bridge portal
+  // ═══════════════════════════════════════════════
+  console.log('\n  ── Level Transitions ──');
+
+  await (async () => {
+    const errBefore = errors.length;
+    await startGameAtLevel(page, 1);
+    // Teleport to the rainbow bridge portal
+    await page.evaluate(() => {
+      player.x = BRIDGE_PORTAL.x;
+      player.y = GROUND_Y;
+      player.onGround = true;
+    });
+    await advanceFrames(page, 10);
+    const levelBefore = await page.evaluate(() => currentLevel);
+    // Press Enter at the portal
+    await pressKey(page, 'Enter', 50);
+    await advanceFrames(page, 10);
+    // Check transition started
+    const transitioning = await page.evaluate(() => levelTransition.active);
+    // Advance through the transition animation
+    await advanceFrames(page, 300);
+    // Dismiss tour guide
+    for (let i = 0; i < 5; i++) {
+      await pressKey(page, 'Space', 30);
+      await page.waitForTimeout(30);
+    }
+    await advanceFrames(page, 60);
+    const levelAfter = await page.evaluate(() => currentLevel);
+    const changed = levelAfter !== levelBefore;
+    record('Level transition (L1 rainbow bridge -> L2)',
+      (transitioning || changed) && errors.length === errBefore,
+      !changed && !transitioning ? `level unchanged: ${levelBefore}` : '');
+  })();
+
+  // ── Summary ──
+  console.log('\n' + '═'.repeat(50));
+  console.log(`\n✅ ${results.passed} passed, ❌ ${results.failed} failed out of ${results.passed + results.failed} detailed tests`);
+
+  if (results.failed > 0) {
+    console.log('\nFailed tests:');
+    for (const r of results.details.filter(r => !r.pass)) {
+      console.log(`  ${r.name}: ${r.reason}`);
+    }
+    process.exitCode = 1;
+  }
+
+  if (errors.length > 0) {
+    console.log(`\n⚠️  ${errors.length} total JS errors during detailed tests:`);
+    for (const e of errors.slice(0, 10)) {
+      console.log(`   ${e.type}: ${e.msg.slice(0, 120)}`);
+    }
+  }
+
+  console.log('═'.repeat(50));
+
+  await browser.close();
+  server.close();
+}
+
 // Run everything
 console.log('═'.repeat(50));
 await runDataTests();
 console.log('');
 await runTests();
+await runDetailedTests();
