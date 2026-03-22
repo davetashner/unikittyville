@@ -3049,7 +3049,7 @@ function update(dt) {
 
   // Yarn bonus — award 100 points when all yarn in a level is collected
   const curYarn = getCurrentYarnBalls();
-  if (curYarn.length > 0 && !yarnBonusAwarded[currentLevel] && curYarn.every(y => y.collected)) {
+  if (curYarn.length > 0 && currentLevel !== 14 && !yarnBonusAwarded[currentLevel] && curYarn.every(y => y.collected)) {
     yarnBonusAwarded[currentLevel] = true;
     score += POINTS.YARN_BONUS;
     addPopup(player.x, player.y - 60, '+' + POINTS.YARN_BONUS + ' ALL YARN BONUS!', '#fbbf24');
@@ -4618,7 +4618,9 @@ function update(dt) {
       if (!lemonBoss.entranceSaid) {
         lemonBoss.entranceSaid = true;
         addPopup(lemonBoss.x, lemonBoss.y - 60, 'I am King Lemon Drop! Taste my sourness!', '#fbbf24');
-        addPopup(player.x, player.y - 60, 'Press S to throw sugar!', '#f472b6');
+        setTimeout(() => {
+          addPopup(player.x, player.y - 60, 'Press S to throw sugar!', '#f472b6');
+        }, 2000);
       }
     }
 
