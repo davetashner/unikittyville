@@ -454,6 +454,35 @@ window.addEventListener('keydown', e => {
       }
     }
   }
+  // Campfire Story Typing
+  if (storyTyping.active && !storyTyping.complete && !e.repeat) {
+    const story = CAMPFIRE_STORIES[storyTyping.storyIndex];
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      storyTyping.active = false;
+    } else if (e.key.length === 1 && storyTyping.typed < story.length) {
+      e.preventDefault();
+      keys[e.code] = false; // block game from seeing these keys
+      const expected = story[storyTyping.typed];
+      if (e.key === expected) {
+        storyTyping.typed++;
+        if (storyTyping.typed >= story.length) {
+          // Story complete!
+          storyTyping.complete = true;
+          storyTyping.completeTimer = 0;
+          const elapsed = (performance.now() - storyTyping.startTime) / 1000;
+          const wpm = Math.round((story.length / 5) / (elapsed / 60));
+          const speedBonus = wpm >= 40 ? POINTS.STORY_SPEED_BONUS : Math.round(POINTS.STORY_SPEED_BONUS * Math.min(1, wpm / 40));
+          const totalPts = POINTS.STORY_TYPING + speedBonus;
+          score += totalPts;
+          addPopup(player.x, player.y - 40, '+' + totalPts + ' Story complete!', '#fbbf24');
+          playChaChing();
+        }
+      } else {
+        storyTyping.errors++;
+      }
+    }
+  }
   // Scroll transcription typing in Pantheon
   if (scrollActive && !scrollComplete && !e.repeat) {
     if (e.key.length === 1 && scrollTyped < scrollText.length) {
@@ -1205,12 +1234,16 @@ function updatePrompt(near) {
     el.textContent = `Need ${5 - stickCount} more sticks to build a fire!`;
     el.style.display = 'block';
     setAction(null, '');
+  } else if (near.nearFirePit && campfire.lit && storyTyping.active) {
+    el.textContent = 'Type the story! Esc to exit.';
+    el.style.display = 'block';
+    setAction(null, '');
   } else if (near.nearFirePit && campfire.lit && lightShowActive) {
     el.textContent = 'Light Show mode! Type colors to program the fire.';
     el.style.display = 'block';
     setAction(null, '');
   } else if (near.nearFirePit && campfire.lit && !near.nearGeometry) {
-    el.textContent = 'Press R to roast a marshmallow! Press L for Light Show!';
+    el.textContent = 'R: Roast  L: Light Show  Y: Story Time!';
     el.style.display = 'block';
     setAction('KeyR', 'Roast');
   } else if (near.nearGeometry) {
