@@ -6006,11 +6006,16 @@ function drawScubaDivingScene(cam, W, H) {
   drawOysterReef(cx + 200, SCUBA_WORLD_H - 50);
   drawOysterReef(cx + 600, SCUBA_WORLD_H - 60);
   drawOysterReef(cx + 1000, SCUBA_WORLD_H - 45);
+  drawOysterReef(cx + 1500, SCUBA_WORLD_H - 55);
+  drawOysterReef(cx + 1900, SCUBA_WORLD_H - 48);
   // Coral formations
   drawCoral(cx + 350, SCUBA_WORLD_H - 40, '#f472b6');
   drawCoral(cx + 500, SCUBA_WORLD_H - 50, '#fb923c');
   drawCoral(cx + 800, SCUBA_WORLD_H - 35, '#c084fc');
   drawCoral(cx + 1100, SCUBA_WORLD_H - 45, '#f43f5e');
+  drawCoral(cx + 1400, SCUBA_WORLD_H - 42, '#34d399');
+  drawCoral(cx + 1750, SCUBA_WORLD_H - 38, '#f472b6');
+  drawCoral(cx + 2050, SCUBA_WORLD_H - 50, '#fb923c');
   // Shipwreck silhouette (USS Oriental)
   drawShipwreck(cx + 750, SCUBA_WORLD_H - 70);
   // Marine life — fish swimming
@@ -6080,6 +6085,34 @@ function drawScubaDivingScene(cam, W, H) {
     }
     ctx.globalAlpha = 1;
   }
+  // USS Oriental dive log timeline pieces (glowing anchor icons)
+  for (let i = 0; i < DIVE_LOG_PIECES.length; i++) {
+    if (diveLogFound.has(i)) continue;
+    const piece = DIVE_LOG_PIECES[i];
+    const ax = cx + piece.x;
+    const ay = piece.y + Math.sin(gameTime / 500 + i * 1.2) * 4;
+    // Glow
+    const glowR = 18 + Math.sin(gameTime / 300 + i) * 4;
+    ctx.globalAlpha = 0.25 + Math.sin(gameTime / 400 + i) * 0.1;
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath(); ctx.arc(ax, ay, glowR, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+    // Anchor shape
+    ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+    // Vertical bar
+    ctx.beginPath(); ctx.moveTo(ax, ay - 10); ctx.lineTo(ax, ay + 8); ctx.stroke();
+    // Cross bar
+    ctx.beginPath(); ctx.moveTo(ax - 6, ay - 4); ctx.lineTo(ax + 6, ay - 4); ctx.stroke();
+    // Ring at top
+    ctx.beginPath(); ctx.arc(ax, ay - 12, 3, 0, Math.PI * 2); ctx.stroke();
+    // Curved flukes at bottom
+    ctx.beginPath(); ctx.moveTo(ax - 7, ay + 2); ctx.quadraticCurveTo(ax - 8, ay + 10, ax, ay + 8); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(ax + 7, ay + 2); ctx.quadraticCurveTo(ax + 8, ay + 10, ax, ay + 8); ctx.stroke();
+    // Year label
+    ctx.font = 'bold 10px system-ui'; ctx.textAlign = 'center';
+    ctx.fillStyle = '#fbbf24';
+    ctx.fillText(piece.year, ax, ay + 22);
+  }
   // Player (scuba Sparkle) with bubble trail
   const px = cx + scubaPlayer.x;
   const py = scubaPlayer.y;
@@ -6101,6 +6134,50 @@ function drawScubaDivingScene(cam, W, H) {
   ctx.beginPath(); ctx.roundRect(cx + 10, 10, 120, 30, 8); ctx.fill();
   ctx.fillStyle = '#fff'; ctx.font = 'bold 12px system-ui'; ctx.textAlign = 'left';
   ctx.fillText(`Pearls: ${scubaPearlCount}`, cx + 20, 30);
+  // Dive log piece count HUD
+  if (diveLogFound.size > 0 || DIVE_LOG_PIECES.length > 0) {
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.beginPath(); ctx.roundRect(cx + 140, 10, 150, 30, 8); ctx.fill();
+    ctx.fillStyle = '#fbbf24'; ctx.font = 'bold 12px system-ui'; ctx.textAlign = 'left';
+    ctx.fillText(`Timeline: ${diveLogFound.size}/${DIVE_LOG_PIECES.length}`, cx + 150, 30);
+  }
+  // USS Oriental timeline overlay
+  if (diveLogShowingTimeline) {
+    ctx.fillStyle = 'rgba(0,0,0,0.85)';
+    ctx.fillRect(cx, 0, W, H);
+    // Title
+    ctx.fillStyle = '#fbbf24'; ctx.font = 'bold 22px system-ui'; ctx.textAlign = 'center';
+    ctx.fillText('USS Oriental — Civil War Timeline', cx + W / 2, 50);
+    // Vertical timeline line
+    const lineX = cx + W / 2;
+    ctx.strokeStyle = '#fbbf24'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(lineX, 70); ctx.lineTo(lineX, 70 + DIVE_LOG_PIECES.length * 65 + 10); ctx.stroke();
+    // Timeline entries
+    ctx.textAlign = 'left'; ctx.font = 'bold 14px system-ui';
+    for (let i = 0; i < DIVE_LOG_PIECES.length; i++) {
+      const entry = DIVE_LOG_PIECES[i];
+      const ey = 90 + i * 65;
+      // Dot on timeline
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath(); ctx.arc(lineX, ey, 6, 0, Math.PI * 2); ctx.fill();
+      // Year
+      ctx.fillStyle = '#fbbf24'; ctx.font = 'bold 14px system-ui';
+      ctx.fillText(entry.year, lineX + 15, ey + 5);
+      // Event text — word wrap
+      ctx.fillStyle = '#e5e7eb'; ctx.font = '12px system-ui';
+      const words = entry.event.split(' ');
+      let line = ''; const maxW = W / 2 - 40; let ly = ey + 20;
+      for (const word of words) {
+        const test = line ? line + ' ' + word : word;
+        if (ctx.measureText(test).width > maxW) { ctx.fillText(line, lineX + 15, ly); ly += 15; line = word; }
+        else line = test;
+      }
+      if (line) ctx.fillText(line, lineX + 15, ly);
+    }
+    // Dismiss prompt
+    ctx.fillStyle = '#94a3b8'; ctx.font = '12px system-ui'; ctx.textAlign = 'center';
+    ctx.fillText('Press Enter or Escape to close', cx + W / 2, 70 + DIVE_LOG_PIECES.length * 65 + 40);
+  }
 }
 
 function drawMercat(x, y, tailColor, facing, name) {

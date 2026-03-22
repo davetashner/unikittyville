@@ -46,6 +46,7 @@ const POINTS = {
   PANTHEON_PUZZLE: 100,
 
   BUG_CORRECT: 15, BUG_WRONG: 5,
+  DIVE_LOG_PIECE: 30, DIVE_LOG_BONUS: 150,
 };
 
 // ── Timing durations (ms) ──
@@ -1323,13 +1324,24 @@ const DIVE_SPOT_POS = { x: 4800 };
 let shellCount = 0;
 // Scuba diving minigame
 let scubaPlayer = { x: 200, y: 200, vx: 0, vy: 0 };
-const SCUBA_WORLD_W = 1200;
+const SCUBA_WORLD_W = 2200;
 const SCUBA_WORLD_H = 500;
 const SCUBA_BUOYANCY = -0.04;
 const SCUBA_SWIM_FORCE = 0.45;
 const SCUBA_DRAG = 0.92;
 let scubaCollectibles = [];
 let scubaPearlCount = 0;
+// USS Oriental Dive Log — timeline pieces
+const DIVE_LOG_PIECES = [
+  { x: 400, y: 200, year: '1861', event: 'The Civil War begins. The Union Navy needs transport ships.' },
+  { x: 800, y: 280, year: '1862', event: 'The USS Oriental is captured by Confederate forces near Hatteras.' },
+  { x: 1200, y: 160, year: '1862', event: 'The ship sinks in the Neuse River during a storm.' },
+  { x: 1600, y: 320, year: '1953', event: 'Local divers discover the wreck and begin documenting artifacts.' },
+  { x: 2000, y: 240, year: '2010', event: 'The site becomes a protected underwater heritage trail.' },
+];
+let diveLogFound = new Set();
+let diveLogShowingTimeline = false;
+let diveLogTimelineTimer = 0;
 // Level select
 let levelSelectUnlocked = true; // permanently unlocked for dev/debug
 // LEVEL_NAMES and TOTAL_LEVELS are now derived from levelRegistry (defined in drawing.js)
@@ -1490,6 +1502,9 @@ function initScubaCollectibles() {
     { x: 1050, y: 280, type: 'Pearl', color: '#e9d5ff', collected: false },
     { x: 200, y: 380, type: 'Shell', color: '#fda4af', collected: false },
     { x: 1100, y: 120, type: 'Pearl', color: '#e9d5ff', collected: false },
+    { x: 1400, y: 250, type: 'Pearl', color: '#e9d5ff', collected: false },
+    { x: 1700, y: 150, type: 'Shell', color: '#fda4af', collected: false },
+    { x: 1900, y: 350, type: 'Pearl', color: '#e9d5ff', collected: false },
   ];
 }
 initScubaCollectibles();
@@ -1721,6 +1736,39 @@ function update(dt) {
         score += POINTS.PEARL;
         addPopup(player.x, player.y - 40, '+' + POINTS.PEARL + ' ' + c.type + '!', c.color);
         playSfx('sfxPearlPickup');
+      }
+    }
+    // USS Oriental Dive Log — timeline piece collection (T key)
+    if (diveLogShowingTimeline) {
+      // Dismiss timeline overlay with Enter or Escape
+      if (keys['Enter'] || keys['Escape']) {
+        keys['Enter'] = false;
+        keys['Escape'] = false;
+        diveLogShowingTimeline = false;
+      }
+      hud.score.textContent = score;
+      return; // freeze movement while viewing timeline
+    }
+    for (let i = 0; i < DIVE_LOG_PIECES.length; i++) {
+      if (diveLogFound.has(i)) continue;
+      const piece = DIVE_LOG_PIECES[i];
+      const dx = scubaPlayer.x - piece.x;
+      const dy = scubaPlayer.y - piece.y;
+      if (dx * dx + dy * dy < 2500) { // 50px proximity
+        if (keys['KeyT']) {
+          keys['KeyT'] = false;
+          diveLogFound.add(i);
+          score += POINTS.DIVE_LOG_PIECE;
+          addPopup(player.x, player.y - 40, '+' + POINTS.DIVE_LOG_PIECE + ' ' + piece.year + ' found!', '#fbbf24');
+          playChaChing();
+          if (diveLogFound.size === DIVE_LOG_PIECES.length) {
+            // All 5 pieces collected — bonus and show timeline
+            score += POINTS.DIVE_LOG_BONUS;
+            addPopup(player.x, player.y - 60, '+' + POINTS.DIVE_LOG_BONUS + ' Timeline Complete!', '#f59e0b');
+            diveLogShowingTimeline = true;
+            diveLogTimelineTimer = gameTime;
+          }
+        }
       }
     }
     // Talk to mercats (Q key)
@@ -3184,6 +3232,8 @@ function update(dt) {
         currentScene = Scene.SCUBA_DIVING;
         scubaPlayer = { x: 200, y: 100, vx: 0, vy: 0 };
         scubaPearlCount = 0;
+        diveLogFound = new Set();
+        diveLogShowingTimeline = false;
         initScubaCollectibles();
         crossfadeToMusic(SCUBA_MUSIC_ID);
         playSfx('sfxDiveSplash');

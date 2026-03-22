@@ -1312,9 +1312,30 @@ function updatePrompt(near) {
     el.style.display = 'block';
     setAction(null, '');
   } else if (currentScene === Scene.SCUBA_DIVING) {
-    el.textContent = 'Swim with arrow keys! Collect pearls! Q: Talk to mercats | Enter: Surface';
-    el.style.display = 'block';
-    setAction('Enter', 'Surface', 'KeyQ', 'Talk');
+    if (diveLogShowingTimeline) {
+      el.textContent = 'USS Oriental Timeline — Press Enter or Escape to close';
+      el.style.display = 'block';
+      setAction('Enter', 'Close');
+      return;
+    }
+    // Check if near a timeline piece
+    let nearPiece = false;
+    for (let i = 0; i < DIVE_LOG_PIECES.length; i++) {
+      if (diveLogFound.has(i)) continue;
+      const piece = DIVE_LOG_PIECES[i];
+      const dx = scubaPlayer.x - piece.x;
+      const dy = scubaPlayer.y - piece.y;
+      if (dx * dx + dy * dy < 2500) { nearPiece = true; break; }
+    }
+    if (nearPiece) {
+      el.textContent = 'Press T to collect timeline piece! | Q: Talk | Enter: Surface';
+      el.style.display = 'block';
+      setAction('KeyT', 'Collect', 'Enter', 'Surface');
+    } else {
+      el.textContent = 'Swim with arrow keys! Collect pearls! Q: Talk to mercats | Enter: Surface';
+      el.style.display = 'block';
+      setAction('Enter', 'Surface', 'KeyQ', 'Talk');
+    }
     return;
   } else if (currentScene === Scene.SAILING) {
     el.textContent = 'Sailing the Neuse River! Left/Right to steer | Enter: Dock';
