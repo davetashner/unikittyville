@@ -1661,6 +1661,9 @@ function completeTransition() {
   stopLoopSfx('sfxGrassRustle');
   stopLoopSfx('sfxSavannaWind');
   stopLoopSfx('sfxFlightWind');
+  stopLoopSfx('sfxCoasterRumble');
+  stopLoopSfx('sfxBiplaneEngine');
+  stopLoopSfx('sfxCarouselMusic');
 
   // Activate tour guide for first visit to each level
   if (!tourGuideSeen.has(levelTransition.toLevel)) {
@@ -4971,6 +4974,7 @@ function update(dt) {
         iceCreamCount++;
         score += POINTS.ICE_CREAM;
         addPopup(yb.x, yb.y - 20, '+' + POINTS.ICE_CREAM + ' Ice Cream!', yb.color);
+        playSfx('sfxIceCreamPickup');
         playChaChing();
         if (iceCreamCount === 10) {
           score += POINTS.ICE_CREAM_ALL;
@@ -4978,6 +4982,13 @@ function update(dt) {
           playChaChing();
         }
       }
+    }
+
+    // Proximity-based carousel music
+    if (Math.abs(player.x - 500) < 200) {
+      startLoopSfx('sfxCarouselMusic');
+    } else {
+      stopLoopSfx('sfxCarouselMusic');
     }
 
     // Rollercoaster ride
@@ -4991,6 +5002,7 @@ function update(dt) {
         coasterRide.x = 380;
         coasterRide.y = GROUND_Y;
         coasterRide.angle = 0;
+        startLoopSfx('sfxCoasterRumble');
       }
     }
 
@@ -5001,26 +5013,27 @@ function update(dt) {
         cr.phase = 'climbing'; cr.timer = 0;
       } else if (cr.phase === 'climbing') {
         const t = Math.min(cr.timer / 2000, 1);
-        cr.x = 380 + t * 220;
-        cr.y = GROUND_Y - t * 220;
+        cr.x = 380 + t * (800 - 380);
+        cr.y = GROUND_Y - t * (GROUND_Y - 300);
         if (cr.timer > 2000) { cr.phase = 'loop'; cr.timer = 0; }
       } else if (cr.phase === 'loop') {
         const t = Math.min(cr.timer / 3000, 1);
         cr.angle = t * Math.PI * 2;
-        cr.x = 800 + Math.cos(cr.angle - Math.PI / 2) * 160;
-        cr.y = 260 + Math.sin(cr.angle - Math.PI / 2) * 160;
+        cr.x = 800 + Math.cos(Math.PI / 2 + cr.angle) * 100;
+        cr.y = 200 + Math.sin(Math.PI / 2 + cr.angle) * 100;
         // Space to scream
         if (keys['Space'] && cr.screams < 5) {
           keys['Space'] = false;
           cr.screams++;
           score += POINTS.COASTER_SCREAM;
           addPopup(cr.x, cr.y - 30, 'WHEEE! +' + POINTS.COASTER_SCREAM, '#f472b6');
+          playSfx('sfxCoasterScream');
         }
         if (cr.timer > 3000) { cr.phase = 'descent'; cr.timer = 0; }
       } else if (cr.phase === 'descent') {
         const t = Math.min(cr.timer / 1500, 1);
-        cr.x = 1000 + t * 200;
-        cr.y = 200 + t * 220;
+        cr.x = 800 + t * (1200 - 800);
+        cr.y = 300 + t * (GROUND_Y - 300);
         cr.angle = 0;
         if (cr.timer > 1500) { cr.phase = 'exit'; cr.timer = 0; }
       } else if (cr.phase === 'exit' && cr.timer > 600) {
@@ -5036,6 +5049,7 @@ function update(dt) {
       } else if (cr.phase === 'celebrate' && cr.timer > 2000) {
         cr.active = false;
         cr.phase = 'idle';
+        stopLoopSfx('sfxCoasterRumble');
         player.x = 1200;
         player.y = GROUND_Y;
         player.onGround = true;
@@ -5059,16 +5073,18 @@ function update(dt) {
         raceTimer: 0, raceOver: false,
         targetJiggle: 0, hitRing: 0,
         prize: '', prizeAnimal: '',
+        phase: 'racing', prizeTimer: 0,
         complete: false,
       };
     }
 
     // Bi-plane ride entry
-    if (Math.abs(player.x - BIPLANE_HUB_POS.x) < BUILDING_RANGE && keys['Enter'] && currentScene === null && !biplaneRide.active) {
+    if (Math.abs(player.x - BIPLANE_HUB_POS.x) < BUILDING_RANGE && keys['Enter'] && currentScene === null && !biplaneRide.active && !biplaneRide.complete) {
       keys['Enter'] = false;
       biplaneRide.active = true;
       biplaneRide.timer = 0;
       biplaneRide.waves = 0;
+      startLoopSfx('sfxBiplaneEngine');
     }
 
     if (biplaneRide.active) {
@@ -5085,6 +5101,7 @@ function update(dt) {
       if (biplaneRide.timer > 6000) {
         biplaneRide.active = false;
         biplaneRide.complete = true;
+        stopLoopSfx('sfxBiplaneEngine');
         score += POINTS.BIPLANE_RIDE;
         addPopup(player.x, player.y - 50, '+' + POINTS.BIPLANE_RIDE + ' Bi-Plane Ride!', '#fbbf24');
         playChaChing();
@@ -5107,7 +5124,7 @@ function update(dt) {
       parkDanceShow = {
         active: true, step: 0, stepTimer: 0,
         cheers: 0, complete: false, celebrateTimer: 0,
-        kittyX: PARK_DANCE_STAGE_POS.x, kittyY: GROUND_Y - 30, kittyAngle: 0,
+        kittyX: PARK_DANCE_STAGE_POS.x - 40, kittyY: GROUND_Y - 30, kittyAngle: 0,
       };
     }
 
@@ -5142,18 +5159,22 @@ function update(dt) {
       wg.chargePower = Math.min(100, wg.chargePower + 2 * (dt / 16));
     } else if (wg.charging && !wg.raceOver) {
       wg.charging = false;
+      playSfx('sfxWaterGunSquirt');
       // Fire! Check accuracy
       const accuracy = Math.abs(wg.chargePower - 70); // 70 is center sweet spot
       if (accuracy < 10) {
         wg.hitRing = 2; // center
         wg.playerHorse += 3;
+        playSfx('sfxWaterGunHit');
       } else if (accuracy < 25) {
         wg.hitRing = 1; // middle
         wg.playerHorse += 2;
+        playSfx('sfxWaterGunHit');
       } else {
         wg.hitRing = 0; // outer
         wg.playerHorse += 1;
       }
+      playSfx('sfxHorseGallop');
       wg.chargePower = 0;
     }
 
@@ -5194,19 +5215,25 @@ function update(dt) {
           if (wg.roundsWon >= 2) {
             wg.prize = 'large';
             wg.prizeAnimal = animals[Math.floor(Math.random() * 3)];
-            addPopup(player.x, player.y - 60, 'Won a stuffed ' + wg.prizeAnimal + '!', '#fbbf24');
           } else if (wg.roundsWon === 1) {
             wg.prize = 'small';
             wg.prizeAnimal = animals[Math.floor(Math.random() * 3)];
-            addPopup(player.x, player.y - 60, 'Won a small stuffy!', '#c0c0c0');
           } else {
             wg.prize = 'balloon';
-            addPopup(player.x, player.y - 60, 'Won a consolation balloon!', '#38bdf8');
           }
-          wg.complete = true;
-          currentScene = null;
+          wg.phase = 'prize';
+          wg.prizeTimer = 0;
         }
       }, 2000);
+    }
+
+    // Prize reveal phase
+    if (wg.phase === 'prize') {
+      wg.prizeTimer += dt;
+      if (wg.prizeTimer > 2000) {
+        wg.complete = true;
+        currentScene = null;
+      }
     }
 
     if (keys['Escape']) {
@@ -5256,6 +5283,7 @@ function update(dt) {
       score += POINTS.DANCE_SHOW;
       addPopup(player.x, player.y - 50, '+' + POINTS.DANCE_SHOW + ' Dance Show!', '#fbbf24');
       playChaChing();
+      playSfx('sfxStageApplause');
       if (ds.cheers >= 5) {
         score += POINTS.DANCE_SHOW_PERFECT_AUDIENCE;
         addPopup(player.x, player.y - 70, '+' + POINTS.DANCE_SHOW_PERFECT_AUDIENCE + ' Perfect Audience!', '#f472b6');

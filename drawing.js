@@ -12154,18 +12154,18 @@ function drawAmusementParkWorld(W, H, cam, cycle, isNight) {
   // Track rails
   ctx.strokeStyle = '#374151';
   ctx.lineWidth = 3;
-  // Climbing section
+  // Climbing section (380, GROUND_Y) to bottom of loop (800, 300)
   ctx.beginPath();
   ctx.moveTo(380, GROUND_Y);
-  ctx.lineTo(600, GROUND_Y - 220);
+  ctx.lineTo(800, 300);
   ctx.stroke();
-  // Loop
+  // Loop (center 800, 200, radius 100)
   ctx.beginPath();
-  ctx.arc(800, 260, 160, 0, Math.PI * 2);
+  ctx.arc(800, 200, 100, 0, Math.PI * 2);
   ctx.stroke();
-  // Descent
+  // Descent from bottom of loop (800, 300) to (1200, GROUND_Y)
   ctx.beginPath();
-  ctx.moveTo(960, 260);
+  ctx.moveTo(800, 300);
   ctx.lineTo(1200, GROUND_Y);
   ctx.stroke();
   // Ties
@@ -12418,26 +12418,6 @@ function drawAmusementParkWorld(W, H, cam, cycle, isNight) {
       }
     }
 
-    // Draw performer during show
-    if (currentScene === Scene.PARK_DANCE_SHOW && parkDanceShow.active) {
-      const ds = parkDanceShow;
-      ctx.save();
-      ctx.translate(ds.kittyX, ds.kittyY);
-      if (ds.kittyAngle) ctx.rotate(ds.kittyAngle);
-      // Horn rainbow glow on step 5
-      if (ds.step === 5) {
-        const grad = ctx.createRadialGradient(0, -35, 2, 0, -35, 20);
-        grad.addColorStop(0, 'rgba(251, 191, 36, 0.8)');
-        grad.addColorStop(0.5, 'rgba(168, 85, 247, 0.4)');
-        grad.addColorStop(1, 'rgba(168, 85, 247, 0)');
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(0, -35, 20, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      drawKitty(0, 0, player.color, 1, ds.step % 2, 'horn', playerEyeColor, playerHornColors);
-      ctx.restore();
-    }
   }
 
   // ── Ferris Wheel at x=4400 ──
@@ -12658,6 +12638,26 @@ function drawAmusementParkWorld(W, H, cam, cycle, isNight) {
     ctx.textAlign = 'left';
   }
 
+  // ── On-screen Space hints during rides ──
+  if (coasterRide.active && coasterRide.phase === 'loop') {
+    ctx.fillStyle = '#fde68a';
+    ctx.font = 'bold 14px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('Press Space to SCREAM!', cam + W / 2, 40);
+    ctx.font = 'bold 12px system-ui';
+    ctx.fillText('Screams: ' + coasterRide.screams + '/5', cam + W / 2, 60);
+    ctx.textAlign = 'left';
+  }
+  if (biplaneRide.active) {
+    ctx.fillStyle = '#fde68a';
+    ctx.font = 'bold 14px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('Press Space to Wave!', cam + W / 2, 40);
+    ctx.font = 'bold 12px system-ui';
+    ctx.fillText('Waves: ' + biplaneRide.waves + '/3', cam + W / 2, 60);
+    ctx.textAlign = 'left';
+  }
+
   drawPlayerAndUI();
 }
 
@@ -12719,8 +12719,9 @@ function drawWaterGunRaceScene(cam, W, H) {
   ctx.fillRect(cx - 100, cy + 90, wg.chargePower * 2, 15);
   // Sweet spot marker
   ctx.fillStyle = '#22c55e';
-  ctx.fillRect(cx - 100 + 60 * 2, cy + 88, 20 * 2, 19);
   ctx.globalAlpha = 0.3;
+  ctx.beginPath();
+  ctx.rect(cx - 100 + 60 * 2, cy + 88, 20 * 2, 19);
   ctx.fill();
   ctx.globalAlpha = 1;
 
@@ -12728,6 +12729,27 @@ function drawWaterGunRaceScene(cam, W, H) {
   ctx.fillStyle = '#fbbf24';
   ctx.font = 'bold 14px system-ui';
   ctx.fillText('Rounds Won: ' + wg.roundsWon, cx, cy + 130);
+
+  // Prize reveal overlay
+  if (wg.phase === 'prize') {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    ctx.fillRect(cx - 310, cy - 200, 620, 420);
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 22px system-ui';
+    ctx.fillText('YOU WON!', cx, cy - 40);
+    ctx.font = 'bold 16px system-ui';
+    if (wg.prize === 'large') {
+      ctx.fillText('A giant stuffed ' + wg.prizeAnimal + '!', cx, cy);
+    } else if (wg.prize === 'small') {
+      ctx.fillText('A small stuffed ' + wg.prizeAnimal + '!', cx, cy);
+    } else {
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillText('A consolation balloon!', cx, cy);
+    }
+    ctx.fillStyle = '#d1d5db';
+    ctx.font = '12px system-ui';
+    ctx.fillText('Rounds Won: ' + wg.roundsWon + '/3', cx, cy + 40);
+  }
 
   // Instructions
   ctx.fillStyle = '#94a3b8';
