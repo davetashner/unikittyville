@@ -1747,7 +1747,9 @@ const level7 = {
     { x: 200, y: 360, w: 80 },
     { x: 400, y: 310, w: 70 },
     { x: 600, y: 260, w: 80 },
+    { x: 780, y: 130, w: 70, boostOnly: 'elephant' },
     { x: 850, y: 340, w: 90 },
+    { x: 980, y: 160, w: 65, boostOnly: 'giraffe' },
     { x: 1050, y: 280, w: 70 },
     { x: 1250, y: 220, w: 80 },
     { x: 1500, y: 350, w: 90 },
@@ -1755,6 +1757,7 @@ const level7 = {
     { x: 1900, y: 230, w: 80 },
     // Around watering hole
     { x: 2150, y: 340, w: 80 },
+    { x: 2180, y: 150, w: 65, boostOnly: 'giraffe' },
     { x: 2350, y: 270, w: 70 },
     { x: 2700, y: 340, w: 80 },
     { x: 2900, y: 280, w: 70 },
@@ -1762,7 +1765,9 @@ const level7 = {
     { x: 3100, y: 350, w: 90 },
     { x: 3300, y: 290, w: 70 },
     { x: 3500, y: 230, w: 80 },
+    { x: 3580, y: 145, w: 65, boostOnly: 'giraffe' },
     { x: 3750, y: 340, w: 80 },
+    { x: 3780, y: 120, w: 70, boostOnly: 'elephant' },
     { x: 3950, y: 270, w: 70 },
     // Speed-jump gaps (cheetah-only areas)
     { x: 4200, y: 310, w: 60 },
