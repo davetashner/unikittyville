@@ -128,6 +128,11 @@ function draw() {
   if (trainPuzzleActive && currentLevel === 2) {
     drawTrainPuzzleOverlay(W, H);
   }
+
+  // Art description overlay (Met Museum)
+  if (artDescActive && currentScene === Scene.THE_MET) {
+    drawArtDescOverlay(W, H);
+  }
 }
 
 function drawPhotoGallery(W, H) {
