@@ -51,6 +51,8 @@ const POINTS = {
   ROVER_CHALLENGE: 50, ROVER_BONUS: 200,
   MARKET_HAGGLE: 30, MARKET_BONUS: 100,
   TIME_CAPSULE: 75,
+  WISH_OUTER: 10, WISH_MIDDLE: 25, WISH_CENTER: 50,
+  WISH_LUCKY_BONUS: 30, WISH_MASTER_BONUS: 100,
 };
 
 // ── Timing durations (ms) ──
@@ -112,6 +114,7 @@ const Scene = {
 
   GELATO_SHOP: 'gelatoShop',
   MARKET: 'market',
+  FOUNTAIN_WISHES: 'fountainWishes',
 };
 let currentScene = null;
 
@@ -658,6 +661,20 @@ let golfAngle = Math.PI / 4;
 let golfScore = 0;
 let golfPower = 0;
 let golfCharging = false;
+
+// Fountain Wishes state
+let wishCoin = { active: false, x: 0, y: 0, vx: 0, vy: 0, spin: 0 };
+let wishAngle = Math.PI / 4;
+let wishPower = 0;
+let wishCharging = false;
+let wishScore = 0;
+let wishTossesLeft = 3;
+let wishSplashParticles = [];
+let wishHits = [];  // track zone of each hit: 'outer', 'middle', 'center', or 'miss'
+let wishSummary = false;
+let wishPrevY = 0;  // previous frame Y for crossing detection
+let wishFirstTossShown = false;  // whether first-toss instructions have been shown
+let wishMasterCelebration = 0;  // timer (ms) for rainbow water burst on Master Wisher
 
 // Apollo Mission minigame state
 let apolloMission = {
@@ -1441,6 +1458,18 @@ function completeTransition() {
   golfScore = 0;
   golfPower = 0;
   golfCharging = false;
+  wishCoin = { active: false, x: 0, y: 0, vx: 0, vy: 0, spin: 0 };
+  wishAngle = Math.PI / 4;
+  wishPower = 0;
+  wishCharging = false;
+  wishScore = 0;
+  wishTossesLeft = 3;
+  wishSplashParticles = [];
+  wishHits = [];
+  wishSummary = false;
+  wishPrevY = 0;
+  wishFirstTossShown = false;
+  wishMasterCelebration = 0;
   apolloMission = {
     active: false, step: 0, progress: 0, rocksCollected: 0,
     rockPositions: [], rockPlayerX: 0, bootY: 0, complete: false,
@@ -3218,12 +3247,24 @@ function update(dt) {
   let nearPantheonDoor = false;
   let nearFiat = false;
   if (currentLevel === 4) {
-    // Fountain swimming
+    // Fountain — coin toss minigame or swimming
     if (Math.abs(player.x - FOUNTAIN_POS.x) < 45) {
       nearFountain = true;
       if (keys['KeyS']) {
         keys['KeyS'] = false;
-        currentScene = Scene.SWIMMING;
+        currentScene = Scene.FOUNTAIN_WISHES;
+        wishCoin = { active: false, x: 0, y: 0, vx: 0, vy: 0, spin: 0 };
+        wishAngle = Math.PI / 4;
+        wishPower = 0;
+        wishCharging = false;
+        wishScore = 0;
+        wishTossesLeft = 3;
+        wishSplashParticles = [];
+        wishHits = [];
+        wishSummary = false;
+        wishPrevY = 0;
+        wishFirstTossShown = false;
+        wishMasterCelebration = 0;
       }
     }
     // Gelato
@@ -4667,6 +4708,186 @@ function update(dt) {
     if (keys['Enter'] && !golfBall.active) {
       keys['Enter'] = false;
       currentScene = null;
+    }
+  }
+
+  // Fountain Wishes minigame
+  if (currentScene === Scene.FOUNTAIN_WISHES) {
+    const W = canvas.width, H = canvas.height;
+    const ww = getCurrentWorldW();
+    const fwCam = Math.max(0, Math.min(ww - W, player.x - W / 2));
+    const fwCx = fwCam + W / 2;
+    const fwCy = H / 2;
+
+    // Update splash particles
+    for (let i = wishSplashParticles.length - 1; i >= 0; i--) {
+      const p = wishSplashParticles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.15;
+      p.life -= 16;
+      if (p.life <= 0) wishSplashParticles.splice(i, 1);
+    }
+
+    // Tick down Master Wisher celebration timer
+    if (wishMasterCelebration > 0) {
+      wishMasterCelebration = Math.max(0, wishMasterCelebration - 16);
+      // Add extra sparkle particles during celebration
+      if (Math.random() < 0.4) {
+        wishSplashParticles.push({
+          x: fwCx + (Math.random() - 0.5) * 120, y: fwCy + 30 - Math.random() * 60,
+          vx: (Math.random() - 0.5) * 3,
+          vy: -Math.random() * 3 - 1,
+          life: 500 + Math.random() * 300,
+          size: 1.5 + Math.random() * 2,
+          rainbow: true,
+        });
+      }
+    }
+
+    if (wishSummary) {
+      // Summary screen — Enter to exit (replayable, no wishComplete lock)
+      if (keys['Enter']) {
+        keys['Enter'] = false;
+        currentScene = null;
+      }
+    } else if (!wishCoin.active && wishTossesLeft > 0) {
+      // Aiming
+      if (keys['ArrowUp']) wishAngle = Math.min(Math.PI * 0.45, wishAngle + 0.02);
+      if (keys['ArrowDown']) wishAngle = Math.max(Math.PI * 0.08, wishAngle - 0.02);
+
+      // Charging
+      if (keys['Space']) {
+        wishCharging = true;
+        wishPower = Math.min(1, wishPower + 0.02);
+      } else if (wishCharging) {
+        // Release — toss coin!
+        wishCharging = false;
+        wishFirstTossShown = true;
+        wishCoin.active = true;
+        wishCoin.x = fwCx - 160;
+        wishCoin.y = fwCy + 45;
+        wishCoin.spin = 0;
+        const speed = 3 + wishPower * 6;
+        wishCoin.vx = Math.cos(wishAngle) * speed;
+        wishCoin.vy = -Math.sin(wishAngle) * speed;
+        wishPower = 0;
+      }
+
+      // Enter to exit early
+      if (keys['Enter']) {
+        keys['Enter'] = false;
+        currentScene = null;
+      }
+    } else if (wishCoin.active) {
+      // Coin physics (parabolic arc)
+      wishPrevY = wishCoin.y;
+      wishCoin.x += wishCoin.vx;
+      wishCoin.y += wishCoin.vy;
+      wishCoin.vy += 0.12;
+      wishCoin.spin += 0.15;
+
+      // Fountain target zones (concentric, centered on fountain)
+      const fountainCenterX = fwCx + 60;
+      const waterY = fwCy + 30;
+      const dx = wishCoin.x - fountainCenterX;
+
+      // Crossing detection: coin crossed waterY or is within expanded band
+      const crossedWater = (wishPrevY < waterY && wishCoin.y >= waterY) ||
+                           (wishCoin.y >= waterY - 10 && wishCoin.y <= fwCy + 80);
+      if (crossedWater) {
+        const absDx = Math.abs(dx);
+        let zone = 'miss';
+        let pts = 0;
+        let msg = '';
+        let color = '#ef4444';
+
+        const wishMsgCenter = ['World peace for kitties!', 'Infinite sparkly yarn!', 'A rainbow every day!', 'A castle made of cupcakes!', 'Wings for all kitties!', 'Best friends forever!'];
+        const wishMsgMiddle = ['A trip to the moon!', 'A swimming pool of gelato!', 'My own pizza restaurant!', 'A kitty playground on Jupiter!', 'A pet dragon!', 'Sparkles everywhere!'];
+        const wishMsgOuter = ['More gelato!', 'Extra bedtime stories!', 'A new ball of yarn!', 'Sunny days forever!', 'A kitten friend!', 'The biggest pizza ever!'];
+
+        if (absDx <= 12) {
+          // Center spout
+          zone = 'center';
+          pts = POINTS.WISH_CENTER;
+          msg = 'Wish: ' + wishMsgCenter[Math.floor(Math.random() * wishMsgCenter.length)];
+          color = '#fbbf24';
+        } else if (absDx <= 30) {
+          // Middle tier
+          zone = 'middle';
+          pts = POINTS.WISH_MIDDLE;
+          msg = 'Wish: ' + wishMsgMiddle[Math.floor(Math.random() * wishMsgMiddle.length)];
+          color = '#a78bfa';
+        } else if (absDx <= 55) {
+          // Outer basin
+          zone = 'outer';
+          pts = POINTS.WISH_OUTER;
+          msg = 'Wish: ' + wishMsgOuter[Math.floor(Math.random() * wishMsgOuter.length)];
+          color = '#34d399';
+        }
+
+        if (zone !== 'miss') {
+          wishCoin.active = false;
+          wishScore += pts;
+          score += pts;
+          wishHits.push(zone);
+          wishTossesLeft--;
+          wishFirstTossShown = true;
+          addPopup(wishCoin.x, wishCoin.y - 20, '+' + pts + ' ' + msg, color);
+          playChaChing();
+          playSfx('sfxDiveSplash');
+          // Create splash particles (16 for bigger effect)
+          for (let i = 0; i < 16; i++) {
+            wishSplashParticles.push({
+              x: wishCoin.x + (Math.random() - 0.5) * 10, y: waterY,
+              vx: (Math.random() - 0.5) * 5,
+              vy: -Math.random() * 4 - 1.5,
+              life: 600 + Math.random() * 400,
+              size: 2 + Math.random() * 2,
+            });
+          }
+          // Brief white flash particles on water surface
+          for (let i = 0; i < 6; i++) {
+            wishSplashParticles.push({
+              x: wishCoin.x + (Math.random() - 0.5) * 20, y: waterY + Math.random() * 4,
+              vx: (Math.random() - 0.5) * 1,
+              vy: 0,
+              life: 200 + Math.random() * 100,
+              size: 3 + Math.random() * 2,
+              flash: true,
+            });
+          }
+        }
+      }
+
+      // Miss — out of bounds
+      if (wishCoin.active && (wishCoin.y > fwCy + 100 || wishCoin.x > fwCx + 280 || wishCoin.x < fwCx - 250)) {
+        wishCoin.active = false;
+        wishHits.push('miss');
+        wishTossesLeft--;
+        wishFirstTossShown = true;
+        addPopup(wishCoin.x, wishCoin.y, 'Missed! The pigeons got that one...', '#ef4444');
+      }
+
+      // After toss resolves, check for summary
+      if (!wishCoin.active && wishTossesLeft <= 0) {
+        // Calculate bonuses
+        const waterHits = wishHits.filter(h => h !== 'miss');
+        if (waterHits.length === 3 && wishHits.every(h => h === 'center')) {
+          wishScore += POINTS.WISH_MASTER_BONUS;
+          score += POINTS.WISH_MASTER_BONUS;
+          addPopup(fwCx, fwCy - 40, '+' + POINTS.WISH_MASTER_BONUS + ' Master Wisher!', '#fbbf24');
+          wishMasterCelebration = 2000;  // 2 second rainbow burst
+        } else if (waterHits.length === 3) {
+          wishScore += POINTS.WISH_LUCKY_BONUS;
+          score += POINTS.WISH_LUCKY_BONUS;
+          addPopup(fwCx, fwCy - 40, '+' + POINTS.WISH_LUCKY_BONUS + ' Lucky Kitty Bonus!', '#22c55e');
+        }
+        wishSummary = true;
+      }
+    } else if (wishTossesLeft <= 0) {
+      // No coin active, no tosses left — already handled above, just wait for summary
+      if (!wishSummary) wishSummary = true;
     }
   }
 

@@ -1363,9 +1363,9 @@ function updatePrompt(near) {
     el.style.display = 'block';
     setAction('Enter', 'Taxi');
   } else if (near.nearFountain) {
-    el.textContent = 'Press S to go swimming!';
+    el.textContent = 'Press S to toss a coin in the fountain!';
     el.style.display = 'block';
-    setAction('KeyS', 'Swim');
+    setAction('KeyS', 'Wish');
   } else if (near.nearGelato) {
     el.textContent = 'Press G for gelato (+5 pts) | Enter for Gelato Shop';
     el.style.display = 'block';
@@ -1691,6 +1691,11 @@ function updatePrompt(near) {
     el.textContent = 'Up/Down = Aim | Space = Shoot | Enter = Exit';
     el.style.display = 'block';
     setAction('Space', 'Shoot');
+    return;
+  } else if (currentScene === Scene.FOUNTAIN_WISHES) {
+    el.textContent = 'Up/Down = Aim | Hold Space = Toss | Enter = Exit';
+    el.style.display = 'block';
+    setAction('Space', 'Toss');
     return;
   } else if (currentLevel === 13 && Math.abs(player.x - SMOOTHIE_SHOP_POS.x) < BUILDING_RANGE) {
     el.textContent = 'Press Enter for Smoothie Shop!';
