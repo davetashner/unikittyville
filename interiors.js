@@ -1485,6 +1485,149 @@ function drawSurfingScene(cam, W, H) {
     ctx.beginPath(); ctx.arc(sx, sy, 2.5, 0, Math.PI * 2); ctx.fill();
   }
   ctx.globalAlpha = 1;
+
+  // ── Dolphin high-five animation ──
+  if (dolphinState.active) {
+    const dp = dolphinState.progress;
+    let dx, dy, angle, flipperAngle;
+    // Dolphin starts from water to the right, arcs up, high-fives, then dives back
+    const startX = cx + 120, startY = cy + 20;  // below water, to the right
+    const peakX = cx + 50, peakY = cy - 65;      // peak of leap (near kitty's paw)
+    const endX = cx + 130, endY = cy + 30;        // dive back into water
+
+    if (dolphinState.phase === 'leaping') {
+      // Ease-out arc from water up to peak
+      const t = 1 - (1 - dp) * (1 - dp); // ease-out
+      dx = startX + (peakX - startX) * t;
+      dy = startY + (peakY - startY) * t;
+      angle = -0.6 * t; // rotate to face upward as it leaps
+      flipperAngle = 0.3 * t; // flipper starts reaching out
+    } else if (dolphinState.phase === 'highfive') {
+      // Hold near peak, flipper extends to touch kitty's paw
+      dx = peakX + Math.sin(dp * Math.PI) * 3; // slight wobble
+      dy = peakY + Math.sin(dp * Math.PI * 2) * 2;
+      angle = -0.6;
+      flipperAngle = 0.5 + 0.3 * Math.sin(dp * Math.PI); // flipper reaches forward
+    } else if (dolphinState.phase === 'diving') {
+      // Ease-in arc from peak back into water
+      const t = dp * dp; // ease-in
+      dx = peakX + (endX - peakX) * t;
+      dy = peakY + (endY - peakY) * t;
+      angle = -0.6 + 1.2 * t; // rotate to dive nose-down
+      flipperAngle = 0.3 * (1 - t); // flipper relaxes
+    } else {
+      dx = startX; dy = startY; angle = 0; flipperAngle = 0;
+    }
+
+    ctx.save();
+    ctx.translate(dx, dy);
+    ctx.rotate(angle);
+
+    // Body — streamlined dolphin shape
+    ctx.fillStyle = '#64748b'; // grey-blue body
+    ctx.beginPath();
+    ctx.moveTo(-22, 0);
+    ctx.quadraticCurveTo(-18, -12, 0, -14);  // top of head
+    ctx.quadraticCurveTo(12, -13, 20, -6);   // back top
+    ctx.quadraticCurveTo(28, -2, 30, 2);     // tail junction
+    // Tail flukes
+    ctx.lineTo(36, -6); ctx.lineTo(34, 0);
+    ctx.lineTo(36, 6); ctx.lineTo(30, 2);
+    ctx.quadraticCurveTo(28, 6, 20, 8);      // back bottom
+    ctx.quadraticCurveTo(8, 10, -4, 8);      // belly
+    ctx.quadraticCurveTo(-18, 6, -22, 0);    // chin back to nose
+    ctx.closePath();
+    ctx.fill();
+
+    // Lighter belly
+    ctx.fillStyle = '#cbd5e1';
+    ctx.beginPath();
+    ctx.moveTo(-16, 2);
+    ctx.quadraticCurveTo(-4, 10, 10, 8);
+    ctx.quadraticCurveTo(20, 6, 24, 3);
+    ctx.quadraticCurveTo(18, 8, 6, 9);
+    ctx.quadraticCurveTo(-6, 8, -16, 2);
+    ctx.closePath();
+    ctx.fill();
+
+    // Dorsal fin
+    ctx.fillStyle = '#475569';
+    ctx.beginPath();
+    ctx.moveTo(4, -13);
+    ctx.quadraticCurveTo(8, -24, 14, -20);
+    ctx.quadraticCurveTo(12, -14, 10, -12);
+    ctx.closePath();
+    ctx.fill();
+
+    // Eye — friendly and round
+    ctx.fillStyle = '#1e293b';
+    ctx.beginPath(); ctx.arc(-12, -4, 2.5, 0, Math.PI * 2); ctx.fill();
+    // Eye shine
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(-11.5, -5, 1, 0, Math.PI * 2); ctx.fill();
+
+    // Friendly smile
+    ctx.strokeStyle = '#334155'; ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.arc(-14, -1, 5, 0.1, 0.8);
+    ctx.stroke();
+
+    // Flipper (the high-fiving one!) — on the near side
+    ctx.save();
+    ctx.translate(-4, 4);
+    ctx.rotate(-flipperAngle);
+    ctx.fillStyle = '#64748b';
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.quadraticCurveTo(-8, -4, -14, -2);
+    ctx.quadraticCurveTo(-10, 2, -2, 3);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    ctx.restore();
+
+    // High-five sparkle effect during the highfive phase
+    if (dolphinState.phase === 'highfive' && dp > 0.3 && dp < 0.8) {
+      const sparkAlpha = Math.sin((dp - 0.3) / 0.5 * Math.PI);
+      ctx.save();
+      ctx.globalAlpha = sparkAlpha * 0.9;
+      const hfx = dx - 16, hfy = dy - 2;
+      // Star sparkles
+      ctx.fillStyle = '#fbbf24';
+      for (let i = 0; i < 6; i++) {
+        const sa = (i / 6) * Math.PI * 2 + gameTime / 100;
+        const sr = 8 + Math.sin(gameTime / 80 + i) * 4;
+        const sx2 = hfx + Math.cos(sa) * sr;
+        const sy2 = hfy + Math.sin(sa) * sr;
+        ctx.beginPath(); ctx.arc(sx2, sy2, 1.5, 0, Math.PI * 2); ctx.fill();
+      }
+      // Central flash
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(hfx, hfy, 3 + Math.sin(gameTime / 60) * 1.5, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+
+    // Splash at water surface when entering/exiting
+    if (dolphinState.phase === 'leaping' && dp < 0.3) {
+      ctx.fillStyle = 'rgba(186,230,253,0.6)';
+      for (let i = 0; i < 5; i++) {
+        const splX = startX - 10 + i * 5 + Math.random() * 4;
+        const splY = cy - 5 - dp * 30 - Math.random() * 8;
+        ctx.beginPath(); ctx.arc(splX, splY, 2, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    if (dolphinState.phase === 'diving' && dp > 0.7) {
+      ctx.fillStyle = 'rgba(186,230,253,0.6)';
+      for (let i = 0; i < 5; i++) {
+        const splX = endX - 10 + i * 5 + Math.random() * 4;
+        const splY = cy - 5 - (1 - dp) * 20 - Math.random() * 8;
+        ctx.beginPath(); ctx.arc(splX, splY, 2, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+  }
+
   ctx.fillStyle = '#fff'; ctx.font = 'bold 18px system-ui'; ctx.textAlign = 'center';
   ctx.fillText('Cowabunga!', cx, cy - 90);
   ctx.font = '13px system-ui'; ctx.fillStyle = 'rgba(255,255,255,0.8)';
