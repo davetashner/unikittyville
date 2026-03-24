@@ -2335,11 +2335,11 @@ function drawEmpireStateInterior(cam, W, H) {
     ctx.fillStyle = '#3f3f46';
     ctx.fillRect(cam, 0, 30, H);
     ctx.fillRect(cam + W - 30, 0, 30, H);
-    // Moving floor lights (scroll up as elevator rises)
+    // Moving floor lights (scroll down past car as elevator rises)
     ctx.fillStyle = '#fbbf2440';
     for (let i = 0; i < 20; i++) {
-      const ly = ((i * H / 10) - empireElevator * 5) % H;
-      if (ly > 0) {
+      const ly = ((i * H / 10) + empireElevator * 5) % H;
+      if (ly >= 0) {
         ctx.fillRect(cam + 8, ly, 14, 3);
         ctx.fillRect(cam + W - 22, ly, 14, 3);
       }
@@ -2381,88 +2381,186 @@ function drawEmpireStateInterior(cam, W, H) {
     ctx.fillRect(cx - 80, H * 0.25, 8, 200);
     ctx.fillRect(cx + 72, H * 0.25, 8, 200);
   } else {
-    // Observation deck — sky above, city far below
-    // Sky gradient
-    const skyGrad = ctx.createLinearGradient(cam, 0, cam, H * 0.55);
-    skyGrad.addColorStop(0, '#3b82f6');
+    // Observation deck — panoramic NYC skyline view
+    const deckY = H * 0.75;       // deck floor pushed down for more view
+    const railTop = H * 0.70;     // thin railing at waist height
+    const railBot = H * 0.75;     // railing bottom matches deck edge
+    const skylineBase = H * 0.65; // where buildings meet the ground plane
+
+    // Sky gradient — deep blue to light blue
+    const skyGrad = ctx.createLinearGradient(cam, 0, cam, skylineBase);
+    skyGrad.addColorStop(0, '#1e3a8a');
+    skyGrad.addColorStop(0.4, '#3b82f6');
     skyGrad.addColorStop(1, '#93c5fd');
     ctx.fillStyle = skyGrad;
-    ctx.fillRect(cam, 0, W, H * 0.55);
-    // Clouds (we're above some of them!)
-    ctx.fillStyle = 'rgba(255,255,255,0.6)';
-    for (let i = 0; i < 6; i++) {
-      const cloudX = cam + (i * 170 + 30 + Math.sin(gameTime / 3000 + i) * 20) % W;
-      const cloudY = H * 0.35 + i * 15;
+    ctx.fillRect(cam, 0, W, skylineBase);
+
+    // Atmospheric haze near horizon
+    const hazeGrad = ctx.createLinearGradient(cam, skylineBase - 40, cam, skylineBase);
+    hazeGrad.addColorStop(0, 'rgba(147,197,253,0)');
+    hazeGrad.addColorStop(1, 'rgba(203,213,225,0.5)');
+    ctx.fillStyle = hazeGrad;
+    ctx.fillRect(cam, skylineBase - 40, W, 40);
+
+    // Clouds — scattered in upper sky
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    for (let i = 0; i < 5; i++) {
+      const cloudX = cam + (i * 200 + 50 + Math.sin(gameTime / 3000 + i) * 25) % W;
+      const cloudY = H * 0.08 + i * 18;
       ctx.beginPath();
-      ctx.ellipse(cloudX, cloudY, 40, 10, 0, 0, Math.PI * 2);
+      ctx.ellipse(cloudX, cloudY, 50, 12, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.beginPath();
-      ctx.ellipse(cloudX - 20, cloudY + 5, 25, 8, 0, 0, Math.PI * 2);
+      ctx.ellipse(cloudX - 25, cloudY + 6, 30, 9, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(cloudX + 30, cloudY + 4, 28, 8, 0, 0, Math.PI * 2);
       ctx.fill();
     }
-    // City skyline far below — tiny buildings
-    for (let i = 0; i < 50; i++) {
-      const bx = cam + (i * 97 + 10) % W;
-      const bh = 15 + (i * 53) % 40;
+
+    // Rivers on sides (behind buildings)
+    ctx.fillStyle = '#60a5fa';
+    ctx.fillRect(cam, skylineBase - 18, W * 0.07, 18);
+    ctx.fillRect(cam + W * 0.93, skylineBase - 18, W * 0.07, 18);
+
+    // Central Park — visible green strip in mid-distance
+    ctx.fillStyle = '#22c55e';
+    ctx.fillRect(cam + W * 0.32, skylineBase - 14, W * 0.18, 14);
+    // Park trees
+    ctx.fillStyle = '#16a34a';
+    for (let t = 0; t < 8; t++) {
+      const tx = cam + W * 0.33 + t * (W * 0.16 / 8);
+      ctx.beginPath();
+      ctx.ellipse(tx, skylineBase - 16, 5, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // City skyline — generic buildings, taller and wider
+    for (let i = 0; i < 45; i++) {
+      const bx = cam + (i * 101 + 10) % W;
+      const bh = 25 + (i * 53) % 55;
+      const bw = 16 + (i * 7) % 5;
       ctx.fillStyle = ['#64748b','#475569','#94a3b8','#334155','#6b7280'][i % 5];
-      ctx.fillRect(bx, H * 0.55 + 50 - bh, 12, bh);
-      // Tiny windows
+      ctx.fillRect(bx, skylineBase - bh, bw, bh);
+      // Windows
       ctx.fillStyle = '#fef08a';
-      for (let wy = H * 0.55 + 50 - bh + 3; wy < H * 0.55 + 48; wy += 6) {
-        ctx.fillRect(bx + 2, wy, 3, 2);
-        ctx.fillRect(bx + 7, wy, 3, 2);
+      for (let wy = skylineBase - bh + 4; wy < skylineBase - 2; wy += 6) {
+        ctx.fillRect(bx + 3, wy, 3, 2);
+        ctx.fillRect(bx + 9, wy, 3, 2);
       }
     }
-    // Central Park (green rectangle in the distance)
-    ctx.fillStyle = '#4ade80';
-    ctx.fillRect(cam + W * 0.35, H * 0.52, W * 0.15, 8);
-    // Rivers on sides
-    ctx.fillStyle = '#60a5fa';
-    ctx.fillRect(cam, H * 0.54, W * 0.08, 6);
-    ctx.fillRect(cam + W * 0.92, H * 0.54, W * 0.08, 6);
 
-    // Observation deck floor and walls
-    ctx.fillStyle = '#78716c';
-    ctx.fillRect(cam, H * 0.6, W, H * 0.4);
-    // Deck surface
+    // Chrysler Building — art deco spire (left-center)
+    const chryslerX = cam + W * 0.25;
+    const chryslerBase = skylineBase;
+    const chryslerH = 75;
+    ctx.fillStyle = '#cbd5e1';
+    ctx.fillRect(chryslerX - 10, chryslerBase - chryslerH, 20, chryslerH);
+    // Art deco stepped crown
+    ctx.fillStyle = '#e2e8f0';
+    for (let step = 0; step < 5; step++) {
+      const sw = 20 - step * 3;
+      const sy = chryslerBase - chryslerH - step * 4;
+      ctx.fillRect(chryslerX - sw / 2, sy, sw, 5);
+    }
+    // Spire
+    ctx.fillStyle = '#f1f5f9';
+    ctx.beginPath();
+    ctx.moveTo(chryslerX, chryslerBase - chryslerH - 30);
+    ctx.lineTo(chryslerX - 3, chryslerBase - chryslerH - 15);
+    ctx.lineTo(chryslerX + 3, chryslerBase - chryslerH - 15);
+    ctx.closePath();
+    ctx.fill();
+    // Chrysler windows
+    ctx.fillStyle = '#fef08a';
+    for (let wy = chryslerBase - chryslerH + 5; wy < chryslerBase - 3; wy += 7) {
+      ctx.fillRect(chryslerX - 6, wy, 3, 2);
+      ctx.fillRect(chryslerX + 3, wy, 3, 2);
+    }
+
+    // One World Trade Center — tall glass tower (right-center)
+    const wtcX = cam + W * 0.72;
+    const wtcBase = skylineBase;
+    const wtcH = 85;
+    ctx.fillStyle = '#93c5fd';
+    ctx.fillRect(wtcX - 8, wtcBase - wtcH, 16, wtcH);
+    // Glass reflections
+    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+    ctx.fillRect(wtcX - 6, wtcBase - wtcH + 2, 4, wtcH - 4);
+    // Antenna spire
+    ctx.strokeStyle = '#e2e8f0'; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(wtcX, wtcBase - wtcH);
+    ctx.lineTo(wtcX, wtcBase - wtcH - 15);
+    ctx.stroke();
+    // WTC windows
+    ctx.fillStyle = 'rgba(191,219,254,0.6)';
+    for (let wy = wtcBase - wtcH + 6; wy < wtcBase - 3; wy += 8) {
+      ctx.fillRect(wtcX - 5, wy, 10, 3);
+    }
+
+    // Water towers — classic NYC rooftop feature
+    ctx.fillStyle = '#92400e';
+    const wt1x = cam + W * 0.15;
+    const wt2x = cam + W * 0.58;
+    [wt1x, wt2x].forEach(function(wtx) {
+      // Tank
+      ctx.fillStyle = '#92400e';
+      ctx.fillRect(wtx - 5, skylineBase - 30, 10, 12);
+      // Conical roof
+      ctx.beginPath();
+      ctx.moveTo(wtx, skylineBase - 35);
+      ctx.lineTo(wtx - 6, skylineBase - 30);
+      ctx.lineTo(wtx + 6, skylineBase - 30);
+      ctx.closePath();
+      ctx.fill();
+      // Legs
+      ctx.strokeStyle = '#78716c'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(wtx - 4, skylineBase - 18); ctx.lineTo(wtx - 6, skylineBase); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(wtx + 4, skylineBase - 18); ctx.lineTo(wtx + 6, skylineBase); ctx.stroke();
+    });
+
+    // Ground plane between skyline and deck
     ctx.fillStyle = '#94a3b8';
-    ctx.fillRect(cam, H * 0.6, W, 6);
+    ctx.fillRect(cam, skylineBase, W, deckY - skylineBase);
+
+    // Observation deck floor
+    ctx.fillStyle = '#78716c';
+    ctx.fillRect(cam, deckY, W, H - deckY);
+    // Deck surface line
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillRect(cam, deckY, W, 4);
     // Tile pattern on floor
     ctx.strokeStyle = '#6b7280'; ctx.lineWidth = 0.5;
     for (let tx = cam; tx < cam + W; tx += 25) {
-      ctx.beginPath(); ctx.moveTo(tx, H * 0.65); ctx.lineTo(tx, H); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(tx, deckY + 8); ctx.lineTo(tx, H); ctx.stroke();
     }
-    for (let ty = H * 0.65; ty < H; ty += 25) {
+    for (let ty = deckY + 8; ty < H; ty += 25) {
       ctx.beginPath(); ctx.moveTo(cam, ty); ctx.lineTo(cam + W, ty); ctx.stroke();
     }
 
-    // Safety fence/railing with mesh
-    ctx.strokeStyle = '#6b7280'; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.moveTo(cam, H * 0.55); ctx.lineTo(cam + W, H * 0.55); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(cam, H * 0.6); ctx.lineTo(cam + W, H * 0.6); ctx.stroke();
-    // Vertical fence bars
+    // Thin safety railing — simple horizontal rail + thin vertical bars
+    ctx.strokeStyle = '#6b7280'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(cam, railTop); ctx.lineTo(cam + W, railTop); ctx.stroke();
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(cam, railTop + (railBot - railTop) / 2); ctx.lineTo(cam + W, railTop + (railBot - railTop) / 2); ctx.stroke();
+    // Thin vertical bars spaced widely
     ctx.lineWidth = 1.5;
-    for (let fx = cam; fx < cam + W; fx += 20) {
-      ctx.beginPath(); ctx.moveTo(fx, H * 0.55); ctx.lineTo(fx, H * 0.6); ctx.stroke();
-    }
-    // Mesh pattern
-    ctx.strokeStyle = '#9ca3af'; ctx.lineWidth = 0.5;
-    for (let fx = cam; fx < cam + W; fx += 8) {
-      ctx.beginPath(); ctx.moveTo(fx, H * 0.55); ctx.lineTo(fx + 4, H * 0.6); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(fx + 4, H * 0.55); ctx.lineTo(fx, H * 0.6); ctx.stroke();
+    for (let fx = cam; fx < cam + W; fx += 30) {
+      ctx.beginPath(); ctx.moveTo(fx, railTop); ctx.lineTo(fx, railBot); ctx.stroke();
     }
 
     // Coin-operated telescope
     const telX = cam + W * 0.8;
     ctx.fillStyle = '#94a3b8';
-    ctx.fillRect(telX - 2, H * 0.62, 4, 20);
+    ctx.fillRect(telX - 2, deckY - 20, 4, 18);
     ctx.fillStyle = '#6b7280';
-    ctx.beginPath(); ctx.ellipse(telX, H * 0.62, 8, 5, -0.3, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(telX, deckY - 20, 8, 5, -0.3, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = '#475569';
-    ctx.fillRect(telX - 1, H * 0.82, 6, 6);
+    ctx.fillRect(telX - 3, deckY - 4, 6, 4);
 
     // Player on the deck
-    drawKitty(cx, H * 0.78, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
+    drawKitty(cx, deckY - 3, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
 
     // Title
     ctx.fillStyle = '#fff'; ctx.font = 'bold 18px system-ui'; ctx.textAlign = 'center';
