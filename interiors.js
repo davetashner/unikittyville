@@ -2339,7 +2339,7 @@ function drawEmpireStateInterior(cam, W, H) {
     ctx.fillStyle = '#fbbf2440';
     for (let i = 0; i < 20; i++) {
       const ly = ((i * H / 10) + empireElevator * 5) % H;
-      if (ly > 0) {
+      if (ly >= 0) {
         ctx.fillRect(cam + 8, ly, 14, 3);
         ctx.fillRect(cam + W - 22, ly, 14, 3);
       }
@@ -2516,13 +2516,13 @@ function drawEmpireStateInterior(cam, W, H) {
       ctx.fill();
       // Legs
       ctx.strokeStyle = '#78716c'; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(wtx - 4, skylineBase - 18); ctx.lineTo(wtx - 6, skylineBase - 10); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(wtx + 4, skylineBase - 18); ctx.lineTo(wtx + 6, skylineBase - 10); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(wtx - 4, skylineBase - 18); ctx.lineTo(wtx - 6, skylineBase); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(wtx + 4, skylineBase - 18); ctx.lineTo(wtx + 6, skylineBase); ctx.stroke();
     });
 
     // Ground plane between skyline and deck
     ctx.fillStyle = '#94a3b8';
-    ctx.fillRect(cam, skylineBase, W, railTop - skylineBase);
+    ctx.fillRect(cam, skylineBase, W, deckY - skylineBase);
 
     // Observation deck floor
     ctx.fillStyle = '#78716c';
@@ -2553,11 +2553,11 @@ function drawEmpireStateInterior(cam, W, H) {
     // Coin-operated telescope
     const telX = cam + W * 0.8;
     ctx.fillStyle = '#94a3b8';
-    ctx.fillRect(telX - 2, deckY + 2, 4, 18);
+    ctx.fillRect(telX - 2, deckY - 20, 4, 18);
     ctx.fillStyle = '#6b7280';
-    ctx.beginPath(); ctx.ellipse(telX, deckY + 2, 8, 5, -0.3, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(telX, deckY - 20, 8, 5, -0.3, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = '#475569';
-    ctx.fillRect(telX - 3, deckY + 20, 6, 4);
+    ctx.fillRect(telX - 3, deckY - 4, 6, 4);
 
     // Player on the deck
     drawKitty(cx, deckY - 3, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
