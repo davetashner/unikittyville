@@ -8433,44 +8433,102 @@ function drawWateringHoleScene(cam, W, H) {
     const crocX = cx + 120;
     const crocY = cy + 55;
     const bobY = Math.sin(gameTime / 800) * 3;
-    // Snout poking out of water
+    const cY = crocY + bobY;
+    // Long snout (elongated shape pointing right)
     ctx.fillStyle = '#4a7c59';
     ctx.beginPath();
-    ctx.ellipse(crocX, crocY + bobY, 25, 12, 0, 0, Math.PI * 2);
+    ctx.moveTo(crocX + 35, cY + 2);
+    ctx.quadraticCurveTo(crocX + 40, cY - 2, crocX + 35, cY - 4);
+    ctx.lineTo(crocX + 5, cY - 8);
+    ctx.quadraticCurveTo(crocX - 5, cY - 2, crocX + 5, cY + 6);
+    ctx.closePath();
     ctx.fill();
-    // Head bump
+    // Bumpy ridges along snout top
+    ctx.fillStyle = '#3d6b4c';
+    for (let i = 0; i < 4; i++) {
+      ctx.beginPath();
+      ctx.arc(crocX + 8 + i * 7, cY - 8 - Math.sin(i * 0.8) * 2, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Head (wider, behind snout)
+    ctx.fillStyle = '#4a7c59';
     ctx.beginPath();
-    ctx.ellipse(crocX - 15, crocY - 5 + bobY, 15, 10, -0.2, 0, Math.PI * 2);
+    ctx.ellipse(crocX - 5, cY - 5, 18, 14, -0.1, 0, Math.PI * 2);
     ctx.fill();
-    // Eyes (big friendly cartoon eyes)
-    ctx.fillStyle = '#fff';
-    ctx.beginPath(); ctx.arc(crocX - 20, crocY - 10 + bobY, 6, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(crocX - 10, crocY - 10 + bobY, 6, 0, Math.PI * 2); ctx.fill();
+    // Head ridges
+    ctx.fillStyle = '#3d6b4c';
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath();
+      ctx.arc(crocX - 12 + i * 6, cY - 18, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Eyes on top of head (crocodile eyes sit high up)
+    ctx.fillStyle = '#c8e6c0';
+    ctx.beginPath(); ctx.ellipse(crocX - 12, cY - 16, 6, 5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(crocX + 2, cY - 16, 6, 5, 0, 0, Math.PI * 2); ctx.fill();
+    // Slit pupils
     ctx.fillStyle = '#1a1a1a';
-    ctx.beginPath(); ctx.arc(crocX - 19, crocY - 10 + bobY, 3, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(crocX - 9, crocY - 10 + bobY, 3, 0, Math.PI * 2); ctx.fill();
-    // Friendly smile
+    ctx.beginPath(); ctx.ellipse(crocX - 12, cY - 16, 2, 4, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(crocX + 2, cY - 16, 2, 4, 0, 0, Math.PI * 2); ctx.fill();
+    // Friendly smile (toothy grin along jaw line)
     ctx.strokeStyle = '#2d5a3d';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.arc(crocX - 5, crocY + 2 + bobY, 10, 0.2, Math.PI - 0.2);
+    ctx.moveTo(crocX + 32, cY + 1);
+    ctx.quadraticCurveTo(crocX + 20, cY + 6, crocX + 5, cY + 4);
     ctx.stroke();
-    // Nostrils
+    // Teeth (little white triangles along the smile)
+    ctx.fillStyle = '#fff';
+    for (let i = 0; i < 5; i++) {
+      const tx = crocX + 30 - i * 6;
+      const ty = cY + 2 + Math.sin(i * 0.5) * 1.5;
+      ctx.beginPath();
+      ctx.moveTo(tx - 2, ty);
+      ctx.lineTo(tx, ty + 4);
+      ctx.lineTo(tx + 2, ty);
+      ctx.closePath();
+      ctx.fill();
+    }
+    // Nostrils at tip of snout
     ctx.fillStyle = '#2d5a3d';
-    ctx.beginPath(); ctx.arc(crocX + 8, crocY - 2 + bobY, 2, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(crocX + 12, crocY - 2 + bobY, 2, 0, Math.PI * 2); ctx.fill();
-    // Speech bubble
+    ctx.beginPath(); ctx.arc(crocX + 33, cY - 3, 1.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(crocX + 36, cY - 3, 1.5, 0, Math.PI * 2); ctx.fill();
+    // Speech bubble with word wrap
     if (crocSpeech.timer > 0) {
       ctx.font = '11px system-ui';
-      const textW = ctx.measureText(crocSpeech.text).width;
-      const bw = Math.min(textW + 16, 200);
-      const bx = crocX - bw / 2;
-      const by = crocY - 40 + bobY;
-      ctx.fillStyle = 'rgba(255,255,255,0.95)';
-      ctx.beginPath(); ctx.roundRect(bx, by - 12, bw, 20, 6); ctx.fill();
-      ctx.fillStyle = '#1a1a1a';
       ctx.textAlign = 'center';
-      ctx.fillText(crocSpeech.text, crocX, by + 3);
+      const maxW = 170;
+      const words = crocSpeech.text.split(' ');
+      const lines = [];
+      let line = '';
+      for (const word of words) {
+        const test = line ? line + ' ' + word : word;
+        if (ctx.measureText(test).width > maxW) {
+          if (line) lines.push(line);
+          line = word;
+        } else {
+          line = test;
+        }
+      }
+      if (line) lines.push(line);
+      const lineH = 14;
+      const bw = maxW + 20;
+      const bh = lines.length * lineH + 10;
+      const bx = crocX - bw / 2;
+      const by = cY - 35 - bh;
+      ctx.fillStyle = 'rgba(255,255,255,0.95)';
+      ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 6); ctx.fill();
+      // Tail pointer
+      ctx.beginPath();
+      ctx.moveTo(crocX - 6, by + bh);
+      ctx.lineTo(crocX, by + bh + 8);
+      ctx.lineTo(crocX + 6, by + bh);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#1a1a1a';
+      for (let i = 0; i < lines.length; i++) {
+        ctx.fillText(lines[i], crocX, by + 12 + i * lineH);
+      }
       ctx.textAlign = 'left';
     }
   }
