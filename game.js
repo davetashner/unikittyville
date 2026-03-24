@@ -1953,6 +1953,22 @@ function loop(ts) {
 function update(dt) {
   updateMusicFade(dt);
 
+  // Show/hide HUD items and control hints based on current level
+  // (must run before any early returns so panels stay correct during overlays)
+  for (const el of hudItems) {
+    const levels = el.dataset.levels.split(',');
+    el.style.display = levels.includes(String(currentLevel)) ? '' : 'none';
+  }
+  for (const el of ctrlItems) {
+    const levels = el.dataset.levels.split(',');
+    el.style.display = levels.includes(String(currentLevel)) ? '' : 'none';
+  }
+  // Hide controls during interior/mini-game scenes (always hidden on mobile)
+  const inScene = currentScene !== null;
+  if (!isMobile) {
+    hud.controls.style.display = inScene ? 'none' : 'flex';
+  }
+
   // Level transition animation
   if (levelTransition.active) {
     levelTransition.timer += dt;
@@ -6426,22 +6442,6 @@ function update(dt) {
   if (hud.gem) hud.gem.textContent = candyGemCount;
   if (hud.cotton) hud.cotton.textContent = cottonCandyCount + '/8';
   if (hud.iceCream) hud.iceCream.textContent = iceCreamCount + '/10';
-
-  // Show/hide HUD items and control hints based on current level
-  for (const el of hudItems) {
-    const levels = el.dataset.levels.split(',');
-    el.style.display = levels.includes(String(currentLevel)) ? '' : 'none';
-  }
-  for (const el of ctrlItems) {
-    const levels = el.dataset.levels.split(',');
-    el.style.display = levels.includes(String(currentLevel)) ? '' : 'none';
-  }
-
-  // Hide controls during interior/mini-game scenes (always hidden on mobile)
-  const inScene = currentScene !== null;
-  if (!isMobile) {
-    hud.controls.style.display = inScene ? 'none' : 'flex';
-  }
 
   // Postcard toggle — W key when outdoors and W wasn't consumed by a level-specific action
   // (pool fill on level 8, Grand Central whisper, etc. already consumed KeyW above)
