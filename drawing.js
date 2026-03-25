@@ -8882,7 +8882,7 @@ function drawWhaleTranscriptionPanel(W, H) {
   const panelW = Math.min(W * 0.85, 520);
   const panelH = 100;
   const px = (W - panelW) / 2;
-  const py = H - panelH - 20;
+  const py = H - panelH - 90;
 
   // Panel background — dark radio console look
   ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
