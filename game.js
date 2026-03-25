@@ -59,6 +59,7 @@ const POINTS = {
   WATER_GUN_FIRST: 50, WATER_GUN_SECOND: 25, WATER_GUN_THIRD: 10,
   BIPLANE_RIDE: 35, BIPLANE_WAVE: 3,
   DANCE_SHOW: 60, DANCE_SHOW_CHEER: 8, DANCE_SHOW_PERFECT_AUDIENCE: 20,
+  DOLPHIN_HIGH_FIVE: 50,
 };
 
 // ── Timing durations (ms) ──
@@ -475,6 +476,12 @@ let coconutCount = 0;
 const TIKI_POSITIONS = [600, 1400, 2200, 3000, 3800];
 const COCONUT_POSITIONS = [400, 1200, 2000, 2800, 3600, 4400];
 const SURF_POS = { x: 1800 };
+// Dolphin high-five during surfing
+let dolphinState = { active: false, timer: 0, phase: 'waiting', progress: 0, done: false };
+const DOLPHIN_DELAY = 3000;       // 3 seconds before dolphin appears
+const DOLPHIN_LEAP_DURATION = 800;  // rising out of water
+const DOLPHIN_HIFIVE_DURATION = 400; // high-five moment
+const DOLPHIN_DIVE_DURATION = 800;  // diving back down
 // Chalet mini-game
 let marshmallow = { active: false, x: 0, y: 0, vx: 0, vy: 0, landed: false };
 let marshmallowScore = 0;
@@ -2963,7 +2970,49 @@ function update(dt) {
   }
 
   if (currentScene === Scene.SURFING) {
-    if (keys['KeyS']) { keys['KeyS'] = false; currentScene = null; }
+    if (keys['KeyS']) {
+      keys['KeyS'] = false;
+      currentScene = null;
+      dolphinState.active = false;
+      dolphinState.timer = 0;
+      dolphinState.phase = 'waiting';
+      dolphinState.progress = 0;
+      dolphinState.done = false;
+    }
+    // Dolphin high-five logic
+    if (!dolphinState.done) {
+      dolphinState.timer += dt;
+      if (dolphinState.phase === 'waiting' && dolphinState.timer >= DOLPHIN_DELAY) {
+        dolphinState.phase = 'leaping';
+        dolphinState.active = true;
+        dolphinState.progress = 0;
+      } else if (dolphinState.phase === 'leaping') {
+        dolphinState.progress += dt / DOLPHIN_LEAP_DURATION;
+        if (dolphinState.progress >= 1) {
+          dolphinState.phase = 'highfive';
+          dolphinState.progress = 0;
+        }
+      } else if (dolphinState.phase === 'highfive') {
+        dolphinState.progress += dt / DOLPHIN_HIFIVE_DURATION;
+        if (dolphinState.progress >= 1) {
+          dolphinState.phase = 'diving';
+          dolphinState.progress = 0;
+          score += POINTS.DOLPHIN_HIGH_FIVE;
+          const cam = Math.max(0, Math.min(getCurrentWorldW() - canvas.width, player.x - canvas.width / 2));
+          const cx = cam + canvas.width / 2;
+          const cy = GROUND_Y - 20;
+          addPopup(cx + 60, cy - 80, '+' + POINTS.DOLPHIN_HIGH_FIVE + ' Dolphin High Five!', '#38bdf8');
+          playChaChing();
+        }
+      } else if (dolphinState.phase === 'diving') {
+        dolphinState.progress += dt / DOLPHIN_DIVE_DURATION;
+        if (dolphinState.progress >= 1) {
+          dolphinState.phase = 'done';
+          dolphinState.active = false;
+          dolphinState.done = true;
+        }
+      }
+    }
     return;
   }
 
@@ -3554,6 +3603,12 @@ function update(dt) {
       if (keys['KeyS']) {
         keys['KeyS'] = false;
         currentScene = Scene.SURFING;
+        // Reset dolphin high-five for this surfing session
+        dolphinState.active = false;
+        dolphinState.timer = 0;
+        dolphinState.phase = 'waiting';
+        dolphinState.progress = 0;
+        dolphinState.done = false;
       }
     }
     // Airport → Oriental
