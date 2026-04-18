@@ -3148,7 +3148,7 @@ function drawPlayerAndUI() {
   // On sledding level, draw kitty sitting in sled (offset lower into sled)
   // When riding dragon, kitty is drawn on the dragon's back in the dragon section
   const sledOffset = (currentLevel === 2 && sledding) ? 5 : 0;
-  if (!ridingDragon) {
+  if (!ridingDragon && !hammockNapping) {
     drawKitty(player.x, player.y - (ridingCheetah ? 15 : sledOffset), player.color, player.facing, player.walkFrame, 'horn', playerEyeColor, playerHornColors);
   }
 
@@ -3279,10 +3279,12 @@ function drawPlayerAndUI() {
   }
   ctx.globalAlpha = 1;
 
-  ctx.fillStyle = '#fff';
-  ctx.font = 'bold 12px system-ui';
-  ctx.textAlign = 'center';
-  ctx.fillText(playerName, player.x, player.y - (ridingCheetah ? 53 : 38));
+  if (!hammockNapping) {
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 12px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText(playerName, player.x, player.y - (ridingCheetah ? 53 : 38));
+  }
 
   if (fishing.active) {
     ctx.strokeStyle = '#a3a3a3';
@@ -7625,15 +7627,105 @@ function drawHammock(x) {
   ctx.fill();
 
   if (hammockNapping) {
-    // Sleeping kitty in hammock
-    ctx.fillStyle = '#c4b5fd';
-    ctx.beginPath(); ctx.ellipse(x, gy - 23 + sway, 12, 8, 0, 0, Math.PI * 2); ctx.fill();
+    // Sleeping kitty curled in hammock — lying on her side, head to the right
+    const cx = x;
+    const cy = gy - 22 + sway;
+    const furColor = (typeof player !== 'undefined' && player.color) ? player.color : '#c4b5fd';
+    const hc = (typeof playerHornColors !== 'undefined' && playerHornColors) ? playerHornColors : ['#fbbf24', '#f472b6', '#a78bfa'];
+    const breath = Math.sin(gameTime / 500) * 0.5;
+
+    ctx.save();
+    // Tail curled behind her (left side)
+    ctx.strokeStyle = furColor;
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(cx - 14, cy);
+    ctx.quadraticCurveTo(cx - 22, cy - 4, cx - 18, cy + 3);
+    ctx.stroke();
+
+    // Curled body (lying on side)
+    ctx.fillStyle = furColor;
+    ctx.beginPath();
+    ctx.ellipse(cx - 2, cy + breath, 14, 7, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Tucked legs (little paws peeking out front)
+    ctx.beginPath();
+    ctx.ellipse(cx + 4, cy + 5, 3, 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(cx - 2, cy + 5, 3, 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Head (resting to the right)
+    ctx.beginPath();
+    ctx.arc(cx + 11, cy - 2 + breath, 7, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Ears
+    ctx.beginPath();
+    ctx.moveTo(cx + 7, cy - 7 + breath);
+    ctx.lineTo(cx + 9, cy - 12 + breath);
+    ctx.lineTo(cx + 11, cy - 7 + breath);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(cx + 13, cy - 7 + breath);
+    ctx.lineTo(cx + 15, cy - 12 + breath);
+    ctx.lineTo(cx + 17, cy - 7 + breath);
+    ctx.fill();
+
+    // Inner ears
+    ctx.fillStyle = '#fda4af';
+    ctx.beginPath();
+    ctx.moveTo(cx + 8, cy - 8 + breath);
+    ctx.lineTo(cx + 9, cy - 11 + breath);
+    ctx.lineTo(cx + 10, cy - 8 + breath);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(cx + 14, cy - 8 + breath);
+    ctx.lineTo(cx + 15, cy - 11 + breath);
+    ctx.lineTo(cx + 16, cy - 8 + breath);
+    ctx.fill();
+
+    // Horn (tilted, rainbow)
+    const hornGrad = ctx.createLinearGradient(cx + 10, cy - 9 + breath, cx + 16, cy - 15 + breath);
+    hornGrad.addColorStop(0, hc[0]);
+    hornGrad.addColorStop(0.5, hc[1]);
+    hornGrad.addColorStop(1, hc[2]);
+    ctx.fillStyle = hornGrad;
+    ctx.beginPath();
+    ctx.moveTo(cx + 11, cy - 8 + breath);
+    ctx.lineTo(cx + 17, cy - 14 + breath);
+    ctx.lineTo(cx + 13, cy - 8 + breath);
+    ctx.closePath();
+    ctx.fill();
+
+    // Closed eyes (happy sleepy arcs)
+    ctx.strokeStyle = '#1e1b4b';
+    ctx.lineWidth = 1.2;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(cx + 9, cy - 2 + breath, 1.5, Math.PI, 0);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(cx + 13, cy - 2 + breath, 1.5, Math.PI, 0);
+    ctx.stroke();
+
+    // Tiny smile
+    ctx.strokeStyle = '#831843';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(cx + 11, cy + 1 + breath, 1.5, 0.2, Math.PI - 0.2);
+    ctx.stroke();
+    ctx.restore();
+
     // Zzz
     ctx.fillStyle = '#a78bfa'; ctx.font = 'bold 14px system-ui';
     const zOff = Math.sin(gameTime / 600) * 5;
-    ctx.fillText('z', x + 15, gy - 40 + zOff);
-    ctx.fillText('Z', x + 22, gy - 52 + zOff);
-    ctx.fillText('Z', x + 28, gy - 65 + zOff);
+    ctx.fillText('z', x + 22, gy - 30 + zOff);
+    ctx.fillText('Z', x + 29, gy - 42 + zOff);
+    ctx.fillText('Z', x + 35, gy - 55 + zOff);
   }
 }
 
