@@ -860,7 +860,7 @@ function startGameAtLevel(lvl) {
     document.getElementById('controls').style.display = 'none';
     document.getElementById('touch-controls').style.display = 'block';
     document.body.classList.add('touch-active');
-  } else {
+  } else if (!isEmbedded) {
     document.getElementById('controls').style.display = 'flex';
   }
   document.getElementById('volumeControl').style.display = 'flex';
@@ -942,7 +942,7 @@ function startGame() {
     document.getElementById('controls').style.display = 'none';
     document.getElementById('touch-controls').style.display = 'block';
     document.body.classList.add('touch-active');
-  } else {
+  } else if (!isEmbedded) {
     document.getElementById('controls').style.display = 'flex';
   }
   document.getElementById('volumeControl').style.display = 'flex';
