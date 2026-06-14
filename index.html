@@ -30,11 +30,14 @@
     background: linear-gradient(135deg, #ff9a9e 0%, #fad0c4 50%, #a18cd1 100%);
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    /* `safe center` keeps content vertically centered when it fits, but falls
+       back to top-aligned when it would overflow — so the title/buttons are
+       never clipped beyond reach of the scrollbar on short viewports. */
+    justify-content: safe center;
     align-items: center;
     z-index: 100;
     overflow-y: auto;
-    padding: 20px 0;
+    padding: calc(20px + var(--sat)) 16px calc(20px + var(--sab));
   }
   #startScreen h1 {
     font-size: 4rem;
@@ -47,7 +50,7 @@
     font-size: 1.2rem;
     color: #fff;
     opacity: 0.9;
-    margin-bottom: 2rem;
+    margin-bottom: 1rem;
   }
   #startScreen label {
     font-size: 1.2rem;
@@ -64,7 +67,7 @@
     background: rgba(255,255,255,0.9);
     color: #4c1d95;
     width: 300px;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
   }
   #nameInput:focus { border-color: #7c3aed; box-shadow: 0 0 20px rgba(124,58,237,0.3); }
   #startBtn {
@@ -561,8 +564,10 @@
   <label for="nameInput">Name your kitty:</label>
   <input type="text" id="nameInput" aria-label="Name your kitty" placeholder="Sparkle" maxlength="16" autofocus>
   <button id="startBtn" aria-label="Start game">Play!</button>
-  <button id="levelSelectBtn" aria-label="Open level select" style="margin-top:12px;font-size:1rem;padding:10px 32px;background:linear-gradient(135deg,#38bdf8,#818cf8);color:#fff;border:none;border-radius:12px;cursor:pointer;font-weight:600;letter-spacing:1px;transition:transform 0.15s,box-shadow 0.15s;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">Level Select</button>
-  <button id="learningDashboardBtn" aria-label="Open learning progress" style="margin-top:8px;font-size:1rem;padding:10px 32px;background:linear-gradient(135deg,#f472b6,#c084fc);color:#fff;border:none;border-radius:12px;cursor:pointer;font-weight:600;letter-spacing:1px;transition:transform 0.15s,box-shadow 0.15s;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">Learning Progress</button>
+  <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;justify-content:center;">
+    <button id="levelSelectBtn" aria-label="Open level select" style="font-size:1rem;padding:10px 28px;background:linear-gradient(135deg,#38bdf8,#818cf8);color:#fff;border:none;border-radius:12px;cursor:pointer;font-weight:600;letter-spacing:1px;transition:transform 0.15s,box-shadow 0.15s;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">Level Select</button>
+    <button id="learningDashboardBtn" aria-label="Open learning progress" style="font-size:1rem;padding:10px 28px;background:linear-gradient(135deg,#f472b6,#c084fc);color:#fff;border:none;border-radius:12px;cursor:pointer;font-weight:600;letter-spacing:1px;transition:transform 0.15s,box-shadow 0.15s;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">Learning Progress</button>
+  </div>
 </div>
 
 <div id="learningDashboard" style="display:none;position:fixed;inset:0;background:linear-gradient(135deg,#4c1d95 0%,#7c3aed 50%,#a78bfa 100%);flex-direction:column;align-items:center;z-index:100;overflow-y:auto;padding:20px;">
