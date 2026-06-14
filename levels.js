@@ -2416,7 +2416,7 @@ npcDialogs[14] = [
 
 // ── Level 15: Amusement Park ──
 const PARK_WORLD_W = 5600;
-const CANDY_PARK_PORTAL = { x: 5100, radius: 30 }; // portal in candy kingdom to park
+const CANDY_PARK_PORTAL = { x: 4900, radius: 30 }; // portal in candy kingdom to park (offset from Moon portal at 5100 so both are reachable)
 const PARK_CANDY_PORTAL = { x: 100, radius: 30 }; // portal in park back to candy
 
 const COASTER_GATE_POS = { x: 380 };
