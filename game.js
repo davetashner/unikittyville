@@ -58,6 +58,7 @@ const POINTS = {
   COASTER_RIDE: 40, COASTER_FIRST_BONUS: 20, COASTER_SCREAM: 5,
   WATER_GUN_FIRST: 50, WATER_GUN_SECOND: 25, WATER_GUN_THIRD: 10,
   BIPLANE_RIDE: 35, BIPLANE_WAVE: 3,
+  FERRIS_RIDE: 35, FERRIS_WAVE: 3,
   DANCE_SHOW: 60, DANCE_SHOW_CHEER: 8, DANCE_SHOW_PERFECT_AUDIENCE: 20,
   DOLPHIN_HIGH_FIVE: 50,
 };
@@ -882,6 +883,12 @@ let waterGunRace = {
 let biplaneRide = {
   active: false, timer: 0, waves: 0,
   rideAngle: 0, complete: false,
+};
+
+// Ferris wheel ride
+let ferrisRide = {
+  active: false, timer: 0, waves: 0,
+  angle: Math.PI / 2, complete: false, // angle starts at the bottom gondola
 };
 
 // Dance show
@@ -1709,6 +1716,10 @@ function completeTransition() {
     biplaneRide = {
       active: false, timer: 0, waves: 0,
       rideAngle: 0, complete: false,
+    };
+    ferrisRide = {
+      active: false, timer: 0, waves: 0,
+      angle: Math.PI / 2, complete: false,
     };
     parkDanceShow = {
       active: false, step: 0, stepTimer: 0,
@@ -5252,6 +5263,47 @@ function update(dt) {
         player.x = BIPLANE_HUB_POS.x + Math.cos(armAngle) * 130;
         player.y = GROUND_Y - 120 + Math.sin(armAngle) * 30;
         player.vy = 0;
+      }
+    }
+
+    // Ferris wheel ride entry — board the gondola at the bottom of the wheel
+    if (Math.abs(player.x - FERRIS_WHEEL_POS.x) < BUILDING_RANGE && keys['Enter'] && currentScene === null && !ferrisRide.active && !ferrisRide.complete && !biplaneRide.active && !coasterRide.active) {
+      keys['Enter'] = false;
+      ferrisRide.active = true;
+      ferrisRide.timer = 0;
+      ferrisRide.waves = 0;
+      ferrisRide.angle = Math.PI / 2; // start at the bottom gondola
+    }
+
+    if (ferrisRide.active) {
+      ferrisRide.timer += dt;
+      // One revolution every 6s; the ride lasts two full turns (~12s)
+      ferrisRide.angle += (2 * Math.PI / 6000) * dt;
+      // Space to wave at the crowd below (bonus, like the bi-plane)
+      if (keys['Space'] && ferrisRide.waves < 3) {
+        keys['Space'] = false;
+        ferrisRide.waves++;
+        score += POINTS.FERRIS_WAVE;
+        addPopup(player.x, player.y - 30, '+' + POINTS.FERRIS_WAVE + ' Wave!', '#fbbf24');
+      }
+      if (ferrisRide.timer > 12000) {
+        ferrisRide.active = false;
+        ferrisRide.complete = true;
+        score += POINTS.FERRIS_RIDE;
+        addPopup(FERRIS_WHEEL_POS.x, GROUND_Y - 60, '+' + POINTS.FERRIS_RIDE + ' Ferris Wheel!', '#fbbf24');
+        playChaChing();
+        player.x = FERRIS_WHEEL_POS.x;
+        player.y = GROUND_Y;
+        player.onGround = true;
+        player.vy = 0;
+      } else {
+        // Lock the kitty to gondola 0 as it rides around the wheel
+        const cx = FERRIS_WHEEL_POS.cx;
+        const cy = GROUND_Y - 120;
+        player.x = cx + Math.cos(ferrisRide.angle) * FERRIS_WHEEL_POS.radius;
+        player.y = cy + Math.sin(ferrisRide.angle) * FERRIS_WHEEL_POS.radius;
+        player.vy = 0;
+        player.onGround = false;
       }
     }
 

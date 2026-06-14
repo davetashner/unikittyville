@@ -2422,6 +2422,7 @@ const PARK_CANDY_PORTAL = { x: 100, radius: 30 }; // portal in park back to cand
 const COASTER_GATE_POS = { x: 380 };
 const WATER_GUN_BOOTH_POS = { x: 1700, w: 150 };
 const BIPLANE_HUB_POS = { x: 2300 };
+const FERRIS_WHEEL_POS = { x: 4400, cx: 4400, radius: 100 }; // center y is GROUND_Y - 120
 const PARK_DANCE_STAGE_POS = { x: 3200, w: 120 };
 const PARK_EXIT_PORTAL_POS = { x: 5400 };
 
