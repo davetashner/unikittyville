@@ -1466,6 +1466,11 @@ function completeTransition() {
   leprechaunGold = 0;
   bigfootHintShown = false;
   roasting = { active: false, progress: 0, done: false };
+  // Campground (level 8) overlay minigames — clear active flags on every
+  // transition so a half-finished one can't render on top of another level.
+  storyTyping.active = false;
+  geometryActive = false;
+  lightShowActive = false;
   activeSpeechBubbles = [];
   quizActive = false;
   quizResultTimer = 0;
@@ -1550,6 +1555,62 @@ function completeTransition() {
     for (const alien of level12Space.aliens) alien.collected = false;
     for (const yb of level12Space.yarnBalls) yb.collected = false;
     collectedAlienCount = 0;
+  }
+  // Reset Rome gelato count when re-entering level 4
+  if (levelTransition.toLevel === 4) {
+    gelatoCount = 0;
+  }
+  // Reset Hawaii tiki/coconut counts when re-entering level 5
+  if (levelTransition.toLevel === 5) {
+    tikiCount = 0;
+    coconutCount = 0;
+  }
+  // Reset Oriental shell count + collected flags when re-entering level 6
+  if (levelTransition.toLevel === 6) {
+    shellCount = 0;
+    for (const s of levelOriental.scenes) {
+      if (s.type === 'shell') s.collected = false;
+    }
+  }
+  // Reset Alps diamond count + collected flags when re-entering level 7
+  if (levelTransition.toLevel === 7) {
+    diamondCount = 0;
+    for (const d of level5.diamonds) d.collected = false;
+  }
+  // Reset Campground state when re-entering level 8
+  if (levelTransition.toLevel === 8) {
+    stickCount = 0;
+    smoreCount = 0;
+    level6.sticksCollected.fill(false);
+    campfire = { built: false, lit: false };
+    campPool = { dug: false, filled: false, digging: false, digProgress: 0, filling: false, fillProgress: 0 };
+    // Campfire light-show programming minigame
+    lightShowActive = false;
+    lightShowProgram = '';
+    lightShowRepeat = false;
+    lightShowRunning = false;
+    lightShowStep = 0;
+    lightShowTimer = 0;
+    lightShowChallenge = 0;
+    lightShowChallengesCompleted = [false, false, false, false, false];
+    lightShowFeedback = { text: '', timer: 0, color: '#fff' };
+    // Campfire geometry minigame
+    geometryActive = false;
+    geometryShapeIndex = 0;
+    geometrySticks = [];
+    geometryAngle = 0;
+    geometryComplete = false;
+    geometryAllComplete = false;
+    geometryCompletionTimer = 0;
+    // Campfire story typing minigame
+    storyTyping = { active: false, storyIndex: 0, typed: 0, errors: 0, startTime: 0, complete: false, completeTimer: 0, sessionPick: -1 };
+  }
+  // Reset Safari counts + photo/cheetah progress when re-entering level 9
+  if (levelTransition.toLevel === 9) {
+    fruitCount = 0;
+    safariPhotoCount = 0;
+    safariPhotosTaken = { elephant: false, rhino: false, antelope: false, giraffe: false, cheetah: false };
+    cheetahYarnGiven = 0;
   }
   // Reset Moon state
   smoothieIngredients = 0;
