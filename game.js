@@ -1140,6 +1140,12 @@ function updateBugCatcher(dt) {
 let popups = []; // floating score popups
 let keys = {};
 const isMobile = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+// When embedded in an iframe (e.g. norahtashner.com/game) the canvas fills the
+// frame with no letterbox, so the fixed bottom controls bar would overlap
+// gameplay — and the host page already renders its own controls legend. Hide
+// the in-game bar in that case; standalone keeps it (it sits in the letterbox).
+let isEmbedded = false;
+try { isEmbedded = window.self !== window.top; } catch (e) { isEmbedded = true; }
 let currentActionKey = null;
 let currentActionLabel = '';
 let currentAction2Key = null;
@@ -2033,7 +2039,7 @@ function update(dt) {
   }
   // Hide controls during interior/mini-game scenes (always hidden on mobile)
   const inScene = currentScene !== null;
-  if (!isMobile) {
+  if (!isMobile && !isEmbedded) {
     hud.controls.style.display = inScene ? 'none' : 'flex';
   }
 
