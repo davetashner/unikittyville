@@ -12587,8 +12587,9 @@ function drawAmusementParkWorld(W, H, cam, cycle, isNight) {
     ctx.beginPath();
     ctx.arc(fwX, GROUND_Y - 120, 100, 0, Math.PI * 2);
     ctx.stroke();
-    // 6 spokes with gondolas
-    const fwAngle = t / 5000;
+    // 6 spokes with gondolas. While the player is riding, drive the wheel from
+    // the ride angle so gondola 0 lines up exactly with the kitty's seat.
+    const fwAngle = ferrisRide.active ? ferrisRide.angle : t / 5000;
     const gondolaColors = ['#f43f5e', '#3b82f6', '#22c55e', '#fbbf24', '#a855f7', '#f97316'];
     for (let s = 0; s < 6; s++) {
       const sa = fwAngle + s * Math.PI / 3;
@@ -12601,14 +12602,33 @@ function drawAmusementParkWorld(W, H, cam, cycle, isNight) {
       ctx.moveTo(fwX, GROUND_Y - 120);
       ctx.lineTo(sx, sy);
       ctx.stroke();
-      // Gondola
-      ctx.fillStyle = gondolaColors[s];
-      ctx.fillRect(sx - 6, sy, 12, 10);
-      // Tiny NPC silhouette
-      ctx.fillStyle = '#374151';
-      ctx.beginPath();
-      ctx.arc(sx, sy - 2, 3, 0, Math.PI * 2);
-      ctx.fill();
+      if (ferrisRide.active && s === 0) {
+        // Larger open car for the player; the kitty is drawn on top by drawPlayerAndUI
+        ctx.fillStyle = gondolaColors[s];
+        ctx.fillRect(sx - 16, sy, 32, 16);
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(sx - 16, sy, 32, 16);
+      } else {
+        // Gondola
+        ctx.fillStyle = gondolaColors[s];
+        ctx.fillRect(sx - 6, sy, 12, 10);
+        // Tiny NPC silhouette
+        ctx.fillStyle = '#374151';
+        ctx.beginPath();
+        ctx.arc(sx, sy - 2, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    // Entry hint when the kitty is near the wheel and not already riding
+    if (currentScene === null && !ferrisRide.active && !ferrisRide.complete &&
+        !coasterRide.active && !biplaneRide.active &&
+        Math.abs(player.x - fwX) < 60) {
+      ctx.fillStyle = '#fbbf24';
+      ctx.font = 'bold 10px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText('Press Enter to Ride!', fwX, GROUND_Y - 235);
+      ctx.textAlign = 'left';
     }
   }
 
@@ -12775,7 +12795,7 @@ function drawAmusementParkWorld(W, H, cam, cycle, isNight) {
   }
 
   // ── Proximity prompts ──
-  if (currentScene === null && !coasterRide.active && !biplaneRide.active) {
+  if (currentScene === null && !coasterRide.active && !biplaneRide.active && !ferrisRide.active) {
     ctx.fillStyle = '#fbbf24';
     ctx.font = 'bold 10px system-ui';
     ctx.textAlign = 'center';
@@ -12805,6 +12825,15 @@ function drawAmusementParkWorld(W, H, cam, cycle, isNight) {
     ctx.fillText('Press Space to Wave!', cam + W / 2, 40);
     ctx.font = 'bold 12px system-ui';
     ctx.fillText('Waves: ' + biplaneRide.waves + '/3', cam + W / 2, 60);
+    ctx.textAlign = 'left';
+  }
+  if (ferrisRide.active) {
+    ctx.fillStyle = '#fde68a';
+    ctx.font = 'bold 14px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('Press Space to Wave!', cam + W / 2, 40);
+    ctx.font = 'bold 12px system-ui';
+    ctx.fillText('Waves: ' + ferrisRide.waves + '/3', cam + W / 2, 60);
     ctx.textAlign = 'left';
   }
 
