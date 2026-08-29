@@ -41,7 +41,7 @@ function drawHouseInterior(cam, W, H) {
   ctx.fillText('Press Enter to go outside', cx, cy + 130);
 
   // Draw player inside
-  drawKitty(cx, cy + 60, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
+  drawKitty(cx, cy + 60, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors, playerOutfit);
 }
 
 function drawCamperInterior(cam, W, H) {
@@ -178,7 +178,7 @@ function drawCamperInterior(cam, W, H) {
   // Napping animation
   if (camperNapping) {
     // Kitty in bed
-    drawKitty(cx + 140, cy - 40, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
+    drawKitty(cx + 140, cy - 40, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors, playerOutfit);
     // Zzz
     const napPhase = camperNapTimer / CAMPER_NAP_DURATION;
     ctx.fillStyle = '#fff'; ctx.font = 'bold 14px system-ui'; ctx.textAlign = 'center';
@@ -195,7 +195,7 @@ function drawCamperInterior(cam, W, H) {
     ctx.fillText('Napping...', cx, cy + 125);
   } else {
     // Draw player walking around
-    drawKitty(kittyX, cy + 60, player.color, player.facing, player.walkFrame, 'horn', playerEyeColor, playerHornColors);
+    drawKitty(kittyX, cy + 60, player.color, player.facing, player.walkFrame, 'horn', playerEyeColor, playerHornColors, playerOutfit);
   }
 
   // Text
@@ -276,7 +276,7 @@ function drawWindmillInterior(cam, W, H) {
   ctx.fillStyle = 'rgba(255,255,255,0.7)';
   ctx.fillText('Press Enter to go outside', cx, cy + 130);
 
-  drawKitty(cx, cy + 60, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
+  drawKitty(cx, cy + 60, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors, playerOutfit);
 }
 
 function drawPizzaInterior(cam, W, H) {
@@ -443,7 +443,7 @@ function drawPizzaInterior(cam, W, H) {
   }
 
   // Draw player
-  drawKitty(cx - 60, cy + 60, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
+  drawKitty(cx - 60, cy + 60, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors, playerOutfit);
 
   // Popups
   for (const p of popups) {
@@ -516,7 +516,7 @@ function drawParkInterior(cam, W, H) {
   ctx.fillText('Central Park', cx, cy - 130);
 
   // Draw player
-  drawKitty(cx - 40, cy + 60, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
+  drawKitty(cx - 40, cy + 60, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors, playerOutfit);
 
   // Kit's stroller next to player
   if (hasStroller) {
@@ -659,7 +659,7 @@ function drawPantheonInterior(cam, W, H) {
       ctx.fillText('Press T to transcribe scrolls | Enter to leave', cx, cy + 145);
     }
   }
-  drawKitty(cx, cy + 60, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
+  drawKitty(cx, cy + 60, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors, playerOutfit);
 
   // ── Scroll transcription overlay ──
   if (scrollActive) {
@@ -935,7 +935,7 @@ function drawPantheonInterior(cam, W, H) {
     ctx.font = '13px system-ui'; ctx.fillStyle = 'rgba(100,100,100,0.8)';
     ctx.fillText('Press A to start Architecture Puzzle', cx, cy + 130);
     ctx.fillText('Press Enter to leave', cx, cy + 145);
-    drawKitty(cx, cy + 60, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
+    drawKitty(cx, cy + 60, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors, playerOutfit);
   }
 }
 
@@ -1094,7 +1094,7 @@ function drawSwimmingScene(cam, W, H) {
   ctx.globalAlpha = 1;
   // Kitty bobbing in the water
   const kittyBob = Math.sin(gameTime / 300) * 4;
-  drawKitty(cx, cy + kittyBob, player.color, 1, Math.floor(gameTime / 200) % 4, 'horn', playerEyeColor, playerHornColors);
+  drawKitty(cx, cy + kittyBob, player.color, 1, Math.floor(gameTime / 200) % 4, 'horn', playerEyeColor, playerHornColors, playerOutfit);
   // Water overlay (kitty partially submerged)
   ctx.fillStyle = 'rgba(56, 189, 248, 0.4)';
   ctx.beginPath(); ctx.ellipse(cx, cy + 8, 190, 45, 0, 0, Math.PI * 2); ctx.fill();
@@ -1248,7 +1248,7 @@ function drawChaletInterior(cam, W, H) {
   // Drinking animation
   if (drinkingCocoa) {
     // Draw kitty next to mug, "drinking"
-    drawKitty(mx - 30, cy + 60, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
+    drawKitty(mx - 30, cy + 60, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors, playerOutfit);
     // Drinking progress bar
     const drinkProgress = cocoaDrinkTimer / COCOA_DRINK_DURATION;
     ctx.fillStyle = '#1f2937'; ctx.fillRect(cx - 40, cy + 100, 80, 8);
@@ -1266,7 +1266,7 @@ function drawChaletInterior(cam, W, H) {
     ctx.globalAlpha = 1;
   } else {
     // Kitty sitting by fire
-    drawKitty(cx - 80, cy + 70, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
+    drawKitty(cx - 80, cy + 70, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors, playerOutfit);
 
     // Aim trajectory preview (dotted arc)
     if (!marshmallow.active) {
@@ -1475,7 +1475,7 @@ function drawSurfingScene(cam, W, H) {
   ctx.restore();
   // Kitty on surfboard
   const kittyBob = Math.sin(gameTime / 400) * 3;
-  drawKitty(cx, cy - 20 + kittyBob, player.color, 1, Math.floor(gameTime / 200) % 4, 'horn', playerEyeColor, playerHornColors);
+  drawKitty(cx, cy - 20 + kittyBob, player.color, 1, Math.floor(gameTime / 200) % 4, 'horn', playerEyeColor, playerHornColors, playerOutfit);
   // Splash effects
   ctx.fillStyle = '#bae6fd';
   for (let i = 0; i < 8; i++) {
@@ -1786,7 +1786,7 @@ function drawPoolSwimmingScene(cam, W, H) {
 
   // Kitty bobbing in pool
   const bobY = Math.sin(gameTime / 400) * 4;
-  drawKitty(cx, cy + 47 + bobY, player.color || '#c4b5fd', 1, 0, 'horn', playerEyeColor, playerHornColors);
+  drawKitty(cx, cy + 47 + bobY, player.color || '#c4b5fd', 1, 0, 'horn', playerEyeColor, playerHornColors, playerOutfit);
 
   // Gold count display
   if (leprechaunGold > 0) {
@@ -1905,7 +1905,7 @@ function drawCampCamperInterior(cam, W, H) {
     ctx.fillStyle = blanketColor;
     ctx.beginPath(); ctx.roundRect(bedX - 25, bedY + 2, 50, 18, 4); ctx.fill();
     // Kitty head peeking
-    drawKitty(bedX - 10, bedY - 5, player.color || '#c4b5fd', 1, 0, 'horn', playerEyeColor, playerHornColors);
+    drawKitty(bedX - 10, bedY - 5, player.color || '#c4b5fd', 1, 0, 'horn', playerEyeColor, playerHornColors, playerOutfit);
     // Zzz
     ctx.fillStyle = '#c4b5fd'; ctx.font = 'bold 14px system-ui'; ctx.textAlign = 'center';
     const zFloat = (gameTime / 600) % 1;
@@ -1916,7 +1916,7 @@ function drawCampCamperInterior(cam, W, H) {
     ctx.globalAlpha = 1;
   } else if (campCamperShowering) {
     // Kitty in shower (just head visible)
-    drawKitty(bathX, bathY + 35, player.color || '#c4b5fd', 1, 0, 'horn', playerEyeColor, playerHornColors);
+    drawKitty(bathX, bathY + 35, player.color || '#c4b5fd', 1, 0, 'horn', playerEyeColor, playerHornColors, playerOutfit);
     // Steam
     ctx.fillStyle = 'rgba(255,255,255,0.3)';
     for (let i = 0; i < 5; i++) {
@@ -1926,7 +1926,7 @@ function drawCampCamperInterior(cam, W, H) {
     }
   } else {
     // Kitty walking around
-    drawKitty(kittyX, cy + 60, player.color || '#c4b5fd', player.facing, player.walkFrame, 'horn', playerEyeColor, playerHornColors);
+    drawKitty(kittyX, cy + 60, player.color || '#c4b5fd', player.facing, player.walkFrame, 'horn', playerEyeColor, playerHornColors, playerOutfit);
   }
 
   // Pasta on counter if cooking
@@ -2068,7 +2068,7 @@ function drawHospitalInterior(cam, W, H) {
   // Player as nurse (left side of room)
   const nurseX = cx - 60;
   const nurseY = cy - 20;
-  drawKitty(nurseX, nurseY, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
+  drawKitty(nurseX, nurseY, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors, playerOutfit);
   // Nurse hat (white cap with red cross)
   ctx.fillStyle = '#fff';
   ctx.beginPath();
@@ -2463,7 +2463,7 @@ function drawFaoSchwarzInterior(cam, W, H) {
     ctx.fillText('Bravo! Press Enter to leave', cx, keyY - 40);
   }
   // Player on current key
-  drawKitty(cam + keyW * 0.5 + faoPlayerX * keyW + keyW / 2, keyY - 15, player.color, 1, player.walkFrame, 'horn', playerEyeColor, playerHornColors);
+  drawKitty(cam + keyW * 0.5 + faoPlayerX * keyW + keyW / 2, keyY - 15, player.color, 1, player.walkFrame, 'horn', playerEyeColor, playerHornColors, playerOutfit);
   ctx.textAlign = 'left';
 }
 
@@ -2518,7 +2518,7 @@ function drawEmpireStateInterior(cam, W, H) {
     ctx.fillStyle = '#78716c';
     ctx.fillRect(cx - 75, H * 0.68, 150, 8);
     // Player standing in elevator
-    drawKitty(cx, H * 0.65, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
+    drawKitty(cx, H * 0.65, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors, playerOutfit);
     // Elevator doors (top)
     ctx.fillStyle = '#94a3b8';
     ctx.fillRect(cx - 80, H * 0.25, 8, 200);
@@ -2703,7 +2703,7 @@ function drawEmpireStateInterior(cam, W, H) {
     ctx.fillRect(telX - 3, deckY - 4, 6, 4);
 
     // Player on the deck
-    drawKitty(cx, deckY - 3, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
+    drawKitty(cx, deckY - 3, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors, playerOutfit);
 
     // Title
     ctx.fillStyle = '#fff'; ctx.font = 'bold 18px system-ui'; ctx.textAlign = 'center';
@@ -2746,7 +2746,7 @@ function drawThirtyRockInterior(cam, W, H) {
     ctx.fillStyle = '#fbbf24'; ctx.font = 'bold 20px system-ui';
     ctx.fillText('Score: ' + thirtyRockDance.score + '/' + thirtyRockDance.sequence.length, cx, H * 0.4);
   }
-  drawKitty(cx, H * 0.65, player.color, 1, player.walkFrame, 'horn', playerEyeColor, playerHornColors);
+  drawKitty(cx, H * 0.65, player.color, 1, player.walkFrame, 'horn', playerEyeColor, playerHornColors, playerOutfit);
   ctx.textAlign = 'left';
 }
 
@@ -2992,7 +2992,7 @@ function drawGrandCentralInterior(cam, W, H) {
   }
 
   // ── Player ──
-  drawKitty(cx, H * 0.82, player.color, 1, player.walkFrame, 'horn', playerEyeColor, playerHornColors);
+  drawKitty(cx, H * 0.82, player.color, 1, player.walkFrame, 'horn', playerEyeColor, playerHornColors, playerOutfit);
   ctx.textAlign = 'left';
 }
 
@@ -3173,7 +3173,7 @@ function drawTelegramOffice(cam, W, H) {
   }
 
   // Draw player
-  drawKitty(cx, H * 0.82, player.color, 1, player.walkFrame, 'horn', playerEyeColor, playerHornColors);
+  drawKitty(cx, H * 0.82, player.color, 1, player.walkFrame, 'horn', playerEyeColor, playerHornColors, playerOutfit);
   ctx.textAlign = 'left';
 }
 
@@ -3232,7 +3232,7 @@ function drawMetMuseumInterior(cam, W, H) {
   ctx.fillStyle = '#78716c'; ctx.font = '14px system-ui';
   ctx.fillText((metPaintingIndex + 1) + ' of ' + MET_PAINTINGS.length, cx, H * 0.74);
   // Player viewing
-  drawKitty(cx, H * 0.88, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
+  drawKitty(cx, H * 0.88, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors, playerOutfit);
   ctx.textAlign = 'left';
 }
 
@@ -3780,7 +3780,7 @@ function drawNasaMuseumInterior(cam, W, H) {
   }
 
   // Player on museum floor
-  drawKitty(cx, H * 0.85, player.color, 1, player.walkFrame, 'horn', playerEyeColor, playerHornColors);
+  drawKitty(cx, H * 0.85, player.color, 1, player.walkFrame, 'horn', playerEyeColor, playerHornColors, playerOutfit);
 
   // Prompt
   ctx.fillStyle = '#fff';
@@ -4044,7 +4044,7 @@ function drawMissionControlInterior(cam, W, H) {
   }
 
   // Player at console
-  drawKitty(cx, H * 0.85, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
+  drawKitty(cx, H * 0.85, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors, playerOutfit);
 
   // Console keyboard in front of player
   ctx.fillStyle = '#334155';
@@ -4180,7 +4180,7 @@ function drawFountainWishesInterior(cam, W, H) {
   // Draw Sparkle (unikitty) on the railing
   const kittyX = cx - 160;
   const kittyY = cy + 45;
-  drawKitty(kittyX, kittyY, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors);
+  drawKitty(kittyX, kittyY, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors, playerOutfit);
 
   // Gold coin in paw (when not thrown)
   if (!wishCoin.active && wishTossesLeft > 0 && !wishSummary) {

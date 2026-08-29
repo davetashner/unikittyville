@@ -205,7 +205,7 @@
     gap: 8px;
     z-index: 20;
   }
-  #volumeBtn {
+  #volumeBtn, #menuBtn {
     width: 36px;
     height: 36px;
     border-radius: 50%;
@@ -220,8 +220,8 @@
     justify-content: center;
     transition: background 0.15s;
   }
-  #volumeBtn:hover { background: rgba(255,255,255,0.25); }
-  #volumeBtn { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  #volumeBtn:hover, #menuBtn:hover { background: rgba(255,255,255,0.25); }
+  #volumeBtn, #menuBtn { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
   #volumeSlider { touch-action: none; }
   #volumeSliderWrap {
     background: rgba(255,255,255,0.15);
@@ -665,8 +665,36 @@
   <div id="touch-action2" class="touch-btn" style="display:none;">Action</div>
 </div>
 <div id="volumeControl">
+  <button id="menuBtn" aria-label="Open menu" title="Menu">&#9776;</button>
   <button id="volumeBtn" aria-label="Toggle sound" title="Toggle sound">&#128264;</button>
   <div id="volumeSliderWrap"><input type="range" id="volumeSlider" aria-label="Volume" min="0" max="100" value="40"></div>
+</div>
+
+<div id="pauseMenu" style="display:none;position:fixed;inset:0;background:rgba(30,27,75,0.85);backdrop-filter:blur(6px);flex-direction:column;align-items:center;justify-content:flex-start;z-index:110;overflow-y:auto;padding:16px;">
+  <h2 style="font-size:1.6rem;color:#fff;text-shadow:2px 2px 0 #3b0764;margin:6px 0 2px;">Menu</h2>
+  <canvas id="menuPreviewCanvas" width="120" height="120" style="border-radius:12px;background:linear-gradient(135deg,#e0e7ff,#fce7f3);margin:6px 0;"></canvas>
+  <div style="display:flex;gap:20px;flex-wrap:wrap;justify-content:center;">
+    <div class="color-group">
+      <div style="color:#fff;font-weight:600;font-size:0.85rem;margin-bottom:4px;">Fur</div>
+      <div id="menuFurPalette" class="palette-row"></div>
+    </div>
+    <div class="color-group">
+      <div style="color:#fff;font-weight:600;font-size:0.85rem;margin-bottom:4px;">Eyes</div>
+      <div id="menuEyePalette" class="palette-row"></div>
+    </div>
+    <div class="color-group">
+      <div style="color:#fff;font-weight:600;font-size:0.85rem;margin-bottom:4px;">Horn</div>
+      <div id="menuHornPalette" class="palette-row"></div>
+    </div>
+  </div>
+  <div style="color:#fff;font-weight:600;font-size:0.85rem;margin:10px 0 4px;">Clothes</div>
+  <div id="menuOutfitRow" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;"></div>
+  <div style="display:flex;gap:12px;align-items:center;margin:14px 0 4px;flex-wrap:wrap;justify-content:center;">
+    <span style="color:#fff;font-weight:600;font-size:0.9rem;">Quiz questions:</span>
+    <button id="quizToggleBtn" aria-label="Toggle quiz questions" style="font-size:0.95rem;padding:8px 22px;border-radius:999px;border:2px solid rgba(255,255,255,0.5);cursor:pointer;font-weight:700;background:#22c55e;color:#fff;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">On</button>
+  </div>
+  <div style="color:rgba(255,255,255,0.65);font-size:0.75rem;max-width:420px;text-align:center;">When quizzes are off, the train puzzle and rocket fuel math no longer block the next level.</div>
+  <button id="resumeBtn" aria-label="Back to game" style="margin:16px 0 8px;font-size:1.1rem;padding:12px 40px;background:linear-gradient(135deg,#f472b6,#c084fc);color:#fff;border:none;border-radius:12px;cursor:pointer;font-weight:700;letter-spacing:1px;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">Back to Game!</button>
 </div>
 
 <script src="physics.js"></script>

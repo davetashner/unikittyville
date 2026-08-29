@@ -184,7 +184,7 @@ const npcDialogs = {
     "That tree branch had a perfect snow hat. Very fashion-forward, tree!",
     "My paws are making that satisfying CRUNCH sound in the snow! Love it!",
     "I bet from space you can see my glitter trail down this mountain!",
-    "The northern lights would look AMAZING from up here. Wrong hemisphere though!",
+    "The northern lights would look AMAZING from up here on a really dark night!",
     "I found a frozen stream! The ice is clear as glass! I can see fish sleeping!",
     "Snowboarding is next on my list. After I figure out this sledding thing.",
     "The fog at the bottom of the mountain looks like I'm sledding into clouds!",
@@ -1639,8 +1639,10 @@ for (let dz = 200; dz < 2800; dz += 80 + Math.random() * 100) {
 
 // Platforms array needed for test compatibility (reachability tests)
 level5.platforms = [{ x: 100, y: 380, w: 100 }];
-// Need at least 1 yarn ball for test compatibility
-level5.yarnBalls = [{ x: 200, y: 360, color: '#60a5fa', collected: false, bobPhase: 0 }];
+// Need at least 1 yarn ball for test compatibility. It must sit within
+// collect range of the pinned player position (x=100), or the level's
+// ALL YARN BONUS can never be earned.
+level5.yarnBalls = [{ x: 105, y: 390, color: '#60a5fa', collected: false, bobPhase: 0 }];
 
 // Level 5 NPCs — positioned within the 960px FP world bounds
 const alpsNpcs = [];
@@ -2298,7 +2300,7 @@ const timeCapsules = {
   4:  { x: 2000, name: 'Roman Coin',               year: '27 BC',  fact: 'Roman denarius coins featured emperors\' portraits.' },
   5:  { x: 2500, name: 'Polynesian Compass',       year: '400 AD', fact: 'Polynesian navigators used stars to cross oceans.' },
   6:  { x: 1800, name: 'Ship\'s Bell',             year: '1862',   fact: 'The USS Oriental\'s bell was recovered from the Neuse River.' },
-  7:  { x: 800, name: 'Swiss Watch',              year: '1755',   fact: 'Swiss watchmaking began in the 1500s.' },
+  7:  { x: 140, name: 'Swiss Watch',              year: '1755',   fact: 'Swiss watchmaking began in the 1500s.' },
   8:  { x: 3200, name: 'Arrowhead',                year: '3000 BC',fact: 'Stone arrowheads took hours of careful flint-knapping.' },
   9:  { x: 3500, name: 'Tribal Mask',              year: '1200 AD',fact: 'African masks represent spirits and nature.' },
   10: { x: 3000, name: 'Amelia Earhart\'s Compass',year: '1932',   fact: 'Amelia Earhart flew solo across the Atlantic.' },
@@ -2519,7 +2521,7 @@ const npcQuizzes = {
     { question: "How many yellow taxis are there in NYC?", answers: ["5,000", "13,000", "25,000"], correct: 1 },
     { question: "Why is NYC pizza famous?", answers: ["The cheese", "The water in the dough", "The oven type"], correct: 1 },
     { question: "How many languages are spoken in NYC?", answers: ["Over 200", "Over 800", "Over 50"], correct: 1 },
-    { question: "What was NYC before Washington DC?", answers: ["A small village", "The first US capital", "A Dutch colony"], correct: 1 },
+    { question: "Which city was the first capital of the United States?", answers: ["Boston", "New York City", "Philadelphia"], correct: 1 },
   ],
   4: [ // Rome
     { question: "How old is Rome?", answers: ["500 years", "1,200 years", "2,700 years"], correct: 2 },

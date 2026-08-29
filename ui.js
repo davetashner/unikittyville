@@ -31,6 +31,31 @@ let selectedFurColor = '#e879f9'; // default player color
 let selectedEyeColor = '#1e1b4b';
 let selectedHornColor = '#f472b6'; // middle of the gradient — we derive gradient from this
 
+// Restore the saved character (colors + outfit) from a previous session
+try {
+  const savedChar = JSON.parse(localStorage.getItem('unikittyville_character') || 'null');
+  if (savedChar) {
+    if (savedChar.fur) selectedFurColor = savedChar.fur;
+    if (savedChar.eye) selectedEyeColor = savedChar.eye;
+    if (savedChar.horn) selectedHornColor = savedChar.horn;
+    if (savedChar.outfit) playerOutfit = savedChar.outfit;
+  }
+} catch (e) { /* corrupt save — keep defaults */ }
+
+function saveCharacter() {
+  try {
+    localStorage.setItem('unikittyville_character', JSON.stringify({
+      fur: selectedFurColor, eye: selectedEyeColor, horn: selectedHornColor, outfit: playerOutfit,
+    }));
+  } catch (e) { /* storage unavailable */ }
+}
+
+function applyCharacterToPlayer() {
+  player.color = selectedFurColor;
+  playerEyeColor = selectedEyeColor;
+  playerHornColors = hornGradientFromColor(selectedHornColor);
+}
+
 // Horn gradient from a single picked color
 function hornGradientFromColor(color) {
   return [lightenColor(color, 0.4), color, darkenColor(color, 0.3)];
@@ -101,12 +126,25 @@ function buildPalette(containerId, fullContainerId, selectedColor, onSelect) {
 }
 
 function updatePreview() {
-  const canvas = document.getElementById('previewCanvas');
+  drawPreviewInto('previewCanvas');
+  drawPreviewInto('menuPreviewCanvas');
+}
+
+function drawPreviewInto(canvasId) {
+  const canvas = document.getElementById(canvasId);
   if (!canvas) return;
   const pCtx = canvas.getContext('2d');
   pCtx.clearRect(0, 0, canvas.width, canvas.height);
 
   const cx = 60, cy = 80;
+
+  // Cape outfit flows out behind the body
+  if (playerOutfit === 'cape') {
+    pCtx.save();
+    pCtx.translate(cx, cy);
+    drawKittyCape(pCtx, 0);
+    pCtx.restore();
+  }
 
   // Body
   pCtx.fillStyle = selectedFurColor;
@@ -233,6 +271,14 @@ function updatePreview() {
     pCtx.lineTo(cx + side * 20, cy - 26);
     pCtx.stroke();
   }
+
+  // Outfit (cape was already drawn behind the body)
+  if (playerOutfit && playerOutfit !== 'none' && playerOutfit !== 'cape') {
+    pCtx.save();
+    pCtx.translate(cx, cy);
+    drawKittyAccessory(pCtx, playerOutfit, 0);
+    pCtx.restore();
+  }
 }
 
 function initCharacterCreator() {
@@ -302,8 +348,25 @@ window.addEventListener('orientationchange', () => { setTimeout(resize, 100); })
 
 // ── Input ──
 window.addEventListener('keydown', e => {
+  // Pause menu is DOM-driven — swallow all game keys while it is open
+  if (pauseMenuOpen) {
+    if (e.code === 'Escape') closePauseMenu();
+    return;
+  }
+  // Escape opens the menu during normal play. Checked before the minigame
+  // typing handlers below, so an Escape that exits one of them can never
+  // also open the menu on the same keypress.
+  if (e.code === 'Escape' && gameStarted && currentScene === null &&
+      !postcardOpen && !missionLogOpen && !fuelCalcActive && !trainPuzzleActive &&
+      !quizActive && !hotdogMath.active && !capeLaunching &&
+      !storyTyping.active && !whaleTranscription.active) {
+    openPauseMenu();
+    return;
+  }
   if (!e.repeat) keys[e.code] = true;
-  if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'ArrowDown') e.preventDefault();
+  // Don't block spaces/arrows while typing in a real text field (name input)
+  const inTextField = e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA');
+  if (!inTextField && (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'ArrowDown')) e.preventDefault();
 
   // Postcard writer — capture typing when open in write mode
   if (postcardOpen && postcardMode === 'write' && !postcardJustSent && !e.repeat) {
@@ -565,9 +628,11 @@ window.addEventListener('keydown', e => {
     const target = WHALE_TRANSMISSIONS[wt.currentIndex].text;
     if (e.key === 'Backspace') {
       e.preventDefault();
+      keys[e.code] = false;
       wt.typed = wt.typed.slice(0, -1);
     } else if (e.key.length === 1 && wt.typed.length < target.length) {
       e.preventDefault();
+      keys[e.code] = false; // block global hotkeys (W/T/N/B) while typing
       const expected = target[wt.typed.length];
       if (e.key === expected) {
         wt.typed += e.key;
@@ -631,13 +696,18 @@ window.addEventListener('keyup', e => { keys[e.code] = false; });
   bindTouch('touch-dpad-right', 'ArrowRight', 'ArrowRight');
   bindTouch('touch-dpad-down', 'ArrowDown', 'ArrowDown');
   bindTouch('touch-jump', 'Space', 'Space');
+  // Remember which key was pressed at touchstart: setAction can reassign
+  // currentActionKey while the button is held, and releasing the NEW key
+  // would leave the original one stuck down forever.
+  let heldActionKey = null;
+  let heldAction2Key = null;
   bindTouch('touch-action',
-    function() { if (currentActionKey) keys[currentActionKey] = true; },
-    function() { if (currentActionKey) keys[currentActionKey] = false; }
+    function() { heldActionKey = currentActionKey; if (heldActionKey) keys[heldActionKey] = true; },
+    function() { if (heldActionKey) keys[heldActionKey] = false; heldActionKey = null; }
   );
   bindTouch('touch-action2',
-    function() { if (currentAction2Key) keys[currentAction2Key] = true; },
-    function() { if (currentAction2Key) keys[currentAction2Key] = false; }
+    function() { heldAction2Key = currentAction2Key; if (heldAction2Key) keys[heldAction2Key] = true; },
+    function() { if (heldAction2Key) keys[heldAction2Key] = false; heldAction2Key = null; }
   );
 })();
 
@@ -669,15 +739,8 @@ canvas.addEventListener('click', function(e) {
   const tx = (e.clientX - rect.left) * scaleX;
   const ty = (e.clientY - rect.top) * scaleY;
   const W = canvas.width, H = canvas.height;
-  // Match button layout from drawQuizOverlay
-  const boxW = Math.min(W * 0.85, 420);
-  const bx = (W - boxW) / 2;
-  const boxH = 180;
-  const by = (H - boxH) / 2 - 20;
-  // answerY uses 2 lines as estimate (question text wrap); buttons start ~76px from box top
-  const answerY = by + 76;
-  const btnH = 26;
-  const btnW = boxW - 40;
+  // Same layout math as drawQuizOverlay, so hitboxes match the drawn buttons
+  const { bx, answerY, btnH, btnW } = getQuizOverlayLayout(W, H);
   for (let i = 0; i < 3; i++) {
     const btnY = answerY + i * (btnH + 4);
     if (tx > bx + 20 && tx < bx + 20 + btnW && ty > btnY && ty < btnY + btnH) {
@@ -811,7 +874,7 @@ function buildLearningDashboard() {
   // ── 3. Achievements Earned ──
   const savedAch = loadJSON('unikittyville_achievements', {});
   const earnedCount = Object.keys(savedAch).length;
-  const totalAch = 8; // matches achievements array length
+  const totalAch = (typeof achievements !== 'undefined') ? achievements.length : 13;
   const achHTML = '<div style="display:flex;align-items:center;gap:12px;">' +
     '<div style="font-size:2.5rem;color:#fbbf24;">' + earnedCount + '/' + totalAch + '</div>' +
     '<div style="color:rgba(255,255,255,0.8);font-size:0.9rem;">achievements earned</div>' +
@@ -874,9 +937,9 @@ function startGameAtLevel(lvl) {
     }
   }
   // Apply character creator selections
-  player.color = selectedFurColor;
-  playerEyeColor = selectedEyeColor;
-  playerHornColors = hornGradientFromColor(selectedHornColor);
+  applyCharacterToPlayer();
+  saveCharacter();
+  gameStarted = true;
   currentLevel = lvl;
   player.x = 100;
   player.y = GROUND_Y;
@@ -930,7 +993,12 @@ updateDifficultyUI();
 // ── Start ──
 document.getElementById('startBtn').addEventListener('click', startGame);
 document.getElementById('nameInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') startGame();
+  if (e.key === 'Enter') {
+    // Keep this Enter away from the window keydown handler, otherwise the
+    // first update() frame treats it as "skip tour guide"
+    e.stopPropagation();
+    startGame();
+  }
 });
 
 function startGame() {
@@ -960,9 +1028,9 @@ function startGame() {
     }
   }
   // Apply character creator selections
-  player.color = selectedFurColor;
-  playerEyeColor = selectedEyeColor;
-  playerHornColors = hornGradientFromColor(selectedHornColor);
+  applyCharacterToPlayer();
+  saveCharacter();
+  gameStarted = true;
   // Activate tour guide for level 1
   if (!tourGuideSeen.has(1)) {
     tourGuideActive = true;
@@ -1001,10 +1069,18 @@ function setAction(key, label, key2, label2) {
 
 function updatePrompt(near) {
   const el = document.getElementById('prompt');
-  // Hide prompt during hot dog math overlay (UI is drawn on canvas)
+  // Hot dog math overlay draws its own UI on canvas, but touch players
+  // still need an on-screen way out (coins are keyboard-only)
   if (hotdogMath.active) {
     el.style.display = 'none';
-    setAction(null, '');
+    setAction('Escape', 'Exit');
+    return;
+  }
+  // Market haggling: answers are typed digits (keyboard-only), so give
+  // touch players an Exit button instead of trapping them in the scene
+  if (currentScene === Scene.MARKET && marketActive) {
+    el.style.display = 'none';
+    setAction('Escape', 'Exit');
     return;
   }
   // Quiz mode overrides all other prompts
@@ -1679,12 +1755,12 @@ function updatePrompt(near) {
   } else if (currentLevel === 11 && fuelCalcActive) {
     el.textContent = 'Type your answer and press Enter (Esc to exit)';
     el.style.display = 'block';
-    setAction('Enter', 'Submit');
-  } else if (currentLevel === 11 && Math.abs(player.x - ROCKET_POS.x) < BUILDING_RANGE && !capeFueled) {
+    setAction('Enter', 'Submit', 'Escape', 'Exit');
+  } else if (currentLevel === 11 && quizzesEnabled && Math.abs(player.x - ROCKET_POS.x) < BUILDING_RANGE && !capeFueled) {
     el.textContent = 'Press P to calculate rocket fuel!';
     el.style.display = 'block';
     setAction('KeyP', 'Fuel');
-  } else if (currentLevel === 11 && capeFueled && capeSpaceSuit && Math.abs(player.x - ROCKET_POS.x) < BUILDING_RANGE && !capeLaunching) {
+  } else if (currentLevel === 11 && (capeFueled || !quizzesEnabled) && capeSpaceSuit && Math.abs(player.x - ROCKET_POS.x) < BUILDING_RANGE && !capeLaunching) {
     el.textContent = 'Press Enter to board the rocket!';
     el.style.display = 'block';
     setAction('Enter', 'Board');
@@ -1775,3 +1851,70 @@ function updatePrompt(near) {
     setAction(null, '');
   }
 }
+
+// ── Pause Menu ──
+// Opened with the ☰ button or Escape. The game world freezes (update() early
+// return on pauseMenuOpen) while the child changes character, clothes, or
+// settings — everything applies live and persists to localStorage.
+const OUTFITS = [
+  { id: 'none', label: 'None' },
+  { id: 'bow', label: '\u{1F380} Bow' },
+  { id: 'scarf', label: '\u{1F9E3} Scarf' },
+  { id: 'glasses', label: '\u{1F453} Glasses' },
+  { id: 'flower', label: '\u{1F338} Flower' },
+  { id: 'crown', label: '\u{1F451} Crown' },
+  { id: 'cape', label: '\u{1F9B8} Cape' },
+];
+
+function buildOutfitRow() {
+  const row = document.getElementById('menuOutfitRow');
+  if (!row) return;
+  row.innerHTML = '';
+  for (const o of OUTFITS) {
+    const btn = document.createElement('button');
+    btn.textContent = o.label;
+    btn.setAttribute('aria-label', o.label.replace(/^\S+ /, '') + ' outfit');
+    const sel = playerOutfit === o.id;
+    btn.style.cssText = 'font-size:0.85rem;padding:8px 12px;border-radius:10px;cursor:pointer;font-weight:600;touch-action:manipulation;-webkit-tap-highlight-color:transparent;color:#fff;background:rgba(255,255,255,0.15);border:2px solid ' + (sel ? '#fff' : 'transparent') + ';';
+    btn.addEventListener('click', () => {
+      playerOutfit = o.id;
+      saveCharacter();
+      buildOutfitRow();
+      updatePreview();
+    });
+    row.appendChild(btn);
+  }
+}
+
+function updateQuizToggleUI() {
+  const btn = document.getElementById('quizToggleBtn');
+  if (!btn) return;
+  btn.textContent = quizzesEnabled ? 'On' : 'Off';
+  btn.style.background = quizzesEnabled ? '#22c55e' : '#64748b';
+}
+
+function openPauseMenu() {
+  pauseMenuOpen = true;
+  // Rebuild every open so palette highlights match the current character
+  buildPalette('menuFurPalette', null, selectedFurColor, (c) => { selectedFurColor = c; applyCharacterToPlayer(); saveCharacter(); });
+  buildPalette('menuEyePalette', null, selectedEyeColor, (c) => { selectedEyeColor = c; applyCharacterToPlayer(); saveCharacter(); });
+  buildPalette('menuHornPalette', null, selectedHornColor, (c) => { selectedHornColor = c; applyCharacterToPlayer(); saveCharacter(); });
+  buildOutfitRow();
+  updateQuizToggleUI();
+  updatePreview();
+  document.getElementById('pauseMenu').style.display = 'flex';
+}
+
+function closePauseMenu() {
+  pauseMenuOpen = false;
+  document.getElementById('pauseMenu').style.display = 'none';
+}
+
+document.getElementById('menuBtn').addEventListener('click', () => {
+  if (pauseMenuOpen) closePauseMenu(); else openPauseMenu();
+});
+document.getElementById('resumeBtn').addEventListener('click', closePauseMenu);
+document.getElementById('quizToggleBtn').addEventListener('click', () => {
+  setQuizzesEnabled(!quizzesEnabled);
+  updateQuizToggleUI();
+});
