@@ -778,9 +778,23 @@ const levelColors = ['#86efac','#bae6fd','#fca5a5','#fde68a','#38bdf8','#67e8f9'
 function buildLevelGrid() {
   const grid = document.getElementById('levelGrid');
   grid.innerHTML = '';
+  const visitedLevels = loadStoredJSON('unikittyville_levels_visited', []);
+  const capsulesLevels = loadStoredJSON('unikittyville_capsules', []);
   for (let i = 0; i < TOTAL_LEVELS; i++) {
     const btn = document.createElement('button');
     btn.textContent = LEVEL_NAMES[i];
+    // 3 star goals: visited, all-yarn bonus, time capsule found
+    const lvl = i + 1;
+    const stars = [
+      { got: visitedLevels.includes(lvl), title: 'Visited' },
+      { got: !!yarnBonusAwarded[lvl], title: 'All yarn collected' },
+      { got: capsulesLevels.includes(lvl), title: 'Time capsule found' },
+    ];
+    const starRow = document.createElement('div');
+    starRow.style.cssText = 'font-size:0.75rem;letter-spacing:2px;margin-top:2px;';
+    starRow.title = stars.map(st => (st.got ? '\u2605 ' : '\u2606 ') + st.title).join(' \u00b7 ');
+    starRow.innerHTML = stars.map(st => '<span style="color:' + (st.got ? '#f59e0b' : 'rgba(30,27,75,0.3)') + ';">\u2605</span>').join('');
+    btn.appendChild(starRow);
     btn.style.cssText = `padding:14px 8px;border-radius:12px;border:2px solid rgba(255,255,255,0.4);font-weight:700;font-size:0.9rem;cursor:pointer;transition:transform 0.15s;background:${levelColors[i % levelColors.length]};color:#1e1b4b;`;
     btn.addEventListener('click', () => {
       startGameAtLevel(i + 1);
@@ -1899,21 +1913,33 @@ const OUTFITS = [
   { id: 'scarf', label: '\u{1F9E3} Scarf' },
   { id: 'glasses', label: '\u{1F453} Glasses' },
   { id: 'flower', label: '\u{1F338} Flower' },
-  { id: 'crown', label: '\u{1F451} Crown' },
-  { id: 'cape', label: '\u{1F9B8} Cape' },
+  { id: 'crown', label: '\u{1F451} Crown', unlock: { level: 14, hint: 'Visit the Candy Kingdom to earn the Crown!' } },
+  { id: 'cape', label: '\u{1F9B8} Cape', unlock: { level: 12, hint: 'Blast off into space to earn the Cape!' } },
+  { id: 'beret', label: '\u{1F3A8} Beret', unlock: { level: 16, hint: 'Visit Paris to earn the Beret!' } },
 ];
+
+function outfitUnlocked(o) {
+  return !o.unlock || (typeof levelsVisited !== 'undefined' && levelsVisited.has(o.unlock.level));
+}
 
 function buildOutfitRow() {
   const row = document.getElementById('menuOutfitRow');
   if (!row) return;
   row.innerHTML = '';
+  const hintEl = document.getElementById('outfitHint');
   for (const o of OUTFITS) {
+    const unlocked = outfitUnlocked(o);
     const btn = document.createElement('button');
-    btn.textContent = o.label;
-    btn.setAttribute('aria-label', o.label.replace(/^\S+ /, '') + ' outfit');
+    btn.textContent = unlocked ? o.label : '\u{1F512} ?';
+    btn.setAttribute('aria-label', unlocked ? o.label.replace(/^\S+ /, '') + ' outfit' : 'Locked outfit');
     const sel = playerOutfit === o.id;
-    btn.style.cssText = 'font-size:0.85rem;padding:8px 12px;border-radius:10px;cursor:pointer;font-weight:600;touch-action:manipulation;-webkit-tap-highlight-color:transparent;color:#fff;background:rgba(255,255,255,0.15);border:2px solid ' + (sel ? '#fff' : 'transparent') + ';';
+    btn.style.cssText = 'font-size:0.85rem;padding:8px 12px;border-radius:10px;cursor:pointer;font-weight:600;touch-action:manipulation;-webkit-tap-highlight-color:transparent;color:#fff;background:rgba(255,255,255,' + (unlocked ? '0.15' : '0.06') + ');border:2px solid ' + (sel ? '#fff' : 'transparent') + ';' + (unlocked ? '' : 'opacity:0.75;');
     btn.addEventListener('click', () => {
+      if (!unlocked) {
+        if (hintEl) hintEl.textContent = o.unlock.hint;
+        return;
+      }
+      if (hintEl) hintEl.textContent = '';
       playerOutfit = o.id;
       saveCharacter();
       buildOutfitRow();
@@ -1938,6 +1964,9 @@ function openPauseMenu() {
   buildPalette('menuHornPalette', null, selectedHornColor, (c) => { selectedHornColor = c; applyCharacterToPlayer(); saveCharacter(); });
   buildOutfitRow();
   updateQuizToggleUI();
+  updateCompanionToggleUI();
+  const hintEl = document.getElementById('outfitHint');
+  if (hintEl) hintEl.textContent = '';
   updatePreview();
   document.getElementById('pauseMenu').style.display = 'flex';
 }
@@ -1945,6 +1974,8 @@ function openPauseMenu() {
 function closePauseMenu() {
   pauseMenuOpen = false;
   document.getElementById('pauseMenu').style.display = 'none';
+  const album = document.getElementById('albumOverlay');
+  if (album) album.style.display = 'none';
 }
 
 document.getElementById('menuBtn').addEventListener('click', () => {
@@ -1955,3 +1986,68 @@ document.getElementById('quizToggleBtn').addEventListener('click', () => {
   setQuizzesEnabled(!quizzesEnabled);
   updateQuizToggleUI();
 });
+
+function updateCompanionToggleUI() {
+  const row = document.getElementById('companionRow');
+  if (!row) return;
+  row.style.display = companionEarned ? 'flex' : 'none';
+  if (!companionEarned) return;
+  document.getElementById('companionLabel').textContent = kitName + ' follows you:';
+  const btn = document.getElementById('companionToggleBtn');
+  btn.textContent = companionActive ? 'On' : 'Off';
+  btn.style.background = companionActive ? '#22c55e' : '#64748b';
+}
+
+document.getElementById('companionToggleBtn').addEventListener('click', () => {
+  companionActive = !companionActive;
+  updateCompanionToggleUI();
+  saveGameProgress();
+});
+
+// ── Photo Album ──
+function buildAlbum() {
+  const grid = document.getElementById('albumGrid');
+  const empty = document.getElementById('albumEmpty');
+  grid.innerHTML = '';
+  empty.style.display = photoAlbum.length ? 'none' : 'block';
+  for (const p of photoAlbum) {
+    const card = document.createElement('div');
+    card.style.cssText = 'background:#fff;border-radius:6px;padding:10px 10px 8px;width:120px;box-shadow:0 4px 10px rgba(0,0,0,0.35);transform:rotate(' + ((Math.random() * 6) - 3).toFixed(1) + 'deg);';
+    card.innerHTML =
+      '<div style="background:linear-gradient(135deg,#e0e7ff,#fce7f3);border-radius:4px;height:78px;display:flex;align-items:center;justify-content:center;font-size:2.4rem;">' + p.emoji + '</div>' +
+      '<div style="font-size:0.72rem;font-weight:700;color:#1e293b;margin-top:6px;text-align:center;line-height:1.2;">' + p.label + '</div>' +
+      (p.levelName ? '<div style="font-size:0.62rem;color:#64748b;text-align:center;">' + p.levelName + '</div>' : '');
+    grid.appendChild(card);
+  }
+}
+
+document.getElementById('albumBtn').addEventListener('click', () => {
+  buildAlbum();
+  document.getElementById('pauseMenu').style.display = 'none';
+  document.getElementById('albumOverlay').style.display = 'flex';
+});
+
+document.getElementById('albumBack').addEventListener('click', () => {
+  document.getElementById('albumOverlay').style.display = 'none';
+  document.getElementById('pauseMenu').style.display = 'flex';
+});
+
+
+// ── Continue saved game ──
+(function initContinueButton() {
+  const btn = document.getElementById('continueBtn');
+  if (!btn) return;
+  const save = loadGameSave();
+  if (!save) return;
+  const lvlName = (typeof LEVEL_NAMES !== 'undefined' && LEVEL_NAMES[save.level - 1]) || ('Level ' + save.level);
+  btn.textContent = '\u25B6 Continue \u2014 ' + lvlName + ' (' + (save.score || 0) + ' pts)';
+  btn.style.display = 'inline-block';
+  btn.addEventListener('click', () => {
+    const s2 = loadGameSave();
+    if (!s2) return;
+    if (s2.playerName) document.getElementById('nameInput').value = s2.playerName;
+    startGameAtLevel(s2.level);
+    applyGameSave(s2);
+    document.getElementById('hudName').textContent = playerName;
+  });
+})();

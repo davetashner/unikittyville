@@ -564,6 +564,7 @@
   </div>
   <label for="nameInput">Name your kitty:</label>
   <input type="text" id="nameInput" aria-label="Name your kitty" placeholder="Sparkle" maxlength="16" autofocus>
+  <button id="continueBtn" aria-label="Continue saved game" style="display:none;font-size:1.15rem;padding:12px 36px;background:linear-gradient(135deg,#22c55e,#4ade80);color:#fff;border:none;border-radius:14px;cursor:pointer;font-weight:700;letter-spacing:1px;margin-bottom:4px;touch-action:manipulation;-webkit-tap-highlight-color:transparent;"></button>
   <button id="startBtn" aria-label="Start game">Play!</button>
   <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;justify-content:center;">
     <button id="levelSelectBtn" aria-label="Open level select" style="font-size:1rem;padding:10px 28px;background:linear-gradient(135deg,#38bdf8,#818cf8);color:#fff;border:none;border-radius:12px;cursor:pointer;font-weight:600;letter-spacing:1px;transition:transform 0.15s,box-shadow 0.15s;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">Level Select</button>
@@ -582,6 +583,13 @@
   <h2 style="font-size:2rem;color:#fff;text-shadow:2px 2px 0 #7c3aed;margin-bottom:1.5rem;">Choose a Level</h2>
   <div id="levelGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;max-width:500px;padding:0 20px;"></div>
   <button id="levelSelectBack" aria-label="Back to start screen" style="margin-top:1.5rem;font-size:1rem;padding:10px 32px;background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.3);border-radius:12px;cursor:pointer;font-weight:600;touch-action:manipulation;">Back</button>
+</div>
+
+<div id="albumOverlay" style="display:none;position:fixed;inset:0;background:rgba(30,27,75,0.92);backdrop-filter:blur(6px);flex-direction:column;align-items:center;z-index:112;overflow-y:auto;padding:16px;">
+  <h2 style="font-size:1.6rem;color:#fff;text-shadow:2px 2px 0 #3b0764;margin:6px 0 2px;">&#128248; Photo Album</h2>
+  <p id="albumEmpty" style="color:rgba(255,255,255,0.75);font-size:0.9rem;margin:4px 0 0;display:none;">No photos yet! Try the safari camera (P), Paris selfies (S), or find Bigfoot...</p>
+  <div id="albumGrid" style="display:flex;flex-wrap:wrap;gap:14px;justify-content:center;max-width:640px;margin-top:12px;"></div>
+  <button id="albumBack" aria-label="Back to menu" style="margin:18px 0 8px;font-size:1rem;padding:10px 32px;background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.3);border-radius:12px;cursor:pointer;font-weight:600;touch-action:manipulation;">Back</button>
 </div>
 
 <canvas id="game"></canvas>
@@ -697,6 +705,12 @@
   </div>
   <div style="color:#fff;font-weight:600;font-size:0.85rem;margin:10px 0 4px;">Clothes</div>
   <div id="menuOutfitRow" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;"></div>
+  <div id="outfitHint" style="color:#fde68a;font-size:0.8rem;min-height:1.1em;margin-top:4px;"></div>
+  <div id="companionRow" style="display:none;gap:12px;align-items:center;margin:8px 0 0;flex-wrap:wrap;justify-content:center;">
+    <span style="color:#fff;font-weight:600;font-size:0.9rem;" id="companionLabel">Kit follows you:</span>
+    <button id="companionToggleBtn" aria-label="Toggle companion" style="font-size:0.95rem;padding:8px 22px;border-radius:999px;border:2px solid rgba(255,255,255,0.5);cursor:pointer;font-weight:700;background:#22c55e;color:#fff;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">On</button>
+  </div>
+  <button id="albumBtn" aria-label="Open photo album" style="margin-top:10px;font-size:0.95rem;padding:10px 26px;background:linear-gradient(135deg,#38bdf8,#818cf8);color:#fff;border:none;border-radius:12px;cursor:pointer;font-weight:700;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">&#128248; Photo Album</button>
   <div style="display:flex;gap:12px;align-items:center;margin:14px 0 4px;flex-wrap:wrap;justify-content:center;">
     <span style="color:#fff;font-weight:600;font-size:0.9rem;">Quiz questions:</span>
     <button id="quizToggleBtn" aria-label="Toggle quiz questions" style="font-size:0.95rem;padding:8px 22px;border-radius:999px;border:2px solid rgba(255,255,255,0.5);cursor:pointer;font-weight:700;background:#22c55e;color:#fff;touch-action:manipulation;-webkit-tap-highlight-color:transparent;">On</button>

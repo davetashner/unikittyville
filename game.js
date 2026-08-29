@@ -276,7 +276,7 @@ function addFactToNotebook(text, level) {
 // ── State ──
 let playerName = 'Sparkle';
 let score = 0, fishCount = 0, baconCount = 0, yarnCount = 0;
-let yarnBonusAwarded = {}; // tracks which levels have had the all-yarn bonus awarded
+let yarnBonusAwarded = loadStoredJSON('unikittyville_yarnbonus', {}); // per-level all-yarn bonus (persisted for level-select stars)
 let gameTime = 0;
 let camperPlayerX = 0; // player x position inside camper (relative to scene center)
 let camperCooking = { active: false, progress: 0, burnt: false };
@@ -420,6 +420,155 @@ let chaletBabyDiscovered = false; // one-time discovery moment for baby in crib
 let chaletBabyDiscoverTimer = 0; // timer for discovery heart effect
 let kitNameInput = ''; // typing buffer for name input
 let hasStroller = false; // does player have the stroller?
+
+// ── Fun Pack: save game, companion, photo album, confetti ──
+
+// Save & Continue — a snapshot of the run, written on level transitions and
+// every ~10s of play. Restoring puts you at the start of the saved level
+// with your score and collection intact.
+let lastAutoSaveTime = 0;
+
+function saveGameProgress() {
+  if (!gameStarted) return;
+  try {
+    localStorage.setItem('unikittyville_save', JSON.stringify({
+      v: 1,
+      level: currentLevel,
+      score: score,
+      playerName: playerName,
+      counts: {
+        fishCount, baconCount, yarnCount, honeyCount, hotdogCount, gelatoCount,
+        tikiCount, coconutCount, snowballCount, smoothieCount, cottonCandyCount,
+        iceCreamCount, shellCount, diamondCount, stickCount, smoreCount,
+        fruitCount, safariPhotoCount,
+      },
+      pizzaCount: pizzaMaking.pizzaCount,
+      companion: companionEarned ? { name: kitName, color: kitFurColor, active: companionActive } : null,
+      ts: Date.now(),
+    }));
+  } catch (e) { /* storage unavailable */ }
+}
+
+function loadGameSave() {
+  const save = loadStoredJSON('unikittyville_save', null);
+  return (save && save.level && save.counts) ? save : null;
+}
+
+function applyGameSave(save) {
+  score = save.score || 0;
+  if (save.playerName) playerName = save.playerName;
+  const c = save.counts;
+  fishCount = c.fishCount || 0; baconCount = c.baconCount || 0; yarnCount = c.yarnCount || 0;
+  honeyCount = c.honeyCount || 0; hotdogCount = c.hotdogCount || 0; gelatoCount = c.gelatoCount || 0;
+  tikiCount = c.tikiCount || 0; coconutCount = c.coconutCount || 0; snowballCount = c.snowballCount || 0;
+  smoothieCount = c.smoothieCount || 0; cottonCandyCount = c.cottonCandyCount || 0;
+  iceCreamCount = c.iceCreamCount || 0; shellCount = c.shellCount || 0; diamondCount = c.diamondCount || 0;
+  stickCount = c.stickCount || 0; smoreCount = c.smoreCount || 0; fruitCount = c.fruitCount || 0;
+  safariPhotoCount = c.safariPhotoCount || 0;
+  pizzaMaking.pizzaCount = save.pizzaCount || 0;
+  if (save.companion) {
+    companionEarned = true;
+    companionActive = save.companion.active !== false;
+    kitName = save.companion.name || 'Kit';
+    kitFurColor = save.companion.color || '#fda4af';
+    hospitalDelivered = true;
+    companion.x = player.x - 60;
+  }
+}
+
+// Baby-kitten companion — once Kit is born in the hospital, the kitten
+// trails behind the player in outdoor levels.
+let companionEarned = false;   // Kit exists (persisted via the save)
+let companionActive = true;    // pause-menu toggle
+const companion = { x: 0, y: GROUND_Y, facing: 1, walkFrame: 0, walkTimer: 0, hop: 0 };
+// Levels where following makes sense (skip sledding, Alps run, flight levels)
+const COMPANION_LEVELS = new Set([1, 3, 4, 5, 6, 8, 9, 13, 14, 15, 16]);
+
+function companionVisible() {
+  return companionEarned && companionActive && currentScene === null &&
+         COMPANION_LEVELS.has(currentLevel) && !levelTransition.active;
+}
+
+function updateCompanion(dt) {
+  if (!companionVisible()) return;
+  const targetX = player.x - player.facing * 55;
+  const dx = targetX - companion.x;
+  if (Math.abs(dx) > 6) {
+    companion.x += Math.min(Math.abs(dx) * 0.06, 3.4) * Math.sign(dx);
+    companion.facing = dx > 0 ? 1 : -1;
+    companion.walkTimer += dt;
+    if (companion.walkTimer > 120) {
+      companion.walkTimer = 0;
+      companion.walkFrame = (companion.walkFrame + 1) % 4;
+    }
+    companion.hop = Math.abs(Math.sin(gameTime / 140)) * 5;
+  } else {
+    companion.hop *= 0.85;
+    companion.walkFrame = 0;
+  }
+  companion.y = GROUND_Y;
+}
+
+// Photo album — safari shots, Paris selfies, and Bigfoot, kept forever.
+let photoAlbum = loadStoredJSON('unikittyville_album', []);
+
+function addAlbumPhoto(emoji, label) {
+  if (photoAlbum.length >= 80) return;
+  const lvl = (typeof levelRegistry !== 'undefined' && levelRegistry[currentLevel]) ? levelRegistry[currentLevel].name : '';
+  photoAlbum.push({ emoji: emoji, label: label, levelName: lvl, ts: Date.now() });
+  try { localStorage.setItem('unikittyville_album', JSON.stringify(photoAlbum)); } catch (e) { /* storage unavailable */ }
+}
+
+// Celebration confetti — level completions, achievements, outfit unlocks.
+let confettiParticles = [];
+
+function spawnConfetti(n) {
+  if (prefersReducedMotion) return;
+  const colors = ['#f472b6', '#fbbf24', '#4ade80', '#38bdf8', '#a78bfa', '#fb7185', '#ffffff'];
+  const W = canvas ? canvas.width : 960;
+  for (let i = 0; i < n && confettiParticles.length < 220; i++) {
+    confettiParticles.push({
+      x: Math.random() * W,
+      y: -10 - Math.random() * 80,
+      vx: (Math.random() - 0.5) * 1.6,
+      vy: 1.6 + Math.random() * 2.6,
+      rot: Math.random() * Math.PI * 2,
+      vr: (Math.random() - 0.5) * 0.25,
+      w: 5 + Math.random() * 5,
+      h: 3 + Math.random() * 4,
+      color: colors[i % colors.length],
+      life: 2400 + Math.random() * 1400,
+    });
+  }
+}
+
+function updateConfetti(dt) {
+  for (let i = confettiParticles.length - 1; i >= 0; i--) {
+    const p = confettiParticles[i];
+    p.x += p.vx + Math.sin((gameTime + i * 97) / 300) * 0.7;
+    p.y += p.vy;
+    p.rot += p.vr;
+    p.life -= dt;
+    if (p.life <= 0 || p.y > (canvas ? canvas.height : 540) + 20) confettiParticles.splice(i, 1);
+  }
+}
+
+// Outfit unlocks announced once each (persisted so reloads don't re-announce)
+let outfitUnlocksSeen = new Set(loadStoredJSON('unikittyville_outfits_seen', []));
+
+function checkOutfitUnlocks() {
+  if (typeof OUTFITS === 'undefined') return;
+  for (const o of OUTFITS) {
+    if (!o.unlock || outfitUnlocksSeen.has(o.id)) continue;
+    if (levelsVisited.has(o.unlock.level)) {
+      outfitUnlocksSeen.add(o.id);
+      try { localStorage.setItem('unikittyville_outfits_seen', JSON.stringify([...outfitUnlocksSeen])); } catch (e) { /* storage unavailable */ }
+      addPopup(player.x, player.y - 80, 'New outfit unlocked: ' + o.label + '! Check the menu!', '#f472b6');
+      spawnConfetti(70);
+      playChaChing();
+    }
+  }
+}
 let kitParkBonus = false; // has player taken Kit to Central Park?
 let picnic = { active: false, fed: 0, feeding: false, feedTimer: 0 }; // park picnic with Kit
 const TAXI_POSITIONS = [300, 1200, 2400, 3600];
@@ -997,13 +1146,18 @@ function awardAchievement(id) {
   score += ACHIEVEMENT_BONUS;
   addPopup(player.x, player.y - 60, '+' + ACHIEVEMENT_BONUS + ' Achievement!', '#fbbf24');
   achievementPopup = { name: a.name, icon: a.icon, timer: ACHIEVEMENT_POPUP_DURATION };
+  spawnConfetti(70);
   playChaChing();
   saveAchievements();
 }
 
 function checkAchievements() {
-  // Track current level visit
+  // Track current level visit — persist new visits right away, since
+  // outfit unlocks and level-select stars depend on this across reloads
+  const visitedBefore = levelsVisited.size;
   levelsVisited.add(currentLevel);
+  if (levelsVisited.size > visitedBefore) saveAchievements();
+  checkOutfitUnlocks();
 
   // Junior Geographer — visit 5 different levels
   if (levelsVisited.size >= 5) awardAchievement('junior_geographer');
@@ -1495,6 +1649,8 @@ function switchToLevel(lvl) {
     console.warn('switchToLevel: invalid level', lvl);
     return;
   }
+  // Celebrate the send-off — bigger burst for a first visit
+  spawnConfetti(levelsVisited.has(lvl) ? 40 : 100);
   levelTransition.active = true;
   levelTransition.timer = 0;
   levelTransition.toLevel = lvl;
@@ -1552,6 +1708,9 @@ function completeTransition() {
   lightShowActive = false;
   activeSpeechBubbles = [];
   quizActive = false;
+  companion.x = player.x - 60;
+  companion.y = GROUND_Y;
+  saveGameProgress();
   eiffelViewOpen = false;
   parisSelfieFlash = 0;
   // Reset Paris picnic when re-entering level 16
@@ -2116,6 +2275,7 @@ function loop(ts) {
 // ── Update ──
 function update(dt) {
   updateMusicFade(dt);
+  updateConfetti(dt); // celebrations keep falling during overlays/transitions
 
   // Show/hide HUD items and control hints based on current level
   // (must run before any early returns so panels stay correct during overlays)
@@ -2587,6 +2747,12 @@ function update(dt) {
         keys['Enter'] = false;
         kitName = kitNameInput.trim() || 'Kit';
         hasStroller = true;
+        companionEarned = true;
+        companionActive = true;
+        companion.x = player.x - 60;
+        addPopup(player.x, player.y - 70, kitName + ' will follow you now!', '#f9a8d4');
+        spawnConfetti(60);
+        saveGameProgress();
         currentScene = null;
         player.y = GROUND_Y;
         player.vy = 0;
@@ -3370,6 +3536,8 @@ function update(dt) {
   const curYarn = getCurrentYarnBalls();
   if (curYarn.length > 0 && currentLevel !== 14 && !yarnBonusAwarded[currentLevel] && curYarn.every(y => y.collected)) {
     yarnBonusAwarded[currentLevel] = true;
+    try { localStorage.setItem('unikittyville_yarnbonus', JSON.stringify(yarnBonusAwarded)); } catch (e) { /* storage unavailable */ }
+    spawnConfetti(50);
     score += POINTS.YARN_BONUS;
     addPopup(player.x, player.y - 60, '+' + POINTS.YARN_BONUS + ' ALL YARN BONUS!', '#fbbf24');
     playChaChing();
@@ -3804,6 +3972,7 @@ function update(dt) {
         keys['KeyS'] = false;
         parisPicnic.selfies++;
         parisSelfieFlash = 400;
+        if (parisPicnic.selfies <= 3) addAlbumPhoto('\u{1F933}', 'Eiffel Tower selfie!');
         if (parisPicnic.selfies <= 3) {
           score += POINTS.PARIS_SELFIE;
           addPopup(player.x, player.y - 60, '+' + POINTS.PARIS_SELFIE + ' Eiffel selfie!', '#38bdf8');
@@ -4221,6 +4390,7 @@ function update(dt) {
       if (leprechaunGold >= 1) {
         leprechaunGold -= 1;
         bigfootPhotoTaken = true;
+        addAlbumPhoto('\u{1F9B6}', 'Bigfoot sighting!');
         bigfootPhotoFlash = 200; // 200ms white flash
         score += POINTS.BIGFOOT_PHOTO;
         addPopup(BIGFOOT_POS.x, player.y - 40, '+' + POINTS.BIGFOOT_PHOTO + ' Photo with Bigfoot!', '#92400e');
@@ -4581,6 +4751,8 @@ function update(dt) {
           if (!safariPhotosTaken[animal]) {
             safariPhotosTaken[animal] = true;
             safariPhotoCount++;
+            const animalEmoji = { elephant: '\u{1F418}', rhino: '\u{1F98F}', antelope: '\u{1F98C}', giraffe: '\u{1F992}', cheetah: '\u{1F406}' };
+            addAlbumPhoto(animalEmoji[animal] || '\u{1F4F7}', 'Safari: ' + animal.charAt(0).toUpperCase() + animal.slice(1));
             score += POINTS.SAFARI_PHOTO;
             addPopup(player.x, player.y - 40, '+' + POINTS.SAFARI_PHOTO + ' Great photo!', '#fbbf24');
             playSfx('sfxPhotoSuccess');
@@ -6748,6 +6920,14 @@ function update(dt) {
 
   // Hot dog math feedback timer
   updateHotdogMathFeedback(dt);
+
+  updateCompanion(dt);
+
+  // Auto-save the run every ~10s of play
+  if (gameTime - lastAutoSaveTime > 10000) {
+    lastAutoSaveTime = gameTime;
+    saveGameProgress();
+  }
 
   // Glitter horn effect — spray when crossing a 100-point milestone
   const currentMilestone = Math.floor(score / 100);
