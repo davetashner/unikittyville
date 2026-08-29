@@ -955,6 +955,24 @@ const npcDialogs = {
     "Altitude check: very high. Sparkle level: maximum!",
     "The sunset from up here is absolutely PURR-fect!",
   ],
+  16: [ // Paris
+    "Bonjour! That's cat for 'hello' in French. Well, human for it too!",
+    "The Eiffel Tower is 330 meters tall — that's about 1,100 baguettes stacked up!",
+    "When it was built in 1889, the Eiffel Tower was the tallest building in the world!",
+    "The Eiffel Tower gets repainted every 7 years. It takes 60 TONS of paint!",
+    "France makes over 1,000 different kinds of cheese. I've only tried 999!",
+    "A real French baguette is baked fresh twice a day. Crunchy outside, fluffy inside!",
+    "The Louvre is the biggest art museum in the world. The Mona Lisa lives there!",
+    "Notre Dame took nearly 200 years to build. Cat-hedral, get it?",
+    "The Champ de Mars is the huge green lawn by the tower — perfect for picnics!",
+    "Parisian cafes put their chairs facing the street. People-watching is a sport here!",
+    "The Seine river flows right through the middle of Paris under 37 bridges!",
+    "Croissants are actually from Austria — but Paris perfected them!",
+    "An espresso is a tiny, very strong coffee. One sip and I chased my tail for an hour!",
+    "The tower sways a little in the wind. Even buildings dance in Paris!",
+    "At night the Eiffel Tower sparkles with 20,000 lights every hour!",
+    "I ordered 'un cafe' and got coffee. This language is easy — for a cat!",
+  ],
 };
 
 // Fish in pond
@@ -2309,6 +2327,7 @@ const timeCapsules = {
   13: { x: 2500, name: 'Moon Rock',                year: '1969',   fact: 'Apollo astronauts brought back 842 pounds of moon rocks.' },
   14: { x: 2200, name: 'Sugar Crystal Bottle',    year: '1847',   fact: 'The first US candy factory opened in 1847.' },
   15: { x: 2800, name: 'Vintage Carousel Horse', year: '1895',   fact: 'The golden age of hand-carved wooden carousel horses ran from 1880 to 1930.' },
+  16: { x: 3000, name: 'Exposition Ticket',     year: '1889',   fact: 'The Eiffel Tower was built as the entrance to the 1889 World\'s Fair.' },
 };
 
 // ── Level 14: Candy Kingdom ──
@@ -2558,4 +2577,53 @@ const npcQuizzes = {
     { question: "What does the bi-plane ride do to the planes?", answers: ["They go very fast", "They tilt up and down while orbiting", "They do barrel rolls"], correct: 1 },
     { question: "What prize can you win at the water gun game?", answers: ["A fish", "A stuffed safari animal", "A crown"], correct: 1 },
   ],
+  16: [ // Paris
+    { question: "How tall is the Eiffel Tower?", answers: ["100 meters", "330 meters", "1,000 meters"], correct: 1 },
+    { question: "Why was the Eiffel Tower built?", answers: ["As a radio mast", "For the 1889 World's Fair", "As a lighthouse"], correct: 1 },
+    { question: "How many kinds of cheese does France make?", answers: ["About 50", "About 200", "Over 1,000"], correct: 2 },
+    { question: "What is the biggest art museum in the world?", answers: ["The Met", "The Louvre", "The Uffizi"], correct: 1 },
+    { question: "How often is the Eiffel Tower repainted?", answers: ["Every year", "Every 7 years", "Never"], correct: 1 },
+  ],
 };
+
+// ── Level 16: Paris ──
+const PARIS_WORLD_W = 5200;
+
+const level16Paris = {
+  worldW: PARIS_WORLD_W,
+  platforms: [
+    // Balcony hops along the shopping street
+    { x: 450, y: 340, w: 90 },
+    { x: 1150, y: 330, w: 90 },
+    { x: 1900, y: 340, w: 90 },
+    { x: 2050, y: 270, w: 80 },
+    { x: 2700, y: 330, w: 90 },
+    // Champ de Mars park benches / hedges
+    { x: 3700, y: 350, w: 100 },
+    { x: 4250, y: 340, w: 100 },
+  ],
+  yarnBalls: [
+    { x: 470, y: 310, color: '#f472b6', collected: false, bobPhase: 0 },
+    { x: 1180, y: 300, color: '#60a5fa', collected: false, bobPhase: 1 },
+    { x: 2080, y: 240, color: '#fbbf24', collected: false, bobPhase: 2 },
+    { x: 2730, y: 300, color: '#4ade80', collected: false, bobPhase: 3 },
+    { x: 3730, y: 320, color: '#a78bfa', collected: false, bobPhase: 4 },
+    { x: 4280, y: 310, color: '#fb7185', collected: false, bobPhase: 5 },
+  ],
+};
+
+const parisNpcs = [];
+const parisNpcColors = ['#fda4af', '#bfdbfe', '#fde68a', '#ddd6fe'];
+const parisNpcAccessories = ['bow', 'scarf', 'glasses', 'flower'];
+for (let i = 0; i < 4; i++) {
+  parisNpcs.push({
+    x: 600 + i * 1000 + Math.random() * 200,
+    y: GROUND_Y,
+    color: parisNpcColors[i],
+    accessory: parisNpcAccessories[i],
+    vx: (Math.random() - 0.5) * 1.2,
+    walkFrame: 0, walkTimer: 0,
+    facing: 1,
+    idleTimer: Math.random() * 200
+  });
+}

@@ -92,6 +92,11 @@ function draw() {
     drawNotebook(W, H);
   }
 
+  // Eiffel Tower panorama overlay (level 16)
+  if (eiffelViewOpen) {
+    drawEiffelViewOverlay(W, H);
+  }
+
   // Achievement screen overlay
   if (achievementScreenOpen) {
     drawAchievements(W, H);
@@ -4656,8 +4661,41 @@ function drawRomeWorld(W, H, cam) {
     }
   }
   drawRomeScenes(cam, W); drawRomePlatforms(); drawRomeYarnBalls();
+  drawTGVStation();
   for (const npc of romeNpcs) drawKitty(npc.x, npc.y, npc.color, npc.facing, npc.walkFrame, npc.accessory);
   drawPlayerAndUI();
+}
+
+// Little TGV platform in Rome — the train to Paris
+function drawTGVStation() {
+  const x = TGV_POS.x;
+  // Platform
+  ctx.fillStyle = '#78716c';
+  ctx.fillRect(x - 80, GROUND_Y - 8, 160, 8);
+  // Train body (sleek TGV nose)
+  ctx.fillStyle = '#e5e7eb';
+  ctx.beginPath();
+  ctx.moveTo(x - 70, GROUND_Y - 8);
+  ctx.lineTo(x - 70, GROUND_Y - 44);
+  ctx.lineTo(x + 38, GROUND_Y - 44);
+  ctx.quadraticCurveTo(x + 74, GROUND_Y - 40, x + 78, GROUND_Y - 8);
+  ctx.closePath();
+  ctx.fill();
+  // Orange stripe (classic TGV livery)
+  ctx.fillStyle = '#f97316';
+  ctx.fillRect(x - 70, GROUND_Y - 26, 132, 7);
+  // Windows
+  ctx.fillStyle = '#1e293b';
+  for (let wx = x - 60; wx < x + 30; wx += 22) {
+    ctx.fillRect(wx, GROUND_Y - 40, 14, 10);
+  }
+  // Sign
+  ctx.fillStyle = '#1d4ed8';
+  ctx.beginPath(); ctx.roundRect(x - 46, GROUND_Y - 78, 92, 22, 6); ctx.fill();
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 12px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('TGV → PARIS', x, GROUND_Y - 62);
 }
 
 function drawRomePlatforms() {
@@ -10967,6 +11005,11 @@ const tourGuideFacts = {
     "Welcome to the Amusement Park -- the first one opened in 1583 in Denmark!",
     "The loop-de-loop rollercoaster was invented in 1846 in Paris.",
     "The golden age of hand-carved carousel horses ran from 1880 to 1930."
+  ],
+  16: [
+    "Bienvenue a Paris! Stroll the street, fill your picnic basket, and head for the tower!",
+    "The Eiffel Tower was finished in 1889 and was the tallest structure on Earth for 41 years!",
+    "Grab cheese, fruit, a baguette, and an espresso -- then picnic on the Champ de Mars!"
   ]
 };
 
@@ -13233,6 +13276,16 @@ const levelRegistry = {
     drawSky: drawAmusementParkSky,
     drawWorld: drawAmusementParkWorld,
   },
+  16: {
+    name: 'Paris',
+    worldW: level16Paris.worldW,
+    platforms: level16Paris.platforms,
+    yarnBalls: level16Paris.yarnBalls,
+    npcs: parisNpcs,
+    musicId: 'musicParis',
+    drawSky: drawParisSky,
+    drawWorld: drawParisWorld,
+  },
 };
 
 // Derive constants from registry
@@ -13445,4 +13498,417 @@ for (const [lvl, reg] of Object.entries(levelRegistry)) {
   if (reg.musicId && !document.getElementById(reg.musicId)) {
     console.warn('Missing audio element for level ' + lvl + ': ' + reg.musicId);
   }
+}
+
+// ── Level 16: Paris ──
+function drawParisSky(W, H, cycle, isNight) {
+  const dayTop = [140, 175, 235]; const nightTop = [12, 15, 40];
+  const dayBot = [255, 225, 210]; const nightBot = [40, 28, 60];
+  const skyTop = lerpColor(dayTop, nightTop, cycle);
+  const skyBot = lerpColor(dayBot, nightBot, cycle);
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, `rgb(${skyTop})`); grad.addColorStop(1, `rgb(${skyBot})`);
+  ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
+  if (isNight) drawStars(W, H, cycle);
+  drawCelestial(W, H, cycle);
+}
+
+// One Haussmann apartment facade (cream stone, iron balconies, mansard roof)
+function drawHaussmannBuilding(x, w, h) {
+  const top = GROUND_Y - h;
+  // Mansard roof
+  ctx.fillStyle = '#475569';
+  ctx.beginPath();
+  ctx.moveTo(x - 6, top);
+  ctx.lineTo(x + 14, top - 26);
+  ctx.lineTo(x + w - 14, top - 26);
+  ctx.lineTo(x + w + 6, top);
+  ctx.closePath();
+  ctx.fill();
+  // Facade
+  ctx.fillStyle = '#f3e8d8';
+  ctx.fillRect(x, top, w, h);
+  ctx.strokeStyle = '#d6c9b2';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x, top, w, h);
+  // Window rows with wrought-iron balconies
+  ctx.fillStyle = '#93c5fd';
+  for (let wy = top + 14; wy < GROUND_Y - 26; wy += 34) {
+    for (let wx = x + 10; wx < x + w - 18; wx += 26) {
+      ctx.fillRect(wx, wy, 14, 20);
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 0.8;
+      ctx.strokeRect(wx, wy, 14, 20);
+      // balcony rail
+      ctx.beginPath();
+      ctx.moveTo(wx - 2, wy + 20); ctx.lineTo(wx + 16, wy + 20);
+      ctx.stroke();
+    }
+  }
+  // Dormer windows on the roof
+  ctx.fillStyle = '#cbd5e1';
+  for (let dx = x + 18; dx < x + w - 22; dx += 44) {
+    ctx.fillRect(dx, top - 18, 10, 12);
+  }
+}
+
+// A shop front with striped awning + sign
+function drawParisShop(x, awningColor, sign, emoji) {
+  const w = 150, h = 96;
+  const top = GROUND_Y - h;
+  ctx.fillStyle = '#e7d8c9';
+  ctx.fillRect(x - w / 2, top, w, h);
+  ctx.strokeStyle = '#b6a58f'; ctx.lineWidth = 1;
+  ctx.strokeRect(x - w / 2, top, w, h);
+  // Shop window
+  ctx.fillStyle = '#fef9c3';
+  ctx.fillRect(x - w / 2 + 12, top + 40, w - 24, h - 52);
+  ctx.strokeStyle = '#78350f';
+  ctx.strokeRect(x - w / 2 + 12, top + 40, w - 24, h - 52);
+  // Striped awning
+  const aw = w + 16, ah = 22;
+  for (let i = 0; i < 8; i++) {
+    ctx.fillStyle = i % 2 === 0 ? awningColor : '#fff7ed';
+    ctx.beginPath();
+    ctx.moveTo(x - aw / 2 + (aw / 8) * i, top + 18);
+    ctx.lineTo(x - aw / 2 + (aw / 8) * (i + 1), top + 18);
+    ctx.lineTo(x - aw / 2 + (aw / 8) * (i + 1), top + 18 + ah);
+    ctx.lineTo(x - aw / 2 + (aw / 8) * i, top + 18 + ah);
+    ctx.closePath();
+    ctx.fill();
+  }
+  // Sign
+  ctx.fillStyle = '#1e293b';
+  ctx.font = 'bold 13px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(sign, x, top + 12);
+  // What's in the window
+  ctx.font = '22px "Segoe UI", system-ui, sans-serif';
+  ctx.fillText(emoji, x, GROUND_Y - 24);
+}
+
+function drawEiffelTower(x) {
+  const baseHalf = 95;      // half-width of the leg spread at the ground
+  const p1 = GROUND_Y - 130; // first platform
+  const p2 = GROUND_Y - 230; // second platform
+  const topY = GROUND_Y - 340; // summit platform
+  ctx.strokeStyle = '#7c5a3a';
+  ctx.fillStyle = '#7c5a3a';
+  ctx.lineWidth = 5;
+  ctx.lineCap = 'round';
+  // Legs curving to the first platform
+  ctx.beginPath();
+  ctx.moveTo(x - baseHalf, GROUND_Y);
+  ctx.quadraticCurveTo(x - baseHalf + 25, p1 + 55, x - 42, p1);
+  ctx.moveTo(x + baseHalf, GROUND_Y);
+  ctx.quadraticCurveTo(x + baseHalf - 25, p1 + 55, x + 42, p1);
+  ctx.stroke();
+  // Ground-floor arch
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(x, GROUND_Y - 28, 52, Math.PI, 0);
+  ctx.stroke();
+  // First + second platforms
+  ctx.fillRect(x - 52, p1 - 5, 104, 8);
+  // Mid section
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(x - 42, p1); ctx.lineTo(x - 24, p2);
+  ctx.moveTo(x + 42, p1); ctx.lineTo(x + 24, p2);
+  ctx.stroke();
+  ctx.fillRect(x - 30, p2 - 4, 60, 7);
+  // Upper section to summit
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(x - 24, p2); ctx.lineTo(x - 7, topY);
+  ctx.moveTo(x + 24, p2); ctx.lineTo(x + 7, topY);
+  ctx.stroke();
+  ctx.fillRect(x - 12, topY - 3, 24, 5);
+  // Antenna
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(x, topY - 3); ctx.lineTo(x, topY - 26);
+  ctx.stroke();
+  // Lattice cross-bracing
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(124,90,58,0.65)';
+  for (let i = 0; i < 5; i++) {
+    const yTopSeg = GROUND_Y - 18 - i * 22;
+    const spread = 78 - i * 8;
+    ctx.beginPath();
+    ctx.moveTo(x - spread, yTopSeg); ctx.lineTo(x + spread - 16, yTopSeg - 22);
+    ctx.moveTo(x + spread, yTopSeg); ctx.lineTo(x - spread + 16, yTopSeg - 22);
+    ctx.stroke();
+  }
+  for (let i = 0; i < 4; i++) {
+    const yy = p1 - 12 - i * 24;
+    const spread = 38 - i * 5;
+    ctx.beginPath();
+    ctx.moveTo(x - spread, yy); ctx.lineTo(x + spread, yy - 24);
+    ctx.moveTo(x + spread, yy); ctx.lineTo(x - spread, yy - 24);
+    ctx.stroke();
+  }
+  // Night sparkle
+  const cyc = (Math.sin(gameTime / DAY_LENGTH * Math.PI * 2 - Math.PI / 2) + 1) / 2;
+  if (cyc > 0.5) {
+    for (let i = 0; i < 14; i++) {
+      const tw = (Math.sin(gameTime / 180 + i * 2.3) + 1) / 2;
+      if (tw > 0.6) {
+        ctx.fillStyle = 'rgba(255,240,150,' + (tw * 0.9).toFixed(2) + ')';
+        const sy = GROUND_Y - 20 - (i * 23) % 300;
+        const spread = Math.max(8, 80 - ((GROUND_Y - sy) / 340) * 72);
+        const sx = x + Math.sin(i * 37.7) * spread;
+        ctx.beginPath();
+        ctx.arc(sx, sy, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+}
+
+function drawParisPicnic(x) {
+  const laid = parisPicnic.laidOut;
+  if (!laid) return;
+  const y = GROUND_Y;
+  // Red-white checkered blanket
+  const bw = 110, bh = 26;
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 8; c++) {
+      ctx.fillStyle = (r + c) % 2 === 0 ? '#ef4444' : '#fff1f2';
+      ctx.fillRect(x - bw / 2 + c * (bw / 8), y - bh + r * (bh / 3), bw / 8, bh / 3);
+    }
+  }
+  // Food spread
+  ctx.font = '18px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('\u{1F9C0}', x - 34, y - 26);  // cheese
+  ctx.fillText('\u{1F347}', x - 10, y - 28);  // grapes
+  ctx.fillText('\u{1F956}', x + 14, y - 26);  // baguette
+  ctx.fillText('☕', x + 38, y - 28);     // espresso
+}
+
+function drawParisWorld(W, H, cam) {
+  const ww = getCurrentWorldW();
+
+  // Cobblestone street
+  ctx.fillStyle = '#9ca3af';
+  ctx.fillRect(0, GROUND_Y, ww, H);
+  ctx.strokeStyle = '#6b7280'; ctx.lineWidth = 0.5;
+  for (let rx = Math.max(0, Math.floor((cam - 20) / 26) * 26); rx < Math.min(ww, cam + W + 20); rx += 26) {
+    for (let ry = 0; ry < 3; ry++) {
+      const offset = ry % 2 === 0 ? 0 : 13;
+      ctx.beginPath(); ctx.roundRect(rx + offset, GROUND_Y + 4 + ry * 10, 22, 8, 3); ctx.stroke();
+    }
+  }
+
+  // Distant landmarks on the skyline (drawn behind the buildings)
+  // The Louvre pyramid
+  if (1150 > cam - 100 && 1150 < cam + W + 100) {
+    ctx.strokeStyle = 'rgba(148,163,184,0.9)';
+    ctx.fillStyle = 'rgba(191,219,254,0.5)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(1150 - 45, GROUND_Y - 160);
+    ctx.lineTo(1150, GROUND_Y - 225);
+    ctx.lineTo(1150 + 45, GROUND_Y - 160);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(1150 - 22, GROUND_Y - 192); ctx.lineTo(1150 + 22, GROUND_Y - 192);
+    ctx.moveTo(1150, GROUND_Y - 225); ctx.lineTo(1150, GROUND_Y - 160);
+    ctx.stroke();
+  }
+  // Notre Dame silhouette
+  if (2900 > cam - 150 && 2900 < cam + W + 150) {
+    ctx.fillStyle = 'rgba(100,116,139,0.75)';
+    ctx.fillRect(2900 - 60, GROUND_Y - 250, 34, 110);  // left tower
+    ctx.fillRect(2900 + 26, GROUND_Y - 250, 34, 110);  // right tower
+    ctx.fillRect(2900 - 30, GROUND_Y - 205, 60, 65);   // nave front
+    // Spire
+    ctx.beginPath();
+    ctx.moveTo(2900 - 6, GROUND_Y - 210);
+    ctx.lineTo(2900, GROUND_Y - 268);
+    ctx.lineTo(2900 + 6, GROUND_Y - 210);
+    ctx.closePath();
+    ctx.fill();
+    // Rose window
+    ctx.fillStyle = 'rgba(191,219,254,0.8)';
+    ctx.beginPath();
+    ctx.arc(2900, GROUND_Y - 180, 11, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Haussmann building rows along the shopping street (culled)
+  for (let bx = 100; bx < 3450; bx += 420) {
+    if (bx + 260 < cam - 50 || bx > cam + W + 50) continue;
+    drawHaussmannBuilding(bx, 260, 200 + ((bx / 420) % 3) * 20);
+  }
+
+  // Street lamps
+  for (let lx = 350; lx < ww - 300; lx += 500) {
+    if (lx < cam - 30 || lx > cam + W + 30) continue;
+    ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(lx, GROUND_Y); ctx.lineTo(lx, GROUND_Y - 85); ctx.stroke();
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath(); ctx.arc(lx, GROUND_Y - 92, 6, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(lx, GROUND_Y - 92, 8, 0, Math.PI * 2); ctx.stroke();
+  }
+
+  // The four picnic shops
+  drawParisShop(FROMAGERIE_POS.x, '#facc15', 'FROMAGERIE', parisPicnic.cheese ? '' : '\u{1F9C0}');
+  drawParisShop(MARCHE_POS.x, '#4ade80', 'MARCHÉ', parisPicnic.fruit ? '' : '\u{1F347}');
+  drawParisShop(BOULANGERIE_POS.x, '#fb923c', 'BOULANGERIE', parisPicnic.baguette ? '' : '\u{1F956}');
+  drawParisShop(CAFE_POS.x, '#f87171', 'CAFÉ', parisPicnic.espresso ? '' : '☕');
+
+  // Champ de Mars lawns
+  ctx.fillStyle = '#4d9e50';
+  ctx.fillRect(3500, GROUND_Y, 1100, 16);
+  ctx.fillStyle = '#5cb860';
+  ctx.fillRect(3500, GROUND_Y, 1100, 8);
+  // Flowers on the lawn
+  for (let fx = 3550; fx < 4550; fx += 90) {
+    if (fx < cam - 20 || fx > cam + W + 20) continue;
+    ctx.fillStyle = ['#f472b6', '#fbbf24', '#a78bfa'][Math.floor(fx / 90) % 3];
+    ctx.beginPath(); ctx.arc(fx, GROUND_Y + 2, 3, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // Picnic blanket + food (once laid out)
+  drawParisPicnic(PICNIC_POS.x);
+
+  // The Eiffel Tower
+  drawEiffelTower(EIFFEL_POS.x);
+
+  // Airport sign to Hawaii
+  ctx.fillStyle = '#e2e8f0';
+  ctx.fillRect(PARIS_AIRPORT_POS.x - 55, GROUND_Y - 90, 110, 46);
+  ctx.strokeStyle = '#475569'; ctx.lineWidth = 2;
+  ctx.strokeRect(PARIS_AIRPORT_POS.x - 55, GROUND_Y - 90, 110, 46);
+  ctx.strokeStyle = '#475569';
+  ctx.beginPath();
+  ctx.moveTo(PARIS_AIRPORT_POS.x - 30, GROUND_Y); ctx.lineTo(PARIS_AIRPORT_POS.x - 30, GROUND_Y - 44);
+  ctx.moveTo(PARIS_AIRPORT_POS.x + 30, GROUND_Y); ctx.lineTo(PARIS_AIRPORT_POS.x + 30, GROUND_Y - 44);
+  ctx.stroke();
+  ctx.fillStyle = '#1e293b';
+  ctx.font = 'bold 13px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('✈ AÉROPORT', PARIS_AIRPORT_POS.x, GROUND_Y - 70);
+  ctx.font = '11px "Segoe UI", system-ui, sans-serif';
+  ctx.fillText('to Hawaii!', PARIS_AIRPORT_POS.x, GROUND_Y - 54);
+
+  drawParisPlatforms();
+  drawParisYarnBalls();
+  for (const npc of parisNpcs) drawKitty(npc.x, npc.y, npc.color, npc.facing, npc.walkFrame, npc.accessory);
+  drawPlayerAndUI();
+
+  // Selfie camera flash
+  if (parisSelfieFlash > 0) {
+    ctx.fillStyle = 'rgba(255,255,255,' + (parisSelfieFlash / 400 * 0.8).toFixed(2) + ')';
+    ctx.fillRect(cam, 0, W, H);
+  }
+}
+
+function drawParisPlatforms() {
+  drawPlatformsWithStyle(level16Paris.platforms, '#f3e8d8', '#b6a58f', function(p) {
+    // wrought-iron balcony rail on top
+    ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let bx = p.x + 4; bx < p.x + p.w - 2; bx += 8) {
+      ctx.moveTo(bx, p.y); ctx.lineTo(bx, p.y - 7);
+    }
+    ctx.moveTo(p.x + 2, p.y - 7); ctx.lineTo(p.x + p.w - 2, p.y - 7);
+    ctx.stroke();
+  });
+}
+
+function drawParisYarnBalls() { drawYarnBallsForLevel(level16Paris.yarnBalls); }
+
+// Top-of-tower panorama overlay (screen-space)
+function drawEiffelViewOverlay(W, H) {
+  // Sky backdrop
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#7dd3fc');
+  grad.addColorStop(0.55, '#fbcfe8');
+  grad.addColorStop(1, '#fde68a');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  const horizon = H * 0.55;
+
+  // The Seine winding through the city
+  ctx.fillStyle = '#7ba7d9';
+  ctx.beginPath();
+  ctx.moveTo(0, horizon + 40);
+  ctx.quadraticCurveTo(W * 0.3, horizon + 90, W * 0.55, horizon + 55);
+  ctx.quadraticCurveTo(W * 0.8, horizon + 25, W, horizon + 70);
+  ctx.lineTo(W, horizon + 100);
+  ctx.quadraticCurveTo(W * 0.7, horizon + 60, W * 0.5, horizon + 90);
+  ctx.quadraticCurveTo(W * 0.25, horizon + 125, 0, horizon + 75);
+  ctx.closePath();
+  ctx.fill();
+
+  // Rooftop rows
+  for (let row = 0; row < 4; row++) {
+    const ry = horizon + 15 + row * (H - horizon - 20) / 4 + 20;
+    const shade = 200 - row * 22;
+    ctx.fillStyle = `rgb(${shade - 40},${shade - 45},${shade - 30})`;
+    for (let bx = (row % 2) * 30; bx < W; bx += 68) {
+      const bh = 18 + ((bx * 7 + row * 13) % 22);
+      ctx.fillRect(bx, ry - bh, 52, bh);
+      ctx.fillStyle = `rgb(${shade},${shade - 20},${shade - 35})`;
+      ctx.fillRect(bx, ry - bh - 6, 52, 6);
+      ctx.fillStyle = `rgb(${shade - 40},${shade - 45},${shade - 30})`;
+    }
+  }
+
+  // Notre Dame (left-of-center on the horizon)
+  const ndx = W * 0.26, ndy = horizon + 8;
+  ctx.fillStyle = '#64748b';
+  ctx.fillRect(ndx - 34, ndy - 70, 20, 70);
+  ctx.fillRect(ndx + 14, ndy - 70, 20, 70);
+  ctx.fillRect(ndx - 16, ndy - 48, 32, 48);
+  ctx.beginPath();
+  ctx.moveTo(ndx - 4, ndy - 50); ctx.lineTo(ndx, ndy - 84); ctx.lineTo(ndx + 4, ndy - 50);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#bfdbfe';
+  ctx.beginPath(); ctx.arc(ndx, ndy - 32, 7, 0, Math.PI * 2); ctx.fill();
+
+  // The Louvre pyramid (right-of-center)
+  const lvx = W * 0.72, lvy = horizon + 18;
+  ctx.strokeStyle = '#94a3b8'; ctx.fillStyle = 'rgba(191,219,254,0.75)'; ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(lvx - 38, lvy); ctx.lineTo(lvx, lvy - 52); ctx.lineTo(lvx + 38, lvy);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(lvx - 19, lvy - 26); ctx.lineTo(lvx + 19, lvy - 26);
+  ctx.moveTo(lvx, lvy - 52); ctx.lineTo(lvx, lvy);
+  ctx.stroke();
+
+  // Landmark labels
+  ctx.font = 'bold 13px "Segoe UI", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#1e293b';
+  ctx.fillText('Notre Dame', ndx, ndy - 95);
+  ctx.fillText('The Louvre', lvx, lvy - 64);
+
+  // Tower railing in the foreground
+  ctx.strokeStyle = '#7c5a3a'; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.moveTo(0, H - 46); ctx.lineTo(W, H - 46); ctx.stroke();
+  ctx.lineWidth = 2;
+  for (let rx = 12; rx < W; rx += 26) {
+    ctx.beginPath(); ctx.moveTo(rx, H - 46); ctx.lineTo(rx, H - 12); ctx.stroke();
+  }
+
+  // Kitty enjoying the view from the platform
+  drawKitty(W / 2, H - 8, player.color, 1, 0, 'horn', playerEyeColor, playerHornColors, playerOutfit);
+
+  // Caption
+  ctx.fillStyle = 'rgba(30,27,75,0.85)';
+  ctx.beginPath(); ctx.roundRect(W / 2 - 230, 14, 460, 58, 12); ctx.fill();
+  ctx.fillStyle = '#fbbf24';
+  ctx.font = 'bold 17px "Segoe UI", system-ui, sans-serif';
+  ctx.fillText('Top of the Eiffel Tower!', W / 2, 38);
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = '13px "Segoe UI", system-ui, sans-serif';
+  ctx.fillText('You can see all of Paris! Press Enter or Esc to ride back down.', W / 2, 60);
 }

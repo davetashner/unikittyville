@@ -1456,6 +1456,43 @@ function updatePrompt(near) {
     el.textContent = 'Press Enter to take a Fiat to Hawaii!';
     el.style.display = 'block';
     setAction('Enter', 'Fiat');
+  } else if (near.nearTGV) {
+    el.textContent = 'Press Enter to ride the TGV to Paris!';
+    el.style.display = 'block';
+    setAction('Enter', 'TGV');
+  } else if (near.nearFromagerie) {
+    el.textContent = parisPicnic.cheese ? 'Cheese: check! Bon appetit!' : 'Press C to buy cheese for the picnic!';
+    el.style.display = 'block';
+    setAction(parisPicnic.cheese ? null : 'KeyC', 'Cheese');
+  } else if (near.nearMarche) {
+    el.textContent = parisPicnic.fruit ? 'Fruit: check! Tres bien!' : 'Press F to buy fresh fruit!';
+    el.style.display = 'block';
+    setAction(parisPicnic.fruit ? null : 'KeyF', 'Fruit');
+  } else if (near.nearBoulangerie) {
+    el.textContent = parisPicnic.baguette ? 'Baguette: check! Magnifique!' : 'Press B to buy a warm baguette!';
+    el.style.display = 'block';
+    setAction(parisPicnic.baguette ? null : 'KeyB', 'Baguette');
+  } else if (near.nearCafe) {
+    el.textContent = parisPicnic.espresso ? 'Espresso: check! Ooh la la!' : 'Press E to order an espresso!';
+    el.style.display = 'block';
+    setAction(parisPicnic.espresso ? null : 'KeyE', 'Espresso');
+  } else if (near.nearPicnicSpot && !parisPicnic.laidOut) {
+    const items = parisPicnicItems();
+    el.textContent = items === 4 ? 'Press P to lay out your picnic!' : 'A perfect picnic spot! Find all 4 foods first (' + items + '/4)';
+    el.style.display = 'block';
+    setAction(items === 4 ? 'KeyP' : null, 'Picnic');
+  } else if (near.nearPicnicSpot && parisPicnic.laidOut) {
+    el.textContent = 'Press S to take a selfie with the Eiffel Tower!';
+    el.style.display = 'block';
+    setAction('KeyS', 'Selfie');
+  } else if (near.nearEiffel) {
+    el.textContent = 'Press Enter to ride up the Eiffel Tower!';
+    el.style.display = 'block';
+    setAction('Enter', 'Ride Up');
+  } else if (near.nearParisAirport) {
+    el.textContent = 'Press Enter to fly to Hawaii!';
+    el.style.display = 'block';
+    setAction('Enter', 'Fly');
   } else if (near.nearTiki) {
     el.textContent = 'Press T to light tiki torch! (+15 pts)';
     el.style.display = 'block';
