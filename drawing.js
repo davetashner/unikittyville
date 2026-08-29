@@ -103,6 +103,9 @@ function draw() {
   }
 
   // Achievement unlock popup banner
+  // Celebration confetti (screen-space)
+  if (confettiParticles.length) drawConfetti();
+
   if (achievementPopup) {
     drawAchievementPopup(W, H);
   }
@@ -3140,6 +3143,19 @@ function drawLevel2World(W, H, cam) {
 }
 
 function drawPlayerAndUI() {
+  // Baby-kitten companion trotting behind the player
+  if (companionVisible()) {
+    ctx.save();
+    ctx.translate(companion.x, companion.y - companion.hop);
+    ctx.scale(0.55, 0.55);
+    drawKitty(0, 0, kitFurColor, companion.facing, companion.walkFrame, 'bow');
+    ctx.restore();
+    ctx.fillStyle = 'rgba(30,27,75,0.75)';
+    ctx.font = 'bold 10px "Segoe UI", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(kitName, companion.x, companion.y - 40 - companion.hop);
+  }
+
   // Draw sled under kitty on sledding level — tilted to match terrain
   if (currentLevel === 2 && sledding) {
     const terrainAngle = Math.atan2(
@@ -6461,6 +6477,26 @@ function drawKittyAccessory(c, acc, bounce) {
       c.arc(8 + Math.cos(fa) * 4, -44 + bounce + Math.sin(fa) * 4, 2.5, 0, Math.PI * 2);
       c.fill();
     }
+  } else if (acc === 'beret') {
+    // Tilted French beret perched beside the horn
+    c.save();
+    c.translate(8, -44 + bounce);
+    c.rotate(-0.22);
+    c.fillStyle = '#b91c1c';
+    c.beginPath();
+    c.ellipse(0, 0, 8.5, 4.5, 0, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = '#7f1d1d';
+    c.beginPath();
+    c.ellipse(0, -1.5, 6.5, 2.8, 0, 0, Math.PI * 2);
+    c.fill();
+    // little stem
+    c.strokeStyle = '#450a0a';
+    c.lineWidth = 1.4;
+    c.beginPath();
+    c.moveTo(0, -3.5); c.lineTo(0, -6);
+    c.stroke();
+    c.restore();
   } else if (acc === 'crown') {
     // Little gold crown perched beside the horn
     c.fillStyle = '#fbbf24';
@@ -13911,4 +13947,17 @@ function drawEiffelViewOverlay(W, H) {
   ctx.fillStyle = '#e2e8f0';
   ctx.font = '13px "Segoe UI", system-ui, sans-serif';
   ctx.fillText('You can see all of Paris! Press Enter or Esc to ride back down.', W / 2, 60);
+}
+
+// ── Celebration confetti (screen-space) ──
+function drawConfetti() {
+  for (const p of confettiParticles) {
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, p.life / 500);
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.rot);
+    ctx.fillStyle = p.color;
+    ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+    ctx.restore();
+  }
 }
