@@ -7,6 +7,16 @@ function setGameDifficulty(diff) {
   try { localStorage.setItem('unikittyville_difficulty', diff); } catch (e) { /* storage unavailable */ }
 }
 
+// ── Quiz toggle ──
+// When off: the train signal puzzle (2→3) and rocket fuel calculator (11→12)
+// no longer block level progression, and random NPC pop quizzes are suppressed.
+let quizzesEnabled = localStorage.getItem('unikittyville_quizzes') !== 'off';
+
+function setQuizzesEnabled(on) {
+  quizzesEnabled = on;
+  try { localStorage.setItem('unikittyville_quizzes', on ? 'on' : 'off'); } catch (e) { /* storage unavailable */ }
+}
+
 function getDifficultyMultiplier() {
   switch (gameDifficulty) {
     case 'easy':   return { timeLimit: 1.5, hintLevel: 2, pointBonus: 0.5 };
@@ -36,6 +46,7 @@ const POINTS = {
   CAMP_SHOWER: 20, TREE_HIT: 10, SNOWMAN_HIT: 10,
   YARN_BONUS: 100, LEPRECHAUN_GOLD: 50,
   FRUIT: 10, ELEPHANT_BOOST: 15, RHINO_HIT: 15,
+  PARIS_FOOD: 15, PARIS_PICNIC: 50, PARIS_SELFIE: 25,
   SAFARI_PHOTO: 30, SAFARI_PHOTO_DUP: 5, SAFARI_COLLECTION: 100,
   CHEETAH_RIDE: 50, GIRAFFE_LIFT: 10, JOURNAL_BONUS: 20,
   TRAIN_PUZZLE: 25, TRAIN_PUZZLE_BONUS: 100,
@@ -216,7 +227,13 @@ function saveMissionLog() {
 const TIME_CAPSULE_RANGE = 80;        // proximity to discover
 const TIME_CAPSULE_GLOW_RANGE = 200;  // visible glow radius
 const TIME_CAPSULE_POINTS = 75;
-let capsulesFound = new Set(JSON.parse(localStorage.getItem('unikittyville_capsules') || '[]'));
+// A corrupt or blocked localStorage must never crash the whole game at load
+function loadStoredJSON(key, fallback) {
+  try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback)); }
+  catch (e) { return fallback; }
+}
+
+let capsulesFound = new Set(loadStoredJSON('unikittyville_capsules', []));
 let capsuleCardState = null;  // { level, name, year, fact, timer } or null
 let capsuleGalleryOpen = false;
 
@@ -225,7 +242,7 @@ function saveCapsules() {
 }
 
 // ── Fact Notebook ──
-let factNotebook = JSON.parse(localStorage.getItem('factNotebook') || '[]');
+let factNotebook = loadStoredJSON('factNotebook', []);
 let notebookOpen = false;
 let notebookCategory = 'All';
 let notebookScroll = 0;
@@ -253,7 +270,7 @@ function addFactToNotebook(text, level) {
   const category = categorizeFact(text);
   const levelName = levelRegistry[level] ? levelRegistry[level].name : ('Level ' + level);
   factNotebook.push({ text, level, levelName, category });
-  localStorage.setItem('factNotebook', JSON.stringify(factNotebook));
+  try { localStorage.setItem('factNotebook', JSON.stringify(factNotebook)); } catch (e) { /* storage unavailable */ }
 }
 
 // ── State ──
@@ -372,8 +389,10 @@ let metPaintingIndex = 0;
 let artDescActive = false;
 let artDescText = '';
 let artDescPaintingIdx = -1;
-let artDescriptions = JSON.parse(localStorage.getItem('unikittyville_artDescriptions') || '{}');
-function saveArtDescriptions() { localStorage.setItem('unikittyville_artDescriptions', JSON.stringify(artDescriptions)); }
+let artDescriptions = loadStoredJSON('unikittyville_artDescriptions', {});
+function saveArtDescriptions() {
+  try { localStorage.setItem('unikittyville_artDescriptions', JSON.stringify(artDescriptions)); } catch (e) { /* storage unavailable */ }
+}
 const MET_PAINTINGS = [
   { title: 'Meadow at Sunrise', artist: 'Claude Meownet', level: 'Meadow', color: '#86efac', draw: 'meadow' },
   { title: 'Starry Sled Night', artist: 'Vincent van Paw', level: 'Sledding', color: '#1e3a5f', draw: 'sled' },
@@ -427,6 +446,23 @@ const PANTHEON_PIECES = [
   { name: 'Oculus', fact: "The oculus (eye) at the top is 27 feet wide \u2014 the only source of light!" },
 ];
 const FIAT_POS = { x: 4500 };
+const TGV_POS = { x: 4150 }; // Rome train station -> Paris
+
+// ── Paris State (level 16) ──
+const FROMAGERIE_POS = { x: 800 };
+const MARCHE_POS = { x: 1600 };
+const BOULANGERIE_POS = { x: 2400 };
+const CAFE_POS = { x: 3200 };
+const PICNIC_POS = { x: 4000 };
+const EIFFEL_POS = { x: 4650 };
+const PARIS_AIRPORT_POS = { x: 5050 };
+let parisPicnic = { cheese: false, fruit: false, baguette: false, espresso: false, laidOut: false, selfies: 0 };
+let parisSelfieFlash = 0;   // ms remaining of camera flash
+let eiffelViewOpen = false; // top-of-tower panorama overlay
+function parisPicnicItems() {
+  return (parisPicnic.cheese ? 1 : 0) + (parisPicnic.fruit ? 1 : 0) +
+         (parisPicnic.baguette ? 1 : 0) + (parisPicnic.espresso ? 1 : 0);
+}
 // Scroll transcription minigame (Pantheon)
 const SCROLL_TEXTS = [
   { text: 'All roads lead to Rome', fact: 'The Roman road network stretched over 250,000 miles!' },
@@ -1240,7 +1276,19 @@ function stopLoopSfx(id) {
 // ── Volume control ──
 let masterVolume = 0.4; // 0..1
 let muted = false;
+try {
+  const savedVol = parseFloat(localStorage.getItem('unikittyville_volume'));
+  if (!isNaN(savedVol)) masterVolume = Math.min(1, Math.max(0, savedVol));
+  muted = localStorage.getItem('unikittyville_muted') === '1';
+} catch (e) { /* storage unavailable — keep defaults */ }
 let sliderHideTimer = null;
+
+function saveVolumeSettings() {
+  try {
+    localStorage.setItem('unikittyville_volume', String(masterVolume));
+    localStorage.setItem('unikittyville_muted', muted ? '1' : '0');
+  } catch (e) { /* storage unavailable */ }
+}
 
 function getMusicVolume() { return muted ? 0 : masterVolume; }
 const sfxRatio = 1.25; // sfx slightly louder than music
@@ -1251,6 +1299,10 @@ const volBtn = document.getElementById('volumeBtn');
 const sliderEl = document.getElementById('volumeSlider');
 const sliderWrap = document.getElementById('volumeSliderWrap');
 let volSliderOpen = false;
+
+// Reflect persisted volume/mute in the UI on load
+sliderEl.value = Math.round(masterVolume * 100);
+volBtn.innerHTML = (muted || masterVolume === 0) ? '&#128263;' : '&#128264;';
 
 if (isMobile) {
   // On mobile: tap speaker icon to toggle slider visibility (no hover)
@@ -1328,6 +1380,7 @@ function showSlider() {
 }
 
 function applyVolume() {
+  saveVolumeSettings();
   const mv = getMusicVolume();
   if (currentMusicId) {
     const el = document.getElementById(currentMusicId);
@@ -1382,6 +1435,14 @@ function crossfadeToLevel(level) {
 }
 
 function crossfadeToMusic(newId) {
+  // Force-complete any in-progress fade first, otherwise its "in" track is
+  // never adopted as currentMusicId and keeps playing forever underneath
+  if (musicFade) {
+    if (musicFade.out) { musicFade.out.pause(); musicFade.out.currentTime = 0; }
+    currentMusicId = musicFade.inId;
+    if (!muted) musicFade.inEl.volume = getMusicVolume();
+    musicFade = null;
+  }
   if (!newId || newId === currentMusicId) return;
   const outEl = currentMusicId ? document.getElementById(currentMusicId) : null;
   const inEl = document.getElementById(newId);
@@ -1413,6 +1474,11 @@ function updateMusicFade(dt) {
 // Character customization — set by character creator
 let playerEyeColor = '#1e1b4b';
 let playerHornColors = ['#fbbf24', '#f472b6', '#a78bfa'];
+let playerOutfit = 'none'; // 'none' | 'bow' | 'scarf' | 'glasses' | 'flower' | 'cape' | 'crown'
+
+// Pause menu (DOM overlay in index.html, wired in ui.js)
+let pauseMenuOpen = false;
+let gameStarted = false;
 
 // Player
 const player = {
@@ -1486,6 +1552,12 @@ function completeTransition() {
   lightShowActive = false;
   activeSpeechBubbles = [];
   quizActive = false;
+  eiffelViewOpen = false;
+  parisSelfieFlash = 0;
+  // Reset Paris picnic when re-entering level 16
+  if (levelTransition.toLevel === 16) {
+    parisPicnic = { cheese: false, fruit: false, baguette: false, espresso: false, laidOut: false, selfies: 0 };
+  }
   quizResultTimer = 0;
   pizzaMaking.stage = 'idle';
   pizzaMaking.progress = 0;
@@ -1585,10 +1657,16 @@ function completeTransition() {
       if (s.type === 'shell') s.collected = false;
     }
   }
+  // Reset sledding collectibles when re-entering level 2
+  if (levelTransition.toLevel === 2) {
+    snowballCount = 0;
+    for (const sb of level2Sled.snowballs) sb.collected = false;
+  }
   // Reset Alps diamond count + collected flags when re-entering level 7
   if (levelTransition.toLevel === 7) {
     diamondCount = 0;
     for (const d of level5.diamonds) d.collected = false;
+    for (const tree of level5.trees) tree.hit = false;
   }
   // Reset Campground state when re-entering level 8
   if (levelTransition.toLevel === 8) {
@@ -2016,6 +2094,7 @@ const hud = {
   gem: document.getElementById('hudGem'),
   cotton: document.getElementById('hudCotton'),
   iceCream: document.getElementById('hudIceCream'),
+  picnic: document.getElementById('hudPicnic'),
   controls: document.getElementById('controls'),
 };
 const hudItems = document.querySelectorAll('.hud-item');
@@ -2062,6 +2141,9 @@ function update(dt) {
     }
     return;
   }
+
+  // Pause menu (DOM overlay) — freeze the world while open
+  if (pauseMenuOpen) return;
 
   // Postcard "just sent" timer
   if (postcardJustSent) {
@@ -2140,6 +2222,16 @@ function update(dt) {
       notebookScroll = 0;
     }
     return; // freeze the game while notebook is open
+  }
+
+  // Eiffel Tower view overlay — Enter/Escape to climb back down
+  if (eiffelViewOpen) {
+    if (keys['Enter'] || keys['Escape']) {
+      keys['Enter'] = false;
+      keys['Escape'] = false;
+      eiffelViewOpen = false;
+    }
+    return; // freeze while enjoying the view
   }
 
   if (currentScene === Scene.CAMP_CAMPER) {
@@ -2733,7 +2825,7 @@ function update(dt) {
     const mc = missionControl;
     if (mc.complete || mc.failed) {
       // Show result then exit
-      mc.showResult += 16;
+      mc.showResult += dt;
       if (mc.complete) {
         mc.rocketY += 3; // animate rocket going up
       }
@@ -2744,7 +2836,7 @@ function update(dt) {
       }
     } else {
       // Count down timer
-      mc.timeLeft -= 16;
+      mc.timeLeft -= dt;
       if (mc.timeLeft <= 0) {
         mc.timeLeft = 0;
         mc.failed = true;
@@ -3571,6 +3663,7 @@ function update(dt) {
   let nearGelato = false;
   let nearPantheonDoor = false;
   let nearFiat = false;
+  let nearTGV = false;
   if (currentLevel === 4) {
     // Fountain — coin toss minigame or swimming
     if (Math.abs(player.x - FOUNTAIN_POS.x) < 45) {
@@ -3639,7 +3732,105 @@ function update(dt) {
         switchToLevel(5);
       }
     }
+    // TGV train → Paris
+    if (Math.abs(player.x - TGV_POS.x) < 45) {
+      nearTGV = true;
+      if (keys['Enter'] && currentScene !== Scene.PANTHEON) {
+        keys['Enter'] = false;
+        switchToLevel(16);
+      }
+    }
   }
+
+  // Paris interactions (level 16)
+  let nearFromagerie = false, nearMarche = false, nearBoulangerie = false, nearCafe = false;
+  let nearPicnicSpot = false, nearEiffel = false, nearParisAirport = false;
+  if (currentLevel === 16) {
+    // Cheese shop
+    if (Math.abs(player.x - FROMAGERIE_POS.x) < BUILDING_RANGE) {
+      nearFromagerie = true;
+      if (!parisPicnic.cheese && keys['KeyC']) {
+        keys['KeyC'] = false;
+        parisPicnic.cheese = true;
+        score += POINTS.PARIS_FOOD;
+        addPopup(player.x, player.y - 40, '+' + POINTS.PARIS_FOOD + ' Brie & Camembert!', '#fbbf24');
+        playChaChing();
+      }
+    }
+    // Fruit market
+    if (Math.abs(player.x - MARCHE_POS.x) < BUILDING_RANGE) {
+      nearMarche = true;
+      if (!parisPicnic.fruit && keys['KeyF']) {
+        keys['KeyF'] = false;
+        parisPicnic.fruit = true;
+        score += POINTS.PARIS_FOOD;
+        addPopup(player.x, player.y - 40, '+' + POINTS.PARIS_FOOD + ' Fresh fruit!', '#4ade80');
+        playChaChing();
+      }
+    }
+    // Boulangerie
+    if (Math.abs(player.x - BOULANGERIE_POS.x) < BUILDING_RANGE) {
+      nearBoulangerie = true;
+      if (!parisPicnic.baguette && keys['KeyB']) {
+        keys['KeyB'] = false;
+        parisPicnic.baguette = true;
+        score += POINTS.PARIS_FOOD;
+        addPopup(player.x, player.y - 40, '+' + POINTS.PARIS_FOOD + ' Warm baguette!', '#fb923c');
+        playChaChing();
+      }
+    }
+    // Cafe
+    if (Math.abs(player.x - CAFE_POS.x) < BUILDING_RANGE) {
+      nearCafe = true;
+      if (!parisPicnic.espresso && keys['KeyE']) {
+        keys['KeyE'] = false;
+        parisPicnic.espresso = true;
+        score += POINTS.PARIS_FOOD;
+        addPopup(player.x, player.y - 40, '+' + POINTS.PARIS_FOOD + ' Espresso to go!', '#a78bfa');
+        playChaChing();
+      }
+    }
+    // Champ de Mars picnic spot
+    if (Math.abs(player.x - PICNIC_POS.x) < 70) {
+      nearPicnicSpot = true;
+      if (!parisPicnic.laidOut && parisPicnicItems() === 4 && keys['KeyP']) {
+        keys['KeyP'] = false;
+        parisPicnic.laidOut = true;
+        score += POINTS.PARIS_PICNIC;
+        addPopup(player.x, player.y - 60, '+' + POINTS.PARIS_PICNIC + ' Picnic time!', '#f472b6');
+        playChaChing();
+      }
+      if (parisPicnic.laidOut && keys['KeyS']) {
+        keys['KeyS'] = false;
+        parisPicnic.selfies++;
+        parisSelfieFlash = 400;
+        if (parisPicnic.selfies <= 3) {
+          score += POINTS.PARIS_SELFIE;
+          addPopup(player.x, player.y - 60, '+' + POINTS.PARIS_SELFIE + ' Eiffel selfie!', '#38bdf8');
+          playChaChing();
+        } else {
+          addPopup(player.x, player.y - 60, 'Say fromage!', '#38bdf8');
+        }
+      }
+    }
+    // Eiffel Tower — ride to the top
+    if (Math.abs(player.x - EIFFEL_POS.x) < BUILDING_RANGE) {
+      nearEiffel = true;
+      if (keys['Enter']) {
+        keys['Enter'] = false;
+        eiffelViewOpen = true;
+      }
+    }
+    // Airport → Hawaii (continue the world tour)
+    if (Math.abs(player.x - PARIS_AIRPORT_POS.x) < 45) {
+      nearParisAirport = true;
+      if (keys['Enter']) {
+        keys['Enter'] = false;
+        switchToLevel(5);
+      }
+    }
+  }
+  if (parisSelfieFlash > 0) parisSelfieFlash -= dt;
 
   // Hawaii interactions (level 4)
   let nearTiki = false;
@@ -4605,7 +4796,7 @@ function update(dt) {
     const wt = whaleTranscription;
     if (wt.active) {
       // Count down timer
-      wt.timeLeft -= 16;
+      wt.timeLeft -= dt;
       if (wt.timeLeft <= 0) {
         // Expired — auto-dismiss
         wt.expired.add(wt.currentIndex);
@@ -4687,11 +4878,18 @@ function update(dt) {
       }
     }
 
+    // Touch players can't type digits — the on-screen Exit button feeds
+    // keys['Escape'], which the keydown handler never sees
+    if (fuelCalcActive && keys['Escape']) {
+      keys['Escape'] = false;
+      fuelCalcActive = false;
+    }
+
     // Fuel calculator logic
     if (fuelCalcActive) {
       // Feedback timer
       if (fuelCalcFeedbackTimer > 0) {
-        fuelCalcFeedbackTimer -= 16;
+        fuelCalcFeedbackTimer -= dt;
         if (fuelCalcFeedbackTimer <= 0) {
           fuelCalcFeedback = '';
           if (fuelCalcCorrect >= 3) {
@@ -4705,8 +4903,8 @@ function update(dt) {
       }
     }
 
-    // Board rocket
-    if (capeFueled && capeSpaceSuit && Math.abs(player.x - ROCKET_POS.x) < BUILDING_RANGE && keys['Enter'] && !capeLaunching) {
+    // Board rocket (fueling quiz not required when quizzes are off)
+    if ((capeFueled || !quizzesEnabled) && capeSpaceSuit && Math.abs(player.x - ROCKET_POS.x) < BUILDING_RANGE && keys['Enter'] && !capeLaunching) {
       keys['Enter'] = false;
       capeLaunching = true;
       currentScene = Scene.CAPE_LAUNCH;
@@ -4717,7 +4915,7 @@ function update(dt) {
 
   // Cape Canaveral Launch minigame
   if (currentScene === Scene.CAPE_LAUNCH) {
-    capeCountdown -= 16; // ~dt
+    capeCountdown -= dt;
     if (keys['Space']) {
       capeLaunchPower = Math.min(1, capeLaunchPower + 0.015);
     } else {
@@ -4744,7 +4942,7 @@ function update(dt) {
   // ── Space Flight interactions (level 12) ──
   if (currentLevel === 12) {
     // Invulnerability timer
-    if (spaceInvulnTimer > 0) spaceInvulnTimer -= 16;
+    if (spaceInvulnTimer > 0) spaceInvulnTimer -= dt;
 
     // Asteroid collision
     for (const ast of level12Space.asteroids) {
@@ -5651,7 +5849,7 @@ function update(dt) {
     if (recipeModeActive) {
       // Recipe Mode logic
       if (recipeComplete) {
-        recipeCompleteTimer += 16;
+        recipeCompleteTimer += dt;
         recipeBlendAnim += 0.3;
         if (recipeCompleteTimer >= 2000) {
           // Move to next round or finish
@@ -5734,7 +5932,7 @@ function update(dt) {
         smoothieProgress = 0;
       }
       if (smoothieBlending) {
-        smoothieProgress += 16;
+        smoothieProgress += dt;
         if (smoothieProgress >= 2000) {
           smoothieBlending = false;
           smoothieCount++;
@@ -5755,7 +5953,7 @@ function update(dt) {
 
   // Gelato Shop minigame
   if (currentScene === Scene.GELATO_SHOP) {
-    if (gelatoMsgTimer > 0) gelatoMsgTimer -= 16;
+    if (gelatoMsgTimer > 0) gelatoMsgTimer -= dt;
 
     const maxScoops = gelatoOrder && gelatoOrder.thirds ? 3 : 4;
 
@@ -5898,7 +6096,7 @@ function update(dt) {
       p.x += p.vx;
       p.y += p.vy;
       p.vy += 0.15;
-      p.life -= 16;
+      p.life -= dt;
       if (p.life <= 0) wishSplashParticles.splice(i, 1);
     }
 
@@ -6070,7 +6268,7 @@ function update(dt) {
 
     if (am.celebrateTimer > 0) {
       // Celebration phase after completing all 4 steps
-      am.celebrateTimer -= 16;
+      am.celebrateTimer -= dt;
       if (am.celebrateTimer <= 0) {
         currentScene = null;
         am.active = false;
@@ -6079,7 +6277,7 @@ function update(dt) {
     } else if (am.step === 0) {
       // Step 1: "First Step" — boot descends, press Space at the right moment
       am.bootY += 0.8; // boot descends slowly
-      am.stepTimer += 16;
+      am.stepTimer += dt;
       // Sweet spot: bootY between 70 and 90 (near the ground)
       if (keys['Space']) {
         keys['Space'] = false;
@@ -6117,7 +6315,7 @@ function update(dt) {
       }
     } else if (am.step === 2) {
       // Step 3: "Collect Moon Rocks" — move left/right to collect 5 rocks in 15s
-      am.stepTimer -= 16;
+      am.stepTimer -= dt;
       if (keys['ArrowLeft']) am.rockPlayerX = Math.max(-180, am.rockPlayerX - 4);
       if (keys['ArrowRight']) am.rockPlayerX = Math.min(180, am.rockPlayerX + 4);
       // Check collection
@@ -6350,11 +6548,17 @@ function update(dt) {
       player.vx = 0;
       if (!trainPuzzleActive && !trainPuzzleComplete && keys['Enter']) {
         keys['Enter'] = false;
-        trainPuzzleActive = true;
-        trainPuzzleRound = 0;
-        trainPuzzleFeedback = '';
-        trainPuzzleFeedbackTimer = 0;
-        trainPuzzleScore = 0;
+        if (quizzesEnabled) {
+          trainPuzzleActive = true;
+          trainPuzzleRound = 0;
+          trainPuzzleFeedback = '';
+          trainPuzzleFeedbackTimer = 0;
+          trainPuzzleScore = 0;
+        } else {
+          // Quizzes are off — board the train right away
+          trainPuzzleComplete = true;
+          switchToLevel(3);
+        }
       }
     }
 
@@ -6498,7 +6702,7 @@ function update(dt) {
       // Chance to trigger a quiz after dialogue ends
       if (!quizActive && quizResultTimer <= 0) {
         const quizzes = npcQuizzes[currentLevel];
-        if (quizzes && quizzes.length > 0 && Math.random() < QUIZ_CHANCE) {
+        if (quizzesEnabled && quizzes && quizzes.length > 0 && Math.random() < QUIZ_CHANCE) {
           const q = quizzes[Math.floor(Math.random() * quizzes.length)];
           quizActive = true;
           quizQuestion = q.question;
@@ -6616,6 +6820,7 @@ function update(dt) {
   if (hud.gem) hud.gem.textContent = candyGemCount;
   if (hud.cotton) hud.cotton.textContent = cottonCandyCount + '/8';
   if (hud.iceCream) hud.iceCream.textContent = iceCreamCount + '/10';
+  if (hud.picnic) hud.picnic.textContent = parisPicnicItems() + '/4';
 
   // Postcard toggle — W key when outdoors and W wasn't consumed by a level-specific action
   // (pool fill on level 8, Grand Central whisper, etc. already consumed KeyW above)
@@ -6649,7 +6854,9 @@ function update(dt) {
     nearSailboat, nearDiveSpot, nearBaobab, nearCheetah, nearSafariJeep,
     nearWateringHole, nearElephant, nearMarket, nearHospital,
     nearFao, nearEmpire, nearThirtyRock, nearGrandCentral, nearMet,
-    nearBugNet, nearTimeCapsule
+    nearBugNet, nearTimeCapsule,
+    nearTGV, nearFromagerie, nearMarche, nearBoulangerie, nearCafe,
+    nearPicnicSpot, nearEiffel, nearParisAirport
   });
 }
 
